@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Alert, Button, Modal, StyleSheet, Text, TextInput, TouchableHighlight, View, ActivityIndicator } from 'react-native';
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 import { useAppDispatch, useAppSelector } from '../../hook';
-import { loadData, selectCourses, selectCoursesList, generateCourse } from '../../../features/item/itemSlice';
+import { loadData, selectCourses, selectCoursesList, openLocation,generateCourse } from '../../../features/item/itemSlice';
 import Slider from '@react-native-community/slider';
 import { SelectList } from 'react-native-dropdown-select-list';
 
@@ -82,6 +82,7 @@ export function Home({ navigation }) {
   const openCourse = (id) => {
     courses.map(course => {
       if (course.id === id) {
+        dispatch(openLocation({courseId: course.id, sectionIndex: null, contentIndex: null, isTest: false}))
         navigation.navigate('Course', {
           courseId: id,
           selectedSectionIndex: undefined
@@ -265,7 +266,7 @@ const styles = StyleSheet.create({
   text: {
     color: 'white',
     textAlign: 'center',
-    fontSize: 24
+    fontSize: 20
 
   },
     smallText: {

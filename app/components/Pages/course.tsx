@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { selectCourses } from '../../../features/item/itemSlice';
+import { selectCourses, openLocation } from '../../../features/item/itemSlice';
 import { useAppDispatch, useAppSelector } from '../../hook';
 import {
     SafeAreaProvider,
@@ -25,7 +25,6 @@ export function Course({ route, navigation }) {
     useEffect(() => {
         const course = courses.find(course => course.id === courseId);
         if (course) setSections(course.sections);
-        console.log(selectedSectionIndex)
         if (selectedSectionIndex >= 0) setExpandedIndex(selectedSectionIndex + 1)
     }, [courses, courseId]);
 
@@ -34,6 +33,7 @@ export function Course({ route, navigation }) {
     };
 
     const openLesson = (sectionIndex, contentIndex) => {
+        dispatch(openLocation({ courseId, sectionIndex: selectedSectionIndex, contentIndex, isTest: false }))
         navigation.navigate('Lesson', {
             courseId,
             sectionIndex,
@@ -87,6 +87,7 @@ export function Course({ route, navigation }) {
                                             underlayColor="#eee"
                                             style={styles.testButton}
                                             onPress={() => {
+                                                dispatch(openLocation({ courseId, sectionIndex: index, contentIndex: null, isTest: true }))
                                                 navigation.navigate("Test", { questions: section.test, courseId, sectionIndex: index });
                                             }}
                                         >
@@ -133,7 +134,7 @@ const styles = StyleSheet.create({
         height: 100,
         borderTopRightRadius: 10,
         borderTopLeftRadius: 10,
-          flexDirection: 'row',
+        flexDirection: 'row',
         justifyContent: 'space-between',
 
     },

@@ -32,14 +32,14 @@ interface ItemState {
     courses: CoursesObjectState[];
     isLoading: boolean;
     coursesList: { name: string; id: number }[];
-    currentLocation: {courseId: number, sectionIndex: number, contentIndex: number, isTest: boolean}
+    currentLocation: {courseId: number|null, sectionIndex: number|null, contentIndex: number|null, isTest: boolean}
 }
 
 const initialState: ItemState = {
     courses: [],
     isLoading: false,
     coursesList: [],
-    currentLocation: {courseId: 0, sectionIndex: 0, contentIndex: 0, isTest: false}
+    currentLocation: {courseId: null, sectionIndex:null, contentIndex: null, isTest: false}
 }
 
 export const loadData = createAsyncThunk('data/loadData', async () => {
@@ -131,7 +131,7 @@ export const itemSlice = createSlice({
     },
 });
 
-export const { generateCourse, updateData, resetData, testDone, lessonDone } = itemSlice.actions;
+export const { generateCourse, updateData, resetData, testDone, lessonDone, openLocation } = itemSlice.actions;
 
 export const selectIsItemLoading = (state: RootState) => state.item.isLoading;
 export const selectCourses = (state: RootState) => state.item.courses;

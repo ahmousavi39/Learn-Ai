@@ -3,7 +3,7 @@ import { StyleSheet, Text, Pressable, Animated, View, Dimensions } from 'react-n
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 import { Audio } from 'expo-av';
 import { MaterialIcons } from '@expo/vector-icons';
-import { testDone } from '../../features/item/itemSlice';
+import { testDone, openLocation } from '../../features/item/itemSlice';
 import { useAppDispatch, useAppSelector } from '../hook';
 
 async function correctSound() {
@@ -200,6 +200,8 @@ export function QuestionRender({ route, navigation }) {
                                 resetResult();
                                 generation();
                             } else {
+                                dispatch(openLocation({ courseId, sectionIndex, contentIndex: null, isTest: false }))
+
                                 navigation.navigate('Course', {
                                     courseId,
                                     selectedSectionIndex: sectionIndex

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { selectCourses, lessonDone } from '../../../features/item/itemSlice';
+import { selectCourses, lessonDone, openLocation } from '../../../features/item/itemSlice';
 import { useAppDispatch, useAppSelector } from '../../hook';
 import {
   SafeAreaProvider,
@@ -36,7 +36,7 @@ export function Lesson({ route, navigation }) {
 
   // Handler for Next button
   const goToNext = () => {
-    dispatch(lessonDone({ courseId, sectionIndex, contentIndex }))
+    dispatch(lessonDone({ courseId, sectionIndex, contentIndex }));
     const course = courses.find(course => course.id === courseId);
     if (!course) return;
 
@@ -45,6 +45,7 @@ export function Lesson({ route, navigation }) {
 
     const nextContentIndex = contentIndex + 1;
     if (nextContentIndex < section.content.length) {
+      dispatch(openLocation({ courseId, sectionIndex, contentIndex, isTest: false }))
       // Go to next content
       navigation.navigate('Lesson', {
         courseId,
@@ -54,9 +55,11 @@ export function Lesson({ route, navigation }) {
     } else {
       // No more content, go to test if exists
       if (section.test && section.test.length > 0) {
+        dispatch(openLocation({ courseId, sectionIndex, contentIndex, isTest: true }))
         navigation.navigate('Test', { questions: section.test, courseId, sectionIndex });
       } else {
         // If no test, maybe go back or somewhere else
+        dispatch(openLocation({ courseId, sectionIndex: sectionIndex+1, contentIndex: null, isTest: true }))
         navigation.goBack();
       }
     }
