@@ -1,0 +1,1725 @@
+{
+    "nominativ": [
+        {
+            "question": "___ Hund ist mein bester Freund.",
+            "answer": "Der",
+            "isTried": false,
+            "isFalse": false,
+            "id": "N_0"
+        },
+        {
+            "question": "___ Blume ist wunderschön.",
+            "answer": "Die",
+            "isTried": false,
+            "isFalse": false,
+            "id": "N_1"
+        },
+        {
+            "question": "___ Auto gehört meinem Onkel.",
+            "answer": "Das",
+            "isTried": false,
+            "isFalse": false,
+            "id": "N_2"
+        },
+        {
+            "question": "___ Mann dort ist sehr freundlich.",
+            "answer": "Der",
+            "isTried": false,
+            "isFalse": false,
+            "id": "N_3"
+        },
+        {
+            "question": "___ Buch liegt auf dem Tisch.",
+            "answer": "Das",
+            "isTried": false,
+            "isFalse": false,
+            "id": "N_4"
+        },
+        {
+            "question": "___ Mädchen ist sehr talentiert.",
+            "answer": "Das",
+            "isTried": false,
+            "isFalse": false,
+            "id": "N_5"
+        },
+        {
+            "question": "___ Lehrer erklärt die Aufgabe.",
+            "answer": "Der",
+            "isTried": false,
+            "isFalse": false,
+            "id": "N_6"
+        },
+        {
+            "question": "___ Fenster ist geöffnet.",
+            "answer": "Das",
+            "isTried": false,
+            "isFalse": false,
+            "id": "N_7"
+        },
+        {
+            "question": "___ Apfel ist rot.",
+            "answer": "Der",
+            "isTried": false,
+            "isFalse": false,
+            "id": "N_8"
+        },
+        {
+            "question": "___ Wasser ist kalt.",
+            "answer": "Das",
+            "isTried": false,
+            "isFalse": false,
+            "id": "N_9"
+        },
+        {
+            "question": "___ Problem müssen wir noch lösen.",
+            "answer": "Das",
+            "isTried": false,
+            "isFalse": false,
+            "id": "N_10"
+        },
+        {
+            "question": "___ Hemd ist zu eng.",
+            "answer": "Das",
+            "isTried": false,
+            "isFalse": false,
+            "id": "N_11"
+        },
+        {
+            "question": "___ Buch ist sehr spannend.",
+            "answer": "Das",
+            "isTried": false,
+            "isFalse": false,
+            "id": "N_12"
+        },
+        {
+            "question": "___ Flugzeug ist pünktlich gelandet.",
+            "answer": "Das",
+            "isTried": false,
+            "isFalse": false,
+            "id": "N_13"
+        },
+        {
+            "question": "___ Zimmer ist sehr sauber.",
+            "answer": "Das",
+            "isTried": false,
+            "isFalse": false,
+            "id": "N_14"
+        },
+        {
+            "question": "___ Plan ist gut durchdacht.",
+            "answer": "Der",
+            "isTried": false,
+            "isFalse": false,
+            "id": "N_15"
+        },
+        {
+            "question": "___ Kind spielt im Garten.",
+            "answer": "Das",
+            "isTried": false,
+            "isFalse": false,
+            "id": "N_16"
+        },
+        {
+            "question": "___ Bild ist sehr schön.",
+            "answer": "Das",
+            "isTried": false,
+            "isFalse": false,
+            "id": "N_17"
+        },
+        {
+            "question": "___ Hund schläft auf dem Sofa.",
+            "answer": "Der",
+            "isTried": false,
+            "isFalse": false,
+            "id": "N_18"
+        },
+        {
+            "question": "___ Blätter fallen von den Bäumen.",
+            "answer": "Die",
+            "isTried": false,
+            "isFalse": false,
+            "id": "N_19"
+        },
+        {
+            "question": "___ Buch ist spannend.",
+            "answer": "Das",
+            "isTried": false,
+            "isFalse": false,
+            "id": "N_20"
+        },
+        {
+            "question": "___ Flugzeug startet in wenigen Minuten.",
+            "answer": "Das",
+            "isTried": false,
+            "isFalse": false,
+            "id": "N_21"
+        },
+        {
+            "question": "___ Licht ist zu hell.",
+            "answer": "Das",
+            "isTried": false,
+            "isFalse": false,
+            "id": "N_22"
+        },
+        {
+            "question": "___ Apfel sieht lecker aus.",
+            "answer": "Der",
+            "isTried": false,
+            "isFalse": false,
+            "id": "N_23"
+        },
+        {
+            "question": "___ Glas ist leer.",
+            "answer": "Das",
+            "isTried": false,
+            "isFalse": false,
+            "id": "N_24"
+        },
+        {
+            "question": "___ Zimmer ist sehr groß.",
+            "answer": "Das",
+            "isTried": false,
+            "isFalse": false,
+            "id": "N_25"
+        },
+        {
+            "question": "___ Wasser schmeckt gut.",
+            "answer": "Das",
+            "isTried": false,
+            "isFalse": false,
+            "id": "N_26"
+        },
+        {
+            "question": "___ Telefon hat geklingelt.",
+            "answer": "Das",
+            "isTried": false,
+            "isFalse": false,
+            "id": "N_27"
+        },
+        {
+            "question": "___ Spiel ist sehr interessant.",
+            "answer": "Das",
+            "isTried": false,
+            "isFalse": false,
+            "id": "N_28"
+        },
+        {
+            "question": "___ Konzert war fantastisch.",
+            "answer": "Das",
+            "isTried": false,
+            "isFalse": false,
+            "id": "N_29"
+        },
+        {
+            "question": "___ Kleidungsstück passt dir gut.",
+            "answer": "Das",
+            "isTried": false,
+            "isFalse": false,
+            "id": "N_30"
+        },
+        {
+            "question": "___ Foto ist wunderschön.",
+            "answer": "Das",
+            "isTried": false,
+            "isFalse": false,
+            "id": "N_31"
+        },
+        {
+            "question": "___ Zimmer ist gut eingerichtet.",
+            "answer": "Das",
+            "isTried": false,
+            "isFalse": false,
+            "id": "N_32"
+        },
+        {
+            "question": "___ Park ist sehr schön.",
+            "answer": "Der",
+            "isTried": false,
+            "isFalse": false,
+            "id": "N_33"
+        },
+        {
+            "question": "___ Flug hat Verspätung.",
+            "answer": "Der",
+            "isTried": false,
+            "isFalse": false,
+            "id": "N_34"
+        },
+        {
+            "question": "___ Tasse ist zerbrochen.",
+            "answer": "Die",
+            "isTried": false,
+            "isFalse": false,
+            "id": "N_35"
+        },
+        {
+            "question": "___ Raum ist sehr groß und hell.",
+            "answer": "Der",
+            "isTried": false,
+            "isFalse": false,
+            "id": "N_36"
+        },
+        {
+            "question": "___ Bild ist sehr modern.",
+            "answer": "Das",
+            "isTried": false,
+            "isFalse": false,
+            "id": "N_37"
+        },
+        {
+            "question": "___ Hund ist ein Labrador.",
+            "answer": "Der",
+            "isTried": false,
+            "isFalse": false,
+            "id": "N_38"
+        },
+        {
+            "question": "___ Fahrrad gehört meinem Bruder.",
+            "answer": "Das",
+            "isTried": false,
+            "isFalse": false,
+            "id": "N_39"
+        },
+        {
+            "question": "___ Smartphone ist neu.",
+            "answer": "Das",
+            "isTried": false,
+            "isFalse": false,
+            "id": "N_40"
+        },
+        {
+            "question": "___ Kleid hast du gewählt?",
+            "answer": "Welches",
+            "isTried": false,
+            "isFalse": false,
+            "id": "N_41"
+        },
+        {
+            "question": "___ Messer ist sehr scharf.",
+            "answer": "Das",
+            "isTried": false,
+            "isFalse": false,
+            "id": "N_42"
+        },
+        {
+            "question": "___ Sofa ist gemütlich.",
+            "answer": "Das",
+            "isTried": false,
+            "isFalse": false,
+            "id": "N_43"
+        },
+        {
+            "question": "___ Handtuch ist frisch gewaschen.",
+            "answer": "Das",
+            "isTried": false,
+            "isFalse": false,
+            "id": "N_44"
+        },
+        {
+            "question": "___ Flugzeug fliegt über die Stadt.",
+            "answer": "Das",
+            "isTried": false,
+            "isFalse": false,
+            "id": "N_45"
+        },
+        {
+            "question": "___ Fernseher ist kaputt.",
+            "answer": "Der",
+            "isTried": false,
+            "isFalse": false,
+            "id": "N_46"
+        },
+        {
+            "question": "___ Berg ist sehr hoch.",
+            "answer": "Der",
+            "isTried": false,
+            "isFalse": false,
+            "id": "N_47"
+        },
+        {
+            "question": "___ Handy gehört mir.",
+            "answer": "Das",
+            "isTried": false,
+            "isFalse": false,
+            "id": "N_48"
+        },
+        {
+            "question": "___ Auto wurde gerade repariert.",
+            "answer": "Das",
+            "isTried": false,
+            "isFalse": false,
+            "id": "N_49"
+        },
+        {
+            "question": "___ Wasser ist klar und blau.",
+            "answer": "Das",
+            "isTried": false,
+            "isFalse": false,
+            "id": "N_50"
+        },
+        {
+            "question": "___ Buch ist aus der Bibliothek.",
+            "answer": "Das",
+            "isTried": false,
+            "isFalse": false,
+            "id": "N_51"
+        },
+        {
+            "question": "___ Hemd passt perfekt.",
+            "answer": "Das",
+            "isTried": false,
+            "isFalse": false,
+            "id": "N_52"
+        },
+        {
+            "question": "___ Hund bellt laut.",
+            "answer": "Der",
+            "isTried": false,
+            "isFalse": false,
+            "id": "N_53"
+        },
+        {
+            "question": "___ Flugzeug ist gelandet.",
+            "answer": "Das",
+            "isTried": false,
+            "isFalse": false,
+            "id": "N_54"
+        },
+        {
+            "question": "___ Zimmer ist gemütlich.",
+            "answer": "Das",
+            "isTried": false,
+            "isFalse": false,
+            "id": "N_55"
+        },
+        {
+            "question": "___ Sofa ist bequem.",
+            "answer": "Das",
+            "isTried": false,
+            "isFalse": false,
+            "id": "N_56"
+        },
+        {
+            "question": "___ Restaurant hat sehr gutes Essen.",
+            "answer": "Das",
+            "isTried": false,
+            "isFalse": false,
+            "id": "N_57"
+        },
+        {
+            "question": "___ Park ist groß und schön.",
+            "answer": "Der",
+            "isTried": false,
+            "isFalse": false,
+            "id": "N_58"
+        },
+        {
+            "question": "___ Spiel ist spannend.",
+            "answer": "Das",
+            "isTried": false,
+            "isFalse": false,
+            "id": "N_59"
+        },
+        {
+            "question": "___ Wasser im See ist kalt.",
+            "answer": "Das",
+            "isTried": false,
+            "isFalse": false,
+            "id": "N_60"
+        },
+        {
+            "question": "___ Konzert fand im Park statt.",
+            "answer": "Das",
+            "isTried": false,
+            "isFalse": false,
+            "id": "N_61"
+        },
+        {
+            "question": "___ Zimmer ist sehr klein.",
+            "answer": "Das",
+            "isTried": false,
+            "isFalse": false,
+            "id": "N_62"
+        },
+        {
+            "question": "___ Flug war lang und anstrengend.",
+            "answer": "Der",
+            "isTried": false,
+            "isFalse": false,
+            "id": "N_63"
+        },
+        {
+            "question": "___ Hund läuft im Garten.",
+            "answer": "Der",
+            "isTried": false,
+            "isFalse": false,
+            "id": "N_64"
+        },
+        {
+            "question": "___ Auto ist kaputt.",
+            "answer": "Das",
+            "isTried": false,
+            "isFalse": false,
+            "id": "N_65"
+        }
+    ],
+    "genitiv": [
+        {
+            "question": "Die Farbe ___ Autos ist rot.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_0"
+        },
+        {
+            "question": "Die Größe ___ Gebäudes ist beeindruckend.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_1"
+        },
+        {
+            "question": "Die Oberfläche ___ Tisches ist glatt.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_2"
+        },
+        {
+            "question": "Die Jahreszeit ___ Sommers ist warm.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_3"
+        },
+        {
+            "question": "Die Struktur ___ Projektes ist komplex.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_4"
+        },
+        {
+            "question": "Die Geschwindigkeit ___ Zuges ist hoch.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_5"
+        },
+        {
+            "question": "Die Bedeutung ___ Wortes ist schwer zu verstehen.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_6"
+        },
+        {
+            "question": "Die Gestaltung ___ Raumes gefällt mir.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_7"
+        },
+        {
+            "question": "Die Länge ___ Flusses ist beeindruckend.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_8"
+        },
+        {
+            "question": "Die Qualität ___ Produkts ist hervorragend.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_9"
+        },
+        {
+            "question": "Die Leistung ___ Teams war außergewöhnlich.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_10"
+        },
+        {
+            "question": "Die Temperatur ___ Wassers ist angenehm.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_11"
+        },
+        {
+            "question": "Die Farbe ___ Himmels war schön.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_12"
+        },
+        {
+            "question": "Die Ursache ___ Unfalls wurde untersucht.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_13"
+        },
+        {
+            "question": "Die Richtung ___ Windes hat sich geändert.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_14"
+        },
+        {
+            "question": "Die Dekoration ___ Raumes ist schlicht.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_15"
+        },
+        {
+            "question": "Die Endlichkeit ___ Zeit ist schwer zu begreifen.",
+            "answer": "Der",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_16"
+        },
+        {
+            "question": "Die Schärfe ___ Messers ist gefährlich.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_17"
+        },
+        {
+            "question": "Die Dauer ___ Spiels ist lang.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_18"
+        },
+        {
+            "question": "Die Stabilität ___ Bauwerks wurde geprüft.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_19"
+        },
+        {
+            "question": "Die Farbe ___ Autos gefällt mir sehr.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_20"
+        },
+        {
+            "question": "Die Bedeutung ___ Wortes ist komplex.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_21"
+        },
+        {
+            "question": "Die Aufgabe ___ Lehrers war schwer.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_22"
+        },
+        {
+            "question": "Die Struktur ___ Unternehmens ist modern.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_23"
+        },
+        {
+            "question": "Die Wirkung ___ Medikaments ist sofort spürbar.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_24"
+        },
+        {
+            "question": "Die Größe ___ Hauses ist beeindruckend.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_25"
+        },
+        {
+            "question": "Die Herkunft ___ Speises ist unklar.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_26"
+        },
+        {
+            "question": "Die Qualität ___ Produkts ist sehr gut.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_27"
+        },
+        {
+            "question": "Die Schwierigkeit ___ Problems ist groß.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_28"
+        },
+        {
+            "question": "Das Ende ___ Filmes war unerwartet.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_29"
+        },
+        {
+            "question": "Die Bedeutung ___ Begriffs ist wichtig.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_30"
+        },
+        {
+            "question": "Die Reaktion ___ Teams war positiv.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_31"
+        },
+        {
+            "question": "Die Lösung ___ Rätsels ist einfach.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_32"
+        },
+        {
+            "question": "Die Zeit ___ Jahres ist am schönsten.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_33"
+        },
+        {
+            "question": "Die Idee ___ Unternehmers ist revolutionär.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_34"
+        },
+        {
+            "question": "Die Information ___ Experten ist sehr nützlich.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_35"
+        },
+        {
+            "question": "Die Lage ___ Hotels ist hervorragend.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_36"
+        },
+        {
+            "question": "Die Entwicklung ___ Technologiemarktes ist schnell.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_37"
+        },
+        {
+            "question": "Die Tradition ___ Festes wird jedes Jahr gepflegt.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_38"
+        },
+        {
+            "question": "Die Farbe ___ Himmels ist blau.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_39"
+        },
+        {
+            "question": "Die Struktur ___ Gebäudes ist modern.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_40"
+        },
+        {
+            "question": "Die Blätter ___ Baumes sind grün.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_41"
+        },
+        {
+            "question": "Die Höhe ___ Turms ist beeindruckend.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_42"
+        },
+        {
+            "question": "Die Bedeutung ___ Wortes ist unklar.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_43"
+        },
+        {
+            "question": "Die Seiten ___ Buches sind gelb.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_44"
+        },
+        {
+            "question": "Die Entwicklung ___ Projektes ist langsam.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_45"
+        },
+        {
+            "question": "Die Ränder ___ Tisches sind abgenutzt.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_46"
+        },
+        {
+            "question": "Das Ende ___ Films war traurig.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_47"
+        },
+        {
+            "question": "Die Aufgabe ___ Teams war schwer.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_48"
+        },
+        {
+            "question": "Die Ursache ___ Problems liegt in der Technik.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_49"
+        },
+        {
+            "question": "Die Bedeutung ___ Textes ist tiefgründig.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_50"
+        },
+        {
+            "question": "Die Dekoration ___ Hauses ist sehr schön.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_51"
+        },
+        {
+            "question": "Die Entscheidung ___ Gerichts war endgültig.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_52"
+        },
+        {
+            "question": "Die Wichtigkeit ___ Aspekts wurde betont.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_53"
+        },
+        {
+            "question": "Der Zustand ___ Raumes hat sich verbessert.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_54"
+        },
+        {
+            "question": "Die Menge ___ Lebensmitteln war groß.",
+            "answer": "Der",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_55"
+        },
+        {
+            "question": "Die Größe ___ Flusses ist beeindruckend.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_56"
+        },
+        {
+            "question": "Die Farbe ___ Autos ist sehr auffällig.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_57"
+        },
+        {
+            "question": "Die Leistung ___ Teams war hervorragend.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_58"
+        },
+        {
+            "question": "Die Höhe ___ Berges ist beeindruckend.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_59"
+        },
+        {
+            "question": "Die Struktur ___ Hauses ist modern.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_60"
+        },
+        {
+            "question": "Die Methode ___ Lehrers ist effektiv.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_61"
+        },
+        {
+            "question": "Die Geschwindigkeit ___ Zuges war sehr hoch.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_62"
+        },
+        {
+            "question": "Die Bedeutung ___ Begriffs ist schwer zu verstehen.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_63"
+        },
+        {
+            "question": "Die Qualität ___ Lebensmittels ist ausgezeichnet.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_64"
+        },
+        {
+            "question": "Die Lage ___ Hotels ist zentral.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_65"
+        },
+        {
+            "question": "Die Entscheidung ___ Vorstandes war eindeutig.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_66"
+        },
+        {
+            "question": "Die Temperatur ___ Raumes ist angenehm.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_67"
+        },
+        {
+            "question": "Die Struktur ___ Unternehmens muss geändert werden.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_68"
+        },
+        {
+            "question": "Die Geschwindigkeit ___ Flugzeugs war beeindruckend.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_69"
+        },
+        {
+            "question": "Die Nutzung ___ Smartphones hat zugenommen.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_70"
+        },
+        {
+            "question": "Die Grenze ___ Landes wurde angepasst.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_71"
+        },
+        {
+            "question": "Die Wirkung ___ Medikaments setzte schnell ein.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_72"
+        },
+        {
+            "question": "Die Aufmerksamkeit ___ Zuschauers galt dem Schauspieler.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_73"
+        },
+        {
+            "question": "Die Auswahl ___ Programms war groß.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_74"
+        },
+        {
+            "question": "Die Entstehung ___ Idee war ein langer Prozess.",
+            "answer": "Der",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_75"
+        },
+        {
+            "question": "Die Stärke ___ Windes hat zugenommen.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_76"
+        },
+        {
+            "question": "Die Dauer ___ Experiments war zu lang.",
+            "answer": "Des",
+            "isTried": false,
+            "isFalse": false,
+            "id": "G_77"
+        }
+    ],
+    "dativ": [
+        {
+            "question": "Er hilft ___ Kind bei den Hausaufgaben.",
+            "answer": "Dem",
+            "isTried": false,
+            "isFalse": false,
+            "id": "D_0"
+        },
+        {
+            "question": "Sie erzählt ___ Freund von ihrer Reise.",
+            "answer": "Dem",
+            "isTried": false,
+            "isFalse": false,
+            "id": "D_1"
+        },
+        {
+            "question": "Ich sende ___ Lehrer die Lösung.",
+            "answer": "Dem",
+            "isTried": false,
+            "isFalse": false,
+            "id": "D_2"
+        },
+        {
+            "question": "Kannst du ___ Nachbarn das Buch bringen?",
+            "answer": "Dem",
+            "isTried": false,
+            "isFalse": false,
+            "id": "D_3"
+        },
+        {
+            "question": "Wir danken ___ Kollegen für die Unterstützung.",
+            "answer": "Dem",
+            "isTried": false,
+            "isFalse": false,
+            "id": "D_4"
+        },
+        {
+            "question": "Ich habe ___ Vater das Auto gewaschen.",
+            "answer": "Dem",
+            "isTried": false,
+            "isFalse": false,
+            "id": "D_5"
+        },
+        {
+            "question": "Er gibt ___ Hund einen Knochen.",
+            "answer": "Dem",
+            "isTried": false,
+            "isFalse": false,
+            "id": "D_6"
+        },
+        {
+            "question": "Sie zeigt ___ Mädchen den Weg.",
+            "answer": "Dem",
+            "isTried": false,
+            "isFalse": false,
+            "id": "D_7"
+        },
+        {
+            "question": "Ich wünsche ___ Lehrer viel Erfolg.",
+            "answer": "Dem",
+            "isTried": false,
+            "isFalse": false,
+            "id": "D_8"
+        },
+        {
+            "question": "Er hilft ___ Kollegen bei der Aufgabe.",
+            "answer": "Dem",
+            "isTried": false,
+            "isFalse": false,
+            "id": "D_9"
+        },
+        {
+            "question": "Ich habe ___ Kind ein Geschenk gemacht.",
+            "answer": "Dem",
+            "isTried": false,
+            "isFalse": false,
+            "id": "D_10"
+        },
+        {
+            "question": "Kannst du ___ Kunden das Angebot erklären?",
+            "answer": "Dem",
+            "isTried": false,
+            "isFalse": false,
+            "id": "D_11"
+        },
+        {
+            "question": "Wir gratulieren ___ Team zum Sieg.",
+            "answer": "Dem",
+            "isTried": false,
+            "isFalse": false,
+            "id": "D_12"
+        },
+        {
+            "question": "Er zeigt ___ Freundin das neue Foto.",
+            "answer": "Der",
+            "isTried": false,
+            "isFalse": false,
+            "id": "D_13"
+        },
+        {
+            "question": "Ich habe ___ Mann geholfen, das Paket zu tragen.",
+            "answer": "Dem",
+            "isTried": false,
+            "isFalse": false,
+            "id": "D_14"
+        },
+        {
+            "question": "Sie zeigt ___ Kindern die neue Technik.",
+            "answer": "Den",
+            "isTried": false,
+            "isFalse": false,
+            "id": "D_15"
+        },
+        {
+            "question": "Ich gebe ___ Buchladen das Geld.",
+            "answer": "Dem",
+            "isTried": false,
+            "isFalse": false,
+            "id": "D_16"
+        },
+        {
+            "question": "Kannst du ___ Mädchen das Heft geben?",
+            "answer": "Dem",
+            "isTried": false,
+            "isFalse": false,
+            "id": "D_17"
+        },
+        {
+            "question": "Er erzählt ___ Freunden eine Geschichte.",
+            "answer": "Den",
+            "isTried": false,
+            "isFalse": false,
+            "id": "D_18"
+        },
+        {
+            "question": "Ich gebe ___ Hund das Spielzeug.",
+            "answer": "Dem",
+            "isTried": false,
+            "isFalse": false,
+            "id": "D_19"
+        },
+        {
+            "question": "Sie hilft ___ Kind beim Malen.",
+            "answer": "Dem",
+            "isTried": false,
+            "isFalse": false,
+            "id": "D_20"
+        },
+        {
+            "question": "Er erklärt ___ Schüler die Aufgabe.",
+            "answer": "Dem",
+            "isTried": false,
+            "isFalse": false,
+            "id": "D_21"
+        },
+        {
+            "question": "Ich sende ___ Kollegen die E-Mail.",
+            "answer": "Dem",
+            "isTried": false,
+            "isFalse": false,
+            "id": "D_22"
+        },
+        {
+            "question": "Kannst du ___ Lehrer das Heft bringen?",
+            "answer": "Dem",
+            "isTried": false,
+            "isFalse": false,
+            "id": "D_23"
+        },
+        {
+            "question": "Wir danken ___ Freund für die Hilfe.",
+            "answer": "Dem",
+            "isTried": false,
+            "isFalse": false,
+            "id": "D_24"
+        },
+        {
+            "question": "Ich erzähle ___ Nachbarn von unserem Urlaub.",
+            "answer": "Dem",
+            "isTried": false,
+            "isFalse": false,
+            "id": "D_25"
+        },
+        {
+            "question": "Ich habe ___ Mann die Zeitung gegeben.",
+            "answer": "Dem",
+            "isTried": false,
+            "isFalse": false,
+            "id": "D_26"
+        },
+        {
+            "question": "Er zeigt ___ Mädchen den Weg.",
+            "answer": "Dem",
+            "isTried": false,
+            "isFalse": false,
+            "id": "D_27"
+        },
+        {
+            "question": "Sie hat ___ Eltern ein Geschenk gemacht.",
+            "answer": "Den",
+            "isTried": false,
+            "isFalse": false,
+            "id": "D_28"
+        },
+        {
+            "question": "Ich zeige ___ Kindern das neue Spielzeug.",
+            "answer": "Den",
+            "isTried": false,
+            "isFalse": false,
+            "id": "D_29"
+        },
+        {
+            "question": "Sie erklärt ___ Besuchern die Regeln.",
+            "answer": "Den",
+            "isTried": false,
+            "isFalse": false,
+            "id": "D_30"
+        },
+        {
+            "question": "Ich gebe ___ Freund die Nachricht.",
+            "answer": "Dem",
+            "isTried": false,
+            "isFalse": false,
+            "id": "D_31"
+        },
+        {
+            "question": "Wir danken ___ Mitarbeiter für die gute Arbeit.",
+            "answer": "Dem",
+            "isTried": false,
+            "isFalse": false,
+            "id": "D_32"
+        },
+        {
+            "question": "Ich wünsche ___ Frau viel Glück.",
+            "answer": "Der",
+            "isTried": false,
+            "isFalse": false,
+            "id": "D_33"
+        },
+        {
+            "question": "Er hat ___ Nachbarn das Buch ausgeliehen.",
+            "answer": "Dem",
+            "isTried": false,
+            "isFalse": false,
+            "id": "D_34"
+        },
+        {
+            "question": "Ich habe ___ Lehrer die Frage gestellt.",
+            "answer": "Dem",
+            "isTried": false,
+            "isFalse": false,
+            "id": "D_35"
+        },
+        {
+            "question": "Sie zeigt ___ Gästen das Hotelzimmer.",
+            "answer": "Den",
+            "isTried": false,
+            "isFalse": false,
+            "id": "D_36"
+        },
+        {
+            "question": "Ich habe ___ Freunden eine E-Mail geschickt.",
+            "answer": "Den",
+            "isTried": false,
+            "isFalse": false,
+            "id": "D_37"
+        },
+        {
+            "question": "Ich gebe ___ Freund das Buch.",
+            "answer": "Dem",
+            "isTried": false,
+            "isFalse": false,
+            "id": "D_38"
+        },
+        {
+            "question": "Er hilft ___ Mädchen bei der Aufgabe.",
+            "answer": "Dem",
+            "isTried": false,
+            "isFalse": false,
+            "id": "D_39"
+        },
+        {
+            "question": "Ich sende ___ Kollege eine E-Mail.",
+            "answer": "Dem",
+            "isTried": false,
+            "isFalse": false,
+            "id": "D_40"
+        },
+        {
+            "question": "Sie erklärt ___ Kind die Aufgabe.",
+            "answer": "Dem",
+            "isTried": false,
+            "isFalse": false,
+            "id": "D_41"
+        },
+        {
+            "question": "Kannst du ___ Lehrer die Antwort zeigen?",
+            "answer": "Dem",
+            "isTried": false,
+            "isFalse": false,
+            "id": "D_42"
+        },
+        {
+            "question": "Wir danken ___ Nachbarn für die Hilfe.",
+            "answer": "Dem",
+            "isTried": false,
+            "isFalse": false,
+            "id": "D_43"
+        },
+        {
+            "question": "Ich erzähle ___ Freundin von der Reise.",
+            "answer": "Der",
+            "isTried": false,
+            "isFalse": false,
+            "id": "D_44"
+        },
+        {
+            "question": "Sie zeigt ___ Besuchern den Weg zum Museum.",
+            "answer": "Den",
+            "isTried": false,
+            "isFalse": false,
+            "id": "D_45"
+        },
+        {
+            "question": "Ich habe ___ Mann das Buch gegeben.",
+            "answer": "Dem",
+            "isTried": false,
+            "isFalse": false,
+            "id": "D_46"
+        },
+        {
+            "question": "Er erklärt ___ Gästen die Regeln des Spiels.",
+            "answer": "Den",
+            "isTried": false,
+            "isFalse": false,
+            "id": "D_47"
+        },
+        {
+            "question": "Sie gibt ___ Hund das Futter.",
+            "answer": "Dem",
+            "isTried": false,
+            "isFalse": false,
+            "id": "D_48"
+        },
+        {
+            "question": "Ich habe ___ Freunden das Geschenk gegeben.",
+            "answer": "Den",
+            "isTried": false,
+            "isFalse": false,
+            "id": "D_49"
+        },
+        {
+            "question": "Sie zeigt ___ Kindern, wie man malt.",
+            "answer": "Den",
+            "isTried": false,
+            "isFalse": false,
+            "id": "D_50"
+        },
+        {
+            "question": "Er hilft ___ Großeltern bei der Gartenarbeit.",
+            "answer": "Den",
+            "isTried": false,
+            "isFalse": false,
+            "id": "D_51"
+        },
+        {
+            "question": "Ich bringe ___ Kollegen den Bericht.",
+            "answer": "Dem",
+            "isTried": false,
+            "isFalse": false,
+            "id": "D_52"
+        },
+        {
+            "question": "Ich wünsche ___ Chef viel Erfolg im neuen Jahr.",
+            "answer": "Dem",
+            "isTried": false,
+            "isFalse": false,
+            "id": "D_53"
+        },
+        {
+            "question": "Sie hilft ___ Schülern bei den Hausaufgaben.",
+            "answer": "Den",
+            "isTried": false,
+            "isFalse": false,
+            "id": "D_54"
+        },
+        {
+            "question": "Er erklärt ___ Gästen das neue Menü.",
+            "answer": "Den",
+            "isTried": false,
+            "isFalse": false,
+            "id": "D_55"
+        },
+        {
+            "question": "Ich danke ___ Nachbarn für ihre Hilfe.",
+            "answer": "Dem",
+            "isTried": false,
+            "isFalse": false,
+            "id": "D_56"
+        },
+        {
+            "question": "Sie erklärt ___ Kindern die Regeln.",
+            "answer": "Den",
+            "isTried": false,
+            "isFalse": false,
+            "id": "D_57"
+        },
+        {
+            "question": "Ich gebe ___ Kollegen die Unterlagen.",
+            "answer": "Dem",
+            "isTried": false,
+            "isFalse": false,
+            "id": "D_58"
+        },
+        {
+            "question": "Er hilft ___ Freunden bei der Umzug.",
+            "answer": "Den",
+            "isTried": false,
+            "isFalse": false,
+            "id": "D_59"
+        },
+        {
+            "question": "Sie gibt ___ Hund das Spielzeug.",
+            "answer": "Dem",
+            "isTried": false,
+            "isFalse": false,
+            "id": "D_60"
+        },
+        {
+            "question": "Wir danken ___ Lehrern für ihre Geduld.",
+            "answer": "Den",
+            "isTried": false,
+            "isFalse": false,
+            "id": "D_61"
+        },
+        {
+            "question": "Er erzählt ___ Kollegen von der Reise.",
+            "answer": "Den",
+            "isTried": false,
+            "isFalse": false,
+            "id": "D_62"
+        },
+        {
+            "question": "Ich erkläre ___ Gästen den Ablauf der Veranstaltung.",
+            "answer": "Den",
+            "isTried": false,
+            "isFalse": false,
+            "id": "D_63"
+        },
+        {
+            "question": "Sie zeigt ___ Freunden das neue Kleid.",
+            "answer": "Den",
+            "isTried": false,
+            "isFalse": false,
+            "id": "D_64"
+        },
+        {
+            "question": "Er hilft ___ Mädchen mit den Hausaufgaben.",
+            "answer": "Dem",
+            "isTried": false,
+            "isFalse": false,
+            "id": "D_65"
+        },
+        {
+            "question": "Wir schicken ___ Großeltern das Geschenk.",
+            "answer": "Den",
+            "isTried": false,
+            "isFalse": false,
+            "id": "D_66"
+        },
+        {
+            "question": "Er zeigt ___ Kollegen das neue Projekt.",
+            "answer": "Dem",
+            "isTried": false,
+            "isFalse": false,
+            "id": "D_67"
+        },
+        {
+            "question": "Wir geben ___ Touristen eine Karte der Stadt.",
+            "answer": "Den",
+            "isTried": false,
+            "isFalse": false,
+            "id": "D_68"
+        },
+        {
+            "question": "Sie bringt ___ Nachbarn das Paket.",
+            "answer": "Dem",
+            "isTried": false,
+            "isFalse": false,
+            "id": "D_69"
+        }
+    ],
+    "akkusativ": [
+        {
+            "question": "Sie liest ___ Buch im Café.",
+            "answer": "Das",
+            "isTried": false,
+            "isFalse": false,
+            "id": "A_0"
+        },
+        {
+            "question": "Ich habe ___ Film gestern gesehen.",
+            "answer": "Den",
+            "isTried": false,
+            "isFalse": false,
+            "id": "A_1"
+        },
+        {
+            "question": "Ich nehme ___ Bus zum Arbeiten.",
+            "answer": "Den",
+            "isTried": false,
+            "isFalse": false,
+            "id": "A_2"
+        },
+        {
+            "question": "Ich gebe ___ Schlüssel zurück.",
+            "answer": "Den",
+            "isTried": false,
+            "isFalse": false,
+            "id": "A_3"
+        },
+        {
+            "question": "Er sucht ___ Lösung für das Problem.",
+            "answer": "Die",
+            "isTried": false,
+            "isFalse": false,
+            "id": "A_4"
+        },
+        {
+            "question": "Ich finde ___ Fehler in der Berechnung.",
+            "answer": "Den",
+            "isTried": false,
+            "isFalse": false,
+            "id": "A_5"
+        },
+        {
+            "question": "Er sieht ___ Film im Fernsehen.",
+            "answer": "Den",
+            "isTried": false,
+            "isFalse": false,
+            "id": "A_6"
+        },
+        {
+            "question": "Ich nehme ___ Zug nach Frankfurt.",
+            "answer": "Den",
+            "isTried": false,
+            "isFalse": false,
+            "id": "A_7"
+        },
+        {
+            "question": "Er sucht ___ Schlüssel in der Tasche.",
+            "answer": "Den",
+            "isTried": false,
+            "isFalse": false,
+            "id": "A_8"
+        },
+        {
+            "question": "Ich habe ___ Problem nicht verstanden.",
+            "answer": "Das",
+            "isTried": false,
+            "isFalse": false,
+            "id": "A_9"
+        },
+        {
+            "question": "Wir finden ___ Restaurant sehr schön.",
+            "answer": "Das",
+            "isTried": false,
+            "isFalse": false,
+            "id": "A_10"
+        },
+        {
+            "question": "Er zeigt ___ Freundin das neue Foto.",
+            "answer": "Das",
+            "isTried": false,
+            "isFalse": false,
+            "id": "A_11"
+        },
+        {
+            "question": "Er hat ___ Auto repariert.",
+            "answer": "Das",
+            "isTried": false,
+            "isFalse": false,
+            "id": "A_12"
+        },
+        {
+            "question": "Ich nehme ___ Taxi zum Flughafen.",
+            "answer": "Das",
+            "isTried": false,
+            "isFalse": false,
+            "id": "A_13"
+        },
+        {
+            "question": "Ich sehe ___ alten Mann im Park.",
+            "answer": "Den",
+            "isTried": false,
+            "isFalse": false,
+            "id": "A_14"
+        },
+        {
+            "question": "Ich habe ___ Problem schon gelöst.",
+            "answer": "Das",
+            "isTried": false,
+            "isFalse": false,
+            "id": "A_15"
+        },
+        {
+            "question": "Er trägt ___ neuen Mantel.",
+            "answer": "Den",
+            "isTried": false,
+            "isFalse": false,
+            "id": "A_16"
+        },
+        {
+            "question": "Wir kaufen ___ Tisch für das Büro.",
+            "answer": "Den",
+            "isTried": false,
+            "isFalse": false,
+            "id": "A_17"
+        },
+        {
+            "question": "Er hat ___ Apfel gegessen.",
+            "answer": "Den",
+            "isTried": false,
+            "isFalse": false,
+            "id": "A_18"
+        },
+        {
+            "question": "Ich trinke ___ Glas Wasser.",
+            "answer": "Das",
+            "isTried": false,
+            "isFalse": false,
+            "id": "A_19"
+        },
+        {
+            "question": "Sie bestellt ___ Kaffee im Café.",
+            "answer": "Den",
+            "isTried": false,
+            "isFalse": false,
+            "id": "A_20"
+        },
+        {
+            "question": "Ich esse ___ Stück Kuchen.",
+            "answer": "Das",
+            "isTried": false,
+            "isFalse": false,
+            "id": "A_21"
+        },
+        {
+            "question": "Wir kaufen ___ Bild für das Wohnzimmer.",
+            "answer": "Das",
+            "isTried": false,
+            "isFalse": false,
+            "id": "A_22"
+        },
+        {
+            "question": "Sie trägt ___ schönen Ring.",
+            "answer": "Den",
+            "isTried": false,
+            "isFalse": false,
+            "id": "A_23"
+        },
+        {
+            "question": "Ich finde ___ Fehler im Bericht.",
+            "answer": "Den",
+            "isTried": false,
+            "isFalse": false,
+            "id": "A_24"
+        },
+        {
+            "question": "Ich habe ___ Brief erhalten.",
+            "answer": "Den",
+            "isTried": false,
+            "isFalse": false,
+            "id": "A_25"
+        },
+        {
+            "question": "Er trägt ___ weißen Anzug.",
+            "answer": "Den",
+            "isTried": false,
+            "isFalse": false,
+            "id": "A_26"
+        },
+        {
+            "question": "Ich schicke ___ Paket an meine Freundin.",
+            "answer": "Das",
+            "isTried": false,
+            "isFalse": false,
+            "id": "A_27"
+        },
+        {
+            "question": "Er hat ___ Problem schon gelöst.",
+            "answer": "Das",
+            "isTried": false,
+            "isFalse": false,
+            "id": "A_28"
+        },
+        {
+            "question": "Sie sieht ___ Mann im Park.",
+            "answer": "Den",
+            "isTried": false,
+            "isFalse": false,
+            "id": "A_29"
+        },
+        {
+            "question": "Ich höre ___ Lied im Radio.",
+            "answer": "Das",
+            "isTried": false,
+            "isFalse": false,
+            "id": "A_30"
+        }
+    ]
+}

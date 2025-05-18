@@ -1,0 +1,17 @@
+{
+  "cli": {
+    "version": ">= 15.0.14",
+    "appVersionSource": "remote"
+  },
+    "build": {
+      "development": {
+        "releaseChannel": "development",
+        "distribution": "internal"
+      },
+      "production": {
+        "releaseChannel": "default",
+        "distribution": "store"
+      }
+    }
+  }
+  

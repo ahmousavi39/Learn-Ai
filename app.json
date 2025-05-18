@@ -1,0 +1,46 @@
+{
+  "expo": {
+    "name": "4F",
+    "slug": "4F",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "bundleIdentifier": "com.4f",
+      "buildNumber": "1",
+      "supportsTablet": true,
+      "icon": "./assets/icon.png",
+      "backgroundColor": "#FFFFFF"
+    },
+    "android": {
+      "package": "com.4f",
+      "versionCode": 1,
+      "icon": "./assets/icon.png",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#FFFFFF"
+      },
+      "backgroundColor": "#FFFFFF",
+      "web": {
+        "favicon": "./assets/favicon.png"
+      },
+      "extra": {
+        "eas": {
+          "projectId": "79325ffb-b302-4e89-8b44-aec28c8515f6"
+        }
+      }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "79325ffb-b302-4e89-8b44-aec28c8515f6"
+      }
+    }
+  }
+}
