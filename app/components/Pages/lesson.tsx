@@ -148,12 +148,11 @@ export function Lesson({ route, navigation }) {
                   </View>
                 )}
               </>
-
             ))}
           </View>
         </ScrollView>
 
-        {loading && <ActivityIndicator size="large" color="#0000ff" />}
+        {loading && <View style={styles.centeredView}><ActivityIndicator size="large" color="#0000ff" /></View>}
 
         <Pressable style={styles.reGenerateTextButton} onPress={reGenerate}>
           <MaterialIcons name="refresh" size={36} color="orange" />
@@ -201,7 +200,7 @@ const styles = StyleSheet.create({
   textBlock: {
     gap: 12,
   },
-  bulletContainer: {
+    bulletContainer: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     marginBottom: 12,
@@ -255,5 +254,10 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 2,
     borderColor: 'orange',              // red outline
+  },
+    centeredView: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

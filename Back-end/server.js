@@ -71,6 +71,7 @@ Create a section titled "${section.title}" for a level ${level}/10 learner in ${
 Instructions:
 - Total words ≈ ${section.availableTime * 50}
 - Include ${bulletCount} bulletpoints
+- Each bulletpoint has 2–4 short paragraphs
 - Add 4-question quiz at end (1 correct + 3 wrong)
 - Use a public related image for every bulletpoint if neccersery
 - Time allocation per bulletpoint (based on complexity ${section.complexity}):
