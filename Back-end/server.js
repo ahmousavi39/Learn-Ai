@@ -209,8 +209,6 @@ You are a rewriting engine for educational mobile content.
 Task:
 - Rewrite the following bulletpoints in ${language} for a level ${level}/10 learner.
 - Maintain the original meaning and information.
-- The rewritten version must have the same number of bulletpoints.
-- Each rewritten bulletpoint should have the same paragraph count as the original.
 - Ensure mobile-friendly, clear language.
 
 Bulletpoints to rewrite:
