@@ -91,7 +91,7 @@ JSON format:
   "content": [  
     {
       "title": "Concept",
-      "bulletpoints": [["Para1", "Para2", "..."], ["Para1", "Para2", "..."]],
+      "bulletpoints": [["Para1 of bulletpoint1", "Para2 of bulletpoint1", "..."], ["Para1 of bulletpoint2", "Para2 of bulletpoint2", "..."]],
       "image": "https://placeholder.com/image.jpg"
     }
   ],

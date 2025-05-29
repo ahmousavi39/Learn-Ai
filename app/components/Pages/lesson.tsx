@@ -105,10 +105,10 @@ export function Lesson({ route, navigation }) {
       });
 
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-      const newBulletpoints = await response.json();
+      const res = await response.json();
 
-      if (newBulletpoints && Array.isArray(newBulletpoints)) {
-        dispatch(regenerateLesson({ courseId, sectionIndex, contentIndex, newBulletpoints }))
+      if (res.newBulletpoints && Array.isArray(res.newBulletpoints)) {
+        dispatch(regenerateLesson({ courseId, sectionIndex, contentIndex, newBulletpoints: res.newBulletpoints }))
       } else {
         throw new Error('Invalid sections data from server');
       }
@@ -140,16 +140,12 @@ export function Lesson({ route, navigation }) {
                   {language === 'fa' ? (
                     <View key={index} style={styles.persianBulletContainer}>
                       <Text style={styles.persianBullet}>{'\u2013'}</Text>
-                      {paragraphs.map(text => 
-                      <Text style={[styles.bulletText, styles.persianText]}>{text}</Text>
-                      )}
+                      <Text style={[styles.bulletText, styles.persianText]}>{paragraphs.map(text => <>{text}{'\n'}</>)}</Text>
                     </View>
                   ) : (
                     <View key={index} style={styles.bulletContainer}>
                       <Text style={styles.bullet}>{'\u2013'}</Text>
-                       {paragraphs.map(text => 
-                      <Text style={styles.bulletText}>{text}</Text>
-                      )}
+                      <Text style={styles.bulletText}>{paragraphs.map(text => text)}</Text>
                     </View>
                   )}
                 </>
@@ -184,7 +180,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingBottom: 80
   },
-  safeAreaDisabled:{
+  safeAreaDisabled: {
     justifyContent: 'center',
     paddingHorizontal: 10,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
