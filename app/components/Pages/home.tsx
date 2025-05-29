@@ -177,7 +177,7 @@ export function Home({ navigation }) {
                   selectedStyle={{ backgroundColor: '#fc4848' }}
                   unselectedStyle={{ backgroundColor: '#ccc' }}
                   trackStyle={{ height: 4 }}
-                  markerStyle={{ height: 40, width: "100%", backgroundColor: '#fc4848' }}
+                  markerStyle={{ height: 20, width: "100%", backgroundColor: '#fc4848' }}
                 />
 
                 <Text style={styles.modalText}>Time to Learn (min): {time}</Text>
@@ -191,7 +191,7 @@ export function Home({ navigation }) {
                   selectedStyle={{ backgroundColor: '#fc4848' }}
                   unselectedStyle={{ backgroundColor: '#ccc' }}
                   trackStyle={{ height: 4 }}
-                  markerStyle={{ height: 40, width: "100%", backgroundColor: '#fc4848' }}
+                  markerStyle={{ height: 20, width: "100%", backgroundColor: '#fc4848' }}
                 />
 
 

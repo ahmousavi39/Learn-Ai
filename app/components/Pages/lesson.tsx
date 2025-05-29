@@ -145,7 +145,7 @@ export function Lesson({ route, navigation }) {
                   ) : (
                     <View key={index} style={styles.bulletContainer}>
                       <Text style={styles.bullet}>{'\u2013'}</Text>
-                      <Text style={styles.bulletText}>{paragraphs.map(text => text)}</Text>
+                      <Text style={styles.bulletText}>{paragraphs.map(text => <>{text}{'\n'}</>)}</Text>
                     </View>
                   )}
                 </>
