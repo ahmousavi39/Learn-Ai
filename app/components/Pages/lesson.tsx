@@ -172,15 +172,16 @@ export function Lesson({ route, navigation }) {
 
 const styles = StyleSheet.create({
   safeArea: {
-    flex: 1,
     backgroundColor: '#f9f9f9',
   },
   container: {
+    flex: 1,
     paddingHorizontal: 10,
     paddingVertical: 10,
     paddingBottom: 80
   },
   safeAreaDisabled: {
+    flex: 1,
     justifyContent: 'center',
     paddingHorizontal: 10,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
