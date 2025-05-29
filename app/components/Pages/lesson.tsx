@@ -122,9 +122,9 @@ export function Lesson({ route, navigation }) {
   return (
     <SafeAreaProvider>
       <SafeAreaView style={loading ? styles.safeAreaDisabled : styles.safeArea}>
-        <ScrollView contentContainerStyle={styles.container}>
-          {loading && <ActivityIndicator size="large" color="#0000ff" />}
+                  {loading && <ActivityIndicator size="large" color="#0000ff" />}
           {!loading && <>
+        <ScrollView contentContainerStyle={styles.container}>
             {content.image ? (
               <Image
                 source={{ uri: content.image }}
@@ -152,7 +152,7 @@ export function Lesson({ route, navigation }) {
 
               ))}
             </View>
-          </>}
+          
         </ScrollView>
 
         <Pressable style={styles.reGenerateTextButton} onPress={reGenerate}>
@@ -165,6 +165,7 @@ export function Lesson({ route, navigation }) {
         <Pressable style={styles.backButton} onPress={goToPrevious}>
           <MaterialIcons name="navigate-before" size={36} color="#3730a3" />
         </Pressable>
+      </>}
       </SafeAreaView>
     </SafeAreaProvider >
   );
