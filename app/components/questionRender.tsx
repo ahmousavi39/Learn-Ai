@@ -33,6 +33,7 @@ export function QuestionRender({ route, navigation }) {
     const backgroundColorRef = useState(new Animated.Value(0))[0];
     const borderColorRef = useState(new Animated.Value(0))[0];
     const dispatch = useAppDispatch();
+    const courses = useAppSelector(state => state.item.courses);
 
     const handlePress = () => {
         Animated.timing(backgroundColorRef, {
@@ -159,9 +160,57 @@ export function QuestionRender({ route, navigation }) {
         handleRelease();
     };
 
+    const goToPrevious = () => {
+        if (index > 0) {
+            // Go to previous test question
+            setIndex(index - 1);
+            resetResult();
+            generation();
+        } else {
+            // We're at the first test question
+            const course = courses.find(c => c.id === courseId); if (!course) return;
+
+            const section = course.sections[sectionIndex];
+            if (!section) return;
+
+            if (section.content && section.content.length > 0) {
+                // Go to last content item
+                const lastContentIndex = section.content.length - 1;
+                dispatch(openLocation({ courseId, sectionIndex, contentIndex: lastContentIndex, isTest: false }));
+                navigation.navigate('Lesson', {
+                    courseId,
+                    sectionIndex,
+                    contentIndex: lastContentIndex,
+                });
+            } else {
+                // No content, just go back to course
+                navigation.navigate('Course', {
+                    courseId,
+                    selectedSectionIndex: sectionIndex,
+                });
+            }
+        }
+    };
+
+    const goToNext = () => {
+        dispatch(testDone({ courseId, sectionIndex, testIndex: index }))
+        if (index + 1 < questions.length) {
+            setIndex(index + 1);
+            resetResult();
+            generation();
+        } else {
+            dispatch(openLocation({ courseId, sectionIndex, contentIndex: null, isTest: false }))
+
+            navigation.navigate('Course', {
+                courseId,
+                selectedSectionIndex: sectionIndex + 1
+            });
+        }
+    }
+
     return (
         <SafeAreaProvider>
-            <SafeAreaView style={styles.safeArea}>
+            <SafeAreaView style={{ flex: 1 }}>
                 <View style={styles.container}>
 
                     <View style={styles.questionWrapper}>
@@ -186,46 +235,29 @@ export function QuestionRender({ route, navigation }) {
                         ))}
                     </View>
 
-                    <View>
-                        {showResetButton && (
-                            <Pressable style={styles.retryButton} onPress={resetWrongAnswer}>
-                                <MaterialIcons name="refresh" size={36} color="#3730a3" />
-                            </Pressable>
-                        )}
-
-                        <Pressable style={styles.nextButton} onPress={() => {
-                            dispatch(testDone({ courseId, sectionIndex, testIndex: index }))
-                            if (index + 1 < questions.length) {
-                                setIndex(index + 1);
-                                resetResult();
-                                generation();
-                            } else {
-                                dispatch(openLocation({ courseId, sectionIndex, contentIndex: null, isTest: false }))
-
-                                navigation.navigate('Course', {
-                                    courseId,
-                                    selectedSectionIndex: sectionIndex
-                                });
-                            }
-                        }}>
-                            <MaterialIcons name="navigate-next" size={36} color="#3730a3" />
+                    {showResetButton && (
+                        <Pressable style={styles.retryTextButton} onPress={resetWrongAnswer}>
+                            <MaterialIcons name="refresh" size={36} color="white" />
                         </Pressable>
-                    </View>
-
+                    )}
+                    <Pressable style={styles.nextButton} onPress={goToNext}>
+                        <MaterialIcons name="navigate-next" size={36} color="#3730a3" />
+                    </Pressable>
+                    <Pressable style={styles.backButton} onPress={goToPrevious}>
+                        <MaterialIcons name="navigate-before" size={36} color="#3730a3" />
+                    </Pressable>
                 </View>
+
             </SafeAreaView>
         </SafeAreaProvider>
     );
 }
 
 const styles = StyleSheet.create({
-    safeArea: {
-        flex: 1,
-        backgroundColor: '#f9f9f9',
-    },
     container: {
         flex: 1,
-        padding: 10,
+        paddingHorizontal: 10,
+        paddingVertical: 10,
         justifyContent: 'space-between', // spread question and options/buttons
     },
 
@@ -236,14 +268,13 @@ const styles = StyleSheet.create({
 
     optionsContainer: {
         gap: 24,
-        marginBottom: 150,  // add space at bottom for buttons
+        bottom: 170,  // add space at bottom for buttons
     },
 
     title: {
         fontSize: 22,
         fontWeight: '600',
         textAlign: 'center',
-        marginBottom: 32,
         marginTop: 20,  // add some top margin
         color: '#222',
     },
@@ -270,28 +301,34 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         gap: 12,
     },
-    bottomRightContainer: {
+
+    retryTextButton: {
         position: 'absolute',
-        right: 20,
-        bottom: 30,
-        flexDirection: 'row',   // changed from default (column)
-        alignItems: 'center',
-        gap: 12,
+        bottom: 37.5,
+        alignSelf: 'center',
+        backgroundColor: '#16a34a',
+        paddingHorizontal: 48,
+        paddingVertical: 2,
+        borderRadius: 8,
     },
 
-
-    retryButton: {
-        position: 'absolute',
-        right: 20,
-        bottom: 70,
-        backgroundColor: 'transparent',
+    retryText: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: '600',
     },
-
     nextButton: {
         position: 'absolute',
         right: 20,
-        bottom: 30,
+        bottom: 40,
         backgroundColor: 'transparent',
     },
+    backButton: {
+        position: 'absolute',
+        left: 20,
+        bottom: 40,
+        backgroundColor: 'transparent',
+    }
+
 
 });

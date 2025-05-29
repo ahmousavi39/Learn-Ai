@@ -18,6 +18,7 @@ export function Course({ route, navigation }) {
     const dispatch = useAppDispatch();
     const courses = useAppSelector(selectCourses);
     const [sections, setSections] = useState([]);
+    const [language, setLanguage] = useState('en');
     const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
 
     const { courseId, selectedSectionIndex } = route.params || {};
@@ -25,7 +26,8 @@ export function Course({ route, navigation }) {
     useEffect(() => {
         const course = courses.find(course => course.id === courseId);
         if (course) setSections(course.sections);
-        if (selectedSectionIndex >= 0) setExpandedIndex(selectedSectionIndex + 1)
+        if (course.language) setLanguage(course.language);
+        if (selectedSectionIndex >= 0) setExpandedIndex(selectedSectionIndex);
     }, [courses, courseId]);
 
     const toggleSection = (index: number) => {
@@ -33,18 +35,19 @@ export function Course({ route, navigation }) {
     };
 
     const openLesson = (sectionIndex, contentIndex) => {
-        dispatch(openLocation({ courseId, sectionIndex: selectedSectionIndex, contentIndex, isTest: false }))
+        dispatch(openLocation({ courseId, sectionIndex: expandedIndex, contentIndex, isTest: false }))
         navigation.navigate('Lesson', {
             courseId,
             sectionIndex,
-            contentIndex
+            contentIndex,
+            language
         });
     }
 
     return (
         <SafeAreaProvider>
             <SafeAreaView style={{ flex: 1 }}>
-                <ScrollView contentContainerStyle={styles.container}>
+                <ScrollView contentContainerStyle={language === "fa" ? styles.containerPersian : styles.container}>
                     {sections.map((section, index) => {
                         const isTestDone = Array.isArray(section.test) && section.test.every(t => t.isDone);
                         const isContentDone = Array.isArray(section.content) && section.content.every(t => t.isDone);
@@ -56,12 +59,18 @@ export function Course({ route, navigation }) {
                                     style={styles.touchableHighlight}
                                     onPress={() => toggleSection(index)}
                                 >
-                                    <View style={styles.button}>
+                                    {language === "fa" ? <View style={styles.button}>
+                                        <View style={styles.iconContainer}>
+                                            <Ionicons name="checkmark-circle" size={20} color="green" style={!isContentDone ? { display: "none" } : {}} />
+                                        </View>
                                         <Text style={styles.text}>{section.title}</Text>
-                                        {isContentDone && (
-                                            <Ionicons name="checkmark-circle" size={20} color="green" />
-                                        )}
-                                    </View>
+                                    </View> : <View style={styles.button}>
+                                        <Text style={styles.text}>{section.title}</Text>
+                                        <View style={styles.iconContainer}>
+                                            <Ionicons name="checkmark-circle" size={20} color="green" style={!isContentDone ? { display: "none" } : {}} />
+                                        </View>
+                                    </View>}
+
                                 </TouchableHighlight>
 
                                 {/* Expand to Show Content */}
@@ -74,12 +83,19 @@ export function Course({ route, navigation }) {
                                                 style={styles.subItem}
                                                 onPress={() => openLesson(index, subIndex)}
                                             >
-                                                <>
-                                                    <Text style={styles.subItemText}>{item.title}</Text>
-                                                    {item.isDone && (
-                                                        <Ionicons name="checkmark-circle" size={20} color="green" />
-                                                    )}
-                                                </>
+                                                {language === "fa" ?
+                                                    <View style={styles.subButton}>
+                                                        <View style={styles.iconContainer}>
+                                                            <Ionicons name="checkmark-circle" size={20} color="green" style={!item.isDone ? { display: "none" } : {}} />
+                                                        </View>
+                                                        <Text style={styles.subItemText}>{item.title}</Text>
+                                                    </View> :
+                                                    <View style={styles.subButton}>
+                                                        <Text style={styles.subItemText}>{item.title}</Text>
+                                                        <View style={styles.iconContainer}>
+                                                            <Ionicons name="checkmark-circle" size={20} color="green" style={!item.isDone ? { display: "none" } : {}} />
+                                                        </View>
+                                                    </View>}
                                             </TouchableHighlight>
                                         ))}
 
@@ -91,12 +107,20 @@ export function Course({ route, navigation }) {
                                                 navigation.navigate("Test", { questions: section.test, courseId, sectionIndex: index });
                                             }}
                                         >
-                                            <>
-                                                <Text style={styles.subItemText}>Test</Text>
-                                                {isTestDone && (
-                                                    <Ionicons name="checkmark-circle" size={20} color="green" />
-                                                )}
-                                            </>
+
+                                              {language === "fa" ?
+                                                    <View style={styles.subButton}>
+                                                        <View style={styles.iconContainer}>
+                                                            <Ionicons name="checkmark-circle" size={20} color="green" style={!isTestDone ? { display: "none" } : {}} />
+                                                        </View>
+                                                <Text style={styles.subItemText}>{"آزمون"}</Text>
+                                                    </View> :
+                                                    <View style={styles.subButton}>
+                                                <Text style={styles.subItemText}>{language === "ru" ? "викторина" : language === "de" ? "Quiz" : language === "es" ? "cuestionario" : language === "fr" ? "questionnaire" : language === "fa" ? "آزمون" : "Quiz"}</Text>
+                                                        <View style={styles.iconContainer}>
+                                                            <Ionicons name="checkmark-circle" size={20} color="green" style={!isTestDone ? { display: "none" } : {}} />
+                                                        </View>
+                                                    </View>}
                                         </TouchableHighlight>
                                     </View>
                                 )}
@@ -112,7 +136,15 @@ export function Course({ route, navigation }) {
 const styles = StyleSheet.create({
     container: {
         justifyContent: 'center',
-        padding: 16
+        padding: 16,
+        textAlign: 'left',
+        writingDirection: 'ltr'
+    },
+    containerPersian: {
+        justifyContent: 'center',
+        padding: 16,
+        textAlign: 'right',
+        writingDirection: 'rtl'
     },
     touchableHighlight: {
         alignItems: 'center',
@@ -128,20 +160,22 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingTop: 35,
         paddingBottom: 35,
-        paddingRight: 20,
-        paddingLeft: 20,
+        paddingHorizontal: 30,
         width: '100%',
         height: 100,
         borderTopRightRadius: 10,
         borderTopLeftRadius: 10,
         flexDirection: 'row',
-        justifyContent: 'space-between',
-
+        justifyContent: 'space-between'
     },
-    buttonContainer: {
-        flexDirection: "row",
-        marginLeft: "auto",
-        marginTop: 10
+    subButton: {
+        backgroundColor: 'transparent',
+        alignItems: 'center',
+        width: '100%',
+        flexDirection: 'row',
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+        justifyContent: 'space-between'
     },
     subItemContainer: {
         backgroundColor: '#fff',
@@ -171,5 +205,8 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
+    },
+    iconContainer: {
+        width: 24
     }
 });

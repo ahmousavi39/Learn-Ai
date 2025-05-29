@@ -123,7 +123,6 @@ export function Settings() {
 
   const toResetData = () => {
       dispatch(resetData());
-      dispatch(loadData());
       setModalVisible(false);
   }
 

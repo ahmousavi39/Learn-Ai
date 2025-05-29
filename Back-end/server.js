@@ -41,6 +41,7 @@ Rules:
 
 Return valid JSON:
 {
+  "title" : "string",
   "sections": [
     { "title": "string", "complexity": number, "availableTime": number, "bulletCount": number }
   ]
@@ -90,7 +91,7 @@ JSON format:
   "content": [  
     {
       "title": "Concept",
-      "bulletpoint": ["Para1", "Para2", "..."],
+      "bulletpoints": ["Para1", "Para2", "..."],
       "image": "https://placeholder.com/image.jpg"
     }
   ],
@@ -119,7 +120,7 @@ Only return valid JSON.
     const parsed = JSON.parse(raw);
 
     const wordCount = parsed.content
-      .flatMap(c => c.bulletpoint)
+      .flatMap(c => c.bulletpoints)
       .join(' ')
       .split(/\s+/)
       .filter(Boolean).length;
@@ -183,7 +184,7 @@ app.post('/generate-course', async (req, res) => {
     }
 
     res.json({
-      topic,
+      topic: coursePlan.title,
       level,
       language,
       sections: sectionsData

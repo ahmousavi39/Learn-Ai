@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Alert, Button, Modal, StyleSheet, Text, TextInput, TouchableHighlight, View, ActivityIndicator } from 'react-native';
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 import { useAppDispatch, useAppSelector } from '../../hook';
-import { loadData, selectCourses, selectCoursesList, openLocation,generateCourse } from '../../../features/item/itemSlice';
+import { loadData, selectCourses, selectCoursesList, openLocation, generateCourse } from '../../../features/item/itemSlice';
 import Slider from '@react-native-community/slider';
 import { SelectList } from 'react-native-dropdown-select-list';
 
@@ -52,7 +52,7 @@ export function Home({ navigation }) {
   const generate = async (topic, level, readingTimeMin, language) => {
     try {
       setLoading(true);
-      const response = await fetch('http://192.168.2.107:4000/generate-course', {
+      const response = await fetch('https://learn-ai-w8ke.onrender.com/generate-course', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -62,10 +62,9 @@ export function Home({ navigation }) {
 
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();
-      const sections = data.sections;
 
-      if (sections && Array.isArray(sections)) {
-        dispatch(generateCourse({ name: topic, sections }));
+      if (data.sections && Array.isArray(data.sections)) {
+        dispatch(generateCourse({ name: data.topic, sections: data.sections, language: data.language, level }));
         setText('');
         setModalVisible(false);
       } else {
@@ -82,7 +81,7 @@ export function Home({ navigation }) {
   const openCourse = (id) => {
     courses.map(course => {
       if (course.id === id) {
-        dispatch(openLocation({courseId: course.id, sectionIndex: null, contentIndex: null, isTest: false}))
+        dispatch(openLocation({ courseId: course.id, sectionIndex: null, contentIndex: null, isTest: false }))
         navigation.navigate('Course', {
           courseId: id,
           selectedSectionIndex: undefined
@@ -105,7 +104,8 @@ export function Home({ navigation }) {
                   onPress={() => openCourse(course.id)}
                 >
                   <View style={styles.buttonContainer}>
-                    <View style={[styles.progressOverlay, { height: `${getCourseCompletion(course)}%` }]} />                    <View style={styles.buttonContent}>
+                    <View style={[styles.progressOverlay, { height: `${getCourseCompletion(course)}%` }]} />
+                    <View style={styles.buttonContent}>
                       <Text style={styles.text}>{course.name}</Text>
                       <Text style={styles.smallText}>{getCourseCompletion(course)}% Complete</Text>
                     </View>
@@ -120,7 +120,8 @@ export function Home({ navigation }) {
                     onPress={() => openCourse(courses[index + 1].id)}
                   >
                     <View style={styles.buttonContainer}>
-                      <View style={[styles.progressOverlay, { height: `${getCourseCompletion(courses[index + 1])}%` }]} />                      <View style={styles.buttonContent}>
+                      <View style={[styles.progressOverlay, { height: `${getCourseCompletion(courses[index + 1])}%` }]} />
+                      <View style={styles.buttonContent}>
                         <Text style={styles.text}>{courses[index + 1].name}</Text>
                         <Text style={styles.smallText}>{getCourseCompletion(courses[index + 1])}% Complete</Text>
                       </View>
@@ -261,7 +262,7 @@ const styles = StyleSheet.create({
     height: '100%',
     paddingTop: 55,
     paddingBottom: 55,
-    
+
   },
   text: {
     color: 'white',
@@ -269,10 +270,10 @@ const styles = StyleSheet.create({
     fontSize: 20
 
   },
-    smallText: {
+  smallText: {
     color: 'white',
     textAlign: 'center',
-    fontSize: 12
+    fontSize: 10
   },
   input: {
     height: 40,

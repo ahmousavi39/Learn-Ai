@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { selectCourses, lessonDone, openLocation } from '../../../features/item/itemSlice';
+import { selectCourses, lessonDone, openLocation, regenerateLesson } from '../../../features/item/itemSlice';
 import { useAppDispatch, useAppSelector } from '../../hook';
 import {
   SafeAreaProvider,
@@ -19,9 +19,9 @@ import { MaterialIcons } from '@expo/vector-icons';
 export function Lesson({ route, navigation }) {
   const dispatch = useAppDispatch();
   const courses = useAppSelector(selectCourses);
-  const [content, setContent] = useState({ title: '', bulletpoint: [], image: '', id: 0, isDone: false });
+  const [content, setContent] = useState({ title: '', bulletpoints: [], image: '', id: 0, isDone: false });
 
-  const { courseId, sectionIndex, contentIndex } = route.params || {};
+  const { courseId, sectionIndex, contentIndex, language } = route.params || {};
   const screenWidth = Dimensions.get('window').width;
 
   useEffect(() => {
@@ -51,19 +51,48 @@ export function Lesson({ route, navigation }) {
         courseId,
         sectionIndex,
         contentIndex: nextContentIndex,
+        language
       });
     } else {
       // No more content, go to test if exists
       if (section.test && section.test.length > 0) {
-        dispatch(openLocation({ courseId, sectionIndex, contentIndex, isTest: true }))
+        dispatch(openLocation({ courseId, sectionIndex, contentIndex: null, isTest: true }))
         navigation.navigate('Test', { questions: section.test, courseId, sectionIndex });
       } else {
         // If no test, maybe go back or somewhere else
-        dispatch(openLocation({ courseId, sectionIndex: sectionIndex+1, contentIndex: null, isTest: true }))
-        navigation.goBack();
+        dispatch(openLocation({ courseId, sectionIndex: sectionIndex + 1, contentIndex: null, isTest: true }));
+        navigation.navigate('Course', { courseId, selectedSectionIndex: sectionIndex })
       }
     }
   };
+
+  const goToPrevious = () => {
+    const course = courses.find(course => course.id === courseId);
+    if (!course) return;
+
+    const section = course.sections[sectionIndex];
+    if (!section) return;
+
+    if (contentIndex > 0) {
+      // Go to previous content in same section
+      navigation.navigate('Lesson', {
+        courseId,
+        sectionIndex,
+        contentIndex: contentIndex - 1,
+      });
+    } else {
+      // First content of first section, just go back to course
+      navigation.navigate('Course', {
+        courseId,
+        selectedSectionIndex: sectionIndex !== 0 ? sectionIndex - 1 : 0,
+      });
+    }
+  };
+
+  const reGenerate = () => {
+    const res = ['new shit', 'niga niga chiken means love', 'money money'];
+    dispatch(regenerateLesson({courseId, sectionIndex, contentIndex, newBulletpoints: res}))
+   }
 
   return (
     <SafeAreaProvider>
@@ -76,24 +105,40 @@ export function Lesson({ route, navigation }) {
               resizeMode="cover"
             />
           ) : null}
-
-          <Text style={styles.title}>{content.title}</Text>
+          <Text style={language === "fa" ? [styles.title, styles.persianText] : styles.title}>{content.title}</Text>
 
           <View style={styles.textBlock}>
-            {content.bulletpoint.map((text, index) => (
-              <View key={index} style={styles.bulletContainer}>
-                <Text style={styles.bullet}>•</Text>
-                <Text style={styles.bulletText}>{text}</Text>
-              </View>
+            {content.bulletpoints.map((text, index) => (
+              <>
+                {language === 'fa' ? (
+                  <View key={index} style={styles.persianBulletContainer}>
+                    <Text style={styles.persianBullet}>{'\u2013'}</Text>
+                    <Text style={[styles.bulletText, styles.persianText]}>{text}</Text>
+                  </View>
+                ) : (
+                  <View key={index} style={styles.bulletContainer}>
+                    <Text style={styles.bullet}>{'\u2013'}</Text>
+                    <Text style={styles.bulletText}>{text}</Text>
+                  </View>
+                )}
+              </>
+
             ))}
           </View>
         </ScrollView>
 
+        <Pressable style={styles.reGenerateTextButton} onPress={reGenerate}>
+          <MaterialIcons name="refresh" size={36} color="orange" />
+        </Pressable>
         <Pressable style={styles.nextButton} onPress={goToNext}>
           <MaterialIcons name="navigate-next" size={36} color="#3730a3" />
         </Pressable>
+
+        <Pressable style={styles.backButton} onPress={goToPrevious}>
+          <MaterialIcons name="navigate-before" size={36} color="#3730a3" />
+        </Pressable>
       </SafeAreaView>
-    </SafeAreaProvider>
+    </SafeAreaProvider >
   );
 }
 
@@ -104,7 +149,8 @@ const styles = StyleSheet.create({
   },
   container: {
     paddingHorizontal: 10,
-    paddingBottom: 80, // space for button
+    paddingVertical: 10,
+    paddingBottom: 80
   },
   image: {
     height: 220,
@@ -132,6 +178,21 @@ const styles = StyleSheet.create({
     marginRight: 10,
     color: '#333',
   },
+  persianBulletContainer: {
+    flexDirection: 'row-reverse', // Important for RTL layout
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  persianBullet: {
+    fontSize: 20,
+    lineHeight: 24,
+    marginLeft: 10, // spacing between bullet and text
+    color: '#333',
+  },
+  persianText: {
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
   bulletText: {
     flex: 1,
     fontSize: 16,
@@ -141,7 +202,24 @@ const styles = StyleSheet.create({
   nextButton: {
     position: 'absolute',
     right: 20,
-    bottom: 30,
+    bottom: 40,
     backgroundColor: 'transparent',
+  },
+  backButton: {
+    position: 'absolute',
+    left: 20,
+    bottom: 40,
+    backgroundColor: 'transparent',
+  },
+  reGenerateTextButton: {
+    position: 'absolute',
+    bottom: 35,
+    alignSelf: 'center',
+    backgroundColor: 'transparent',      // no fill
+    paddingHorizontal: 48,
+    paddingVertical: 2,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: 'orange',              // red outline
   },
 });

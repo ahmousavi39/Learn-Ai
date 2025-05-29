@@ -1,7 +1,7 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Provider } from 'react-redux';
-import { Course, Home, RightHeaderHome, Settings } from './app/components';
+import { Course, Home, RightHeaderHome, Settings, LeftHeader } from './app/components';
 import { store } from './app/store';
 import { NavigationContainer } from '@react-navigation/native';
 import { Lesson } from './app/components/Pages/lesson';
@@ -27,6 +27,7 @@ export default function App() {
           component={Course}
           options={{
             headerTitleAlign: "center",
+            headerLeft: () => <LeftHeader />,
           }}
         />
         <Stack.Screen
@@ -34,6 +35,7 @@ export default function App() {
           component={Lesson}
           options={{
             headerTitleAlign: "center",
+            headerLeft: () => <LeftHeader />,
           }}
         />
         <Stack.Screen
@@ -41,6 +43,7 @@ export default function App() {
           component={QuestionRender}
           options={{
             headerTitleAlign: "center",
+            headerLeft: () => <LeftHeader />,
           }}
         />
         <Stack.Screen

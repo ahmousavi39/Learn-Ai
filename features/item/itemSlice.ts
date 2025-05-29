@@ -9,7 +9,7 @@ interface SectionObjectState {
     content: {
         title: string;
         id: number,
-        bulletpoint: string[];
+        bulletpoints: string[];
         image: string;
         isDone: boolean;
     }[];
@@ -25,6 +25,8 @@ interface SectionObjectState {
 interface CoursesObjectState {
     id: number;
     name: string;
+    language: string;
+    level: string;
     sections: SectionObjectState[];
 }
 
@@ -32,14 +34,14 @@ interface ItemState {
     courses: CoursesObjectState[];
     isLoading: boolean;
     coursesList: { name: string; id: number }[];
-    currentLocation: {courseId: number|null, sectionIndex: number|null, contentIndex: number|null, isTest: boolean}
+    currentLocation: { courseId: number | null, sectionIndex: number | null, contentIndex: number | null, isTest: boolean }
 }
 
 const initialState: ItemState = {
     courses: [],
     isLoading: false,
     coursesList: [],
-    currentLocation: {courseId: null, sectionIndex:null, contentIndex: null, isTest: false}
+    currentLocation: { courseId: null, sectionIndex: null, contentIndex: null, isTest: false }
 }
 
 export const loadData = createAsyncThunk('data/loadData', async () => {
@@ -56,14 +58,14 @@ export const itemSlice = createSlice({
     name: 'item',
     initialState,
     reducers: {
-        generateCourse: (state, action: PayloadAction<{ name: string, sections: SectionObjectState[] }>) => {
+        generateCourse: (state, action: PayloadAction<{ name: string, sections: SectionObjectState[], language: string, level: string }>) => {
             let id = 0;
             if (state.coursesList.length > 0) {
                 id = state.coursesList.slice(-1)[0].id + 1;
             }
             const coursesListData = [...state.coursesList, { name: action.payload.name, id }];
             state.coursesList = coursesListData;
-            const coursesData = [...state.courses, { sections: action.payload.sections, id, name: action.payload.name }];
+            const coursesData = [...state.courses, { sections: action.payload.sections, id, name: action.payload.name, language: action.payload.language, level: action.payload.level }];
             state.courses = coursesData;
 
             const pushData = async () => {
@@ -84,11 +86,9 @@ export const itemSlice = createSlice({
             state.courses.map((course, courseIndex) => {
                 if (course.id == action.payload.courseId) {
                     courseInd = courseIndex;
-                    console.log(state.courses[courseIndex].sections[action.payload.sectionIndex].test[action.payload.testIndex])
                     state.courses[courseIndex].sections[action.payload.sectionIndex].test[action.payload.testIndex].isDone = true;
                 }
             })
-            console.log(state.courses[courseInd].sections[action.payload.sectionIndex].test[action.payload.testIndex])
             const pushData = async () => {
                 await putItem('courses', state.courses);
             };
@@ -99,11 +99,9 @@ export const itemSlice = createSlice({
             state.courses.map((course, courseIndex) => {
                 if (course.id == action.payload.courseId) {
                     courseInd = courseIndex;
-                    console.log(state.courses[courseIndex].sections[action.payload.sectionIndex].content[action.payload.contentIndex])
                     state.courses[courseIndex].sections[action.payload.sectionIndex].content[action.payload.contentIndex].isDone = true;
                 }
             })
-            console.log(state.courses[courseInd].sections[action.payload.sectionIndex].content[action.payload.contentIndex])
             const pushData = async () => {
                 await putItem('courses', state.courses);
             };
@@ -119,8 +117,20 @@ export const itemSlice = createSlice({
             removeData();
         },
         openLocation: (state, action: PayloadAction<{ courseId: number, sectionIndex: number, contentIndex: number, isTest: boolean }>) => {
-            const {courseId, sectionIndex, contentIndex, isTest} = action.payload || null;
-            state.currentLocation = {courseId, sectionIndex, contentIndex, isTest};
+            const { courseId, sectionIndex, contentIndex, isTest } = action.payload || null;
+            state.currentLocation = { courseId, sectionIndex, contentIndex, isTest };
+        },
+        regenerateLesson: (state, action: PayloadAction<{ courseId: number, sectionIndex: number, contentIndex: number, newBulletpoints: string[] }>) => {
+            state.courses.map((course, courseIndex) => {
+                if (course.id == action.payload.courseId) {
+                    state.courses[courseIndex].sections[action.payload.sectionIndex].content[action.payload.contentIndex].bulletpoints = action.payload.newBulletpoints;
+
+                }
+            })
+            const pushData = async () => {
+                await putItem('courses', state.courses);
+            };
+            pushData();
         }
     },
     extraReducers: (builder) => {
@@ -131,10 +141,11 @@ export const itemSlice = createSlice({
     },
 });
 
-export const { generateCourse, updateData, resetData, testDone, lessonDone, openLocation } = itemSlice.actions;
+export const { generateCourse, updateData, resetData, testDone, lessonDone, openLocation, regenerateLesson } = itemSlice.actions;
 
 export const selectIsItemLoading = (state: RootState) => state.item.isLoading;
 export const selectCourses = (state: RootState) => state.item.courses;
 export const selectCoursesList = (state: RootState) => state.item.coursesList;
+export const selectCurrentLocation = (state: RootState) => state.item.currentLocation;
 
 export default itemSlice.reducer;
