@@ -34,6 +34,7 @@ export function Lesson({ route, navigation }) {
       level = course.level;
       if (section) {
         setContent(section.content[contentIndex]);
+        console.log(content)
       }
     }
   }, [courses, courseId, sectionIndex, contentIndex]);
@@ -121,39 +122,38 @@ export function Lesson({ route, navigation }) {
 
   return (
     <SafeAreaProvider>
-      <SafeAreaView style={loading ? styles.safeAreaDisabled : styles.safeArea}>
-                  {loading && <ActivityIndicator size="large" color="#0000ff" />}
-          {!loading && <>
+      <SafeAreaView style={!loading ? styles.safeArea : styles.disabledSafeArea}>
         <ScrollView contentContainerStyle={styles.container}>
-            {content.image ? (
-              <Image
-                source={{ uri: content.image }}
-                style={[styles.image, { width: screenWidth - 40 }]}
-                resizeMode="cover"
-              />
-            ) : null}
-            <Text style={language === "fa" ? [styles.title, styles.persianText] : styles.title}>{content.title}</Text>
+          {content.image ? (
+            <Image
+              source={{ uri: content.image }}
+              style={[styles.image, { width: screenWidth - 20 }]}
+              resizeMode="cover"
+            />
+          ) : null}
+          <Text style={language === "fa" ? [styles.title, styles.persianText] : styles.title}>{content.title}</Text>
 
-            <View style={styles.textBlock}>
-              {content.bulletpoints.map((text, index) => (
-                <>
-                  {language === 'fa' ? (
-                    <View key={index} style={styles.persianBulletContainer}>
-                      <Text style={styles.persianBullet}>{'\u2013'}</Text>
-                      <Text style={[styles.bulletText, styles.persianText]}>{text}</Text>
-                    </View>
-                  ) : (
-                    <View key={index} style={styles.bulletContainer}>
-                      <Text style={styles.bullet}>{'\u2013'}</Text>
-                      <Text style={styles.bulletText}>{text}</Text>
-                    </View>
-                  )}
-                </>
+          <View style={styles.textBlock}>
+            {content.bulletpoints.map((text, index) => (
+              <>
+                {language === 'fa' ? (
+                  <View key={index} style={styles.persianBulletContainer}>
+                    <Text style={styles.persianBullet}>{'\u2013'}</Text>
+                    <Text style={[styles.bulletText, styles.persianText]}>{text}</Text>
+                  </View>
+                ) : (
+                  <View key={index} style={styles.bulletContainer}>
+                    <Text style={styles.bullet}>{'\u2013'}</Text>
+                    <Text style={styles.bulletText}>{text}</Text>
+                  </View>
+                )}
+              </>
 
-              ))}
-            </View>
-          
+            ))}
+          </View>
         </ScrollView>
+
+        {loading && <ActivityIndicator size="large" color="#0000ff" />}
 
         <Pressable style={styles.reGenerateTextButton} onPress={reGenerate}>
           <MaterialIcons name="refresh" size={36} color="orange" />
@@ -165,7 +165,6 @@ export function Lesson({ route, navigation }) {
         <Pressable style={styles.backButton} onPress={goToPrevious}>
           <MaterialIcons name="navigate-before" size={36} color="#3730a3" />
         </Pressable>
-      </>}
       </SafeAreaView>
     </SafeAreaProvider >
   );
@@ -173,21 +172,19 @@ export function Lesson({ route, navigation }) {
 
 const styles = StyleSheet.create({
   safeArea: {
+    flex: 1,
     backgroundColor: '#f9f9f9',
   },
-  container: {
-    flex: 1,
-    paddingHorizontal: 10,
-    paddingVertical: 10,
-    paddingBottom: 80
-  },
-  safeAreaDisabled: {
+  disabledSafeArea: {
     flex: 1,
     justifyContent: 'center',
     paddingHorizontal: 10,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    width: "100%",
-    height: "100%"
+  },
+  container: {
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    paddingBottom: 80
   },
   image: {
     height: 220,

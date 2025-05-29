@@ -59,6 +59,7 @@ export const itemSlice = createSlice({
     initialState,
     reducers: {
         generateCourse: (state, action: PayloadAction<{ name: string, sections: SectionObjectState[], language: string, level: string }>) => {
+            console.log(action.payload.sections)
             let id = 0;
             if (state.coursesList.length > 0) {
                 id = state.coursesList.slice(-1)[0].id + 1;

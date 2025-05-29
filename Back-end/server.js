@@ -60,8 +60,6 @@ Return valid JSON:
   const parsed = JSON.parse(raw);
   return parsed;
 }
-
-// ✅ STEP 2: Generate content using o4-mini
 async function generateSection(section, level, language, maxRetries = 3) {
   const bulletCount = section.bulletCount || 3;
   let finalResult;
@@ -90,7 +88,7 @@ JSON format:
   "content": [  
     {
       "title": "Concept",
-      "bulletpoints": ["bulletpoint1", "bulletpoint2", ...],
+      "bulletpoints": ["Para1", "Para2", "..."],
       "image": "https://placeholder.com/image.jpg"
     }
   ],
@@ -158,6 +156,7 @@ Only return valid JSON.
 
   return finalResult;
 }
+
 
 // STEP 3: Main API route
 app.post('/generate-course', async (req, res) => {
