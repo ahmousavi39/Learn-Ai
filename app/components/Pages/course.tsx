@@ -61,13 +61,13 @@ export function Course({ route, navigation }) {
                                 >
                                     {language === "fa" ? <View style={styles.button}>
                                         <View style={styles.iconContainer}>
-                                            <Ionicons name="checkmark-circle" size={20} color="green" style={!isContentDone ? { display: "none" } : {}} />
+                                            <Ionicons name="checkmark-circle" size={20} color="green" style={!isContentDone || !isTestDone ? { display: "none" } : {}} />
                                         </View>
                                         <Text style={styles.text}>{section.title}</Text>
                                     </View> : <View style={styles.button}>
                                         <Text style={styles.text}>{section.title}</Text>
                                         <View style={styles.iconContainer}>
-                                            <Ionicons name="checkmark-circle" size={20} color="green" style={!isContentDone ? { display: "none" } : {}} />
+                                            <Ionicons name="checkmark-circle" size={20} color="green" style={!isContentDone || !isTestDone ? { display: "none" } : {}} />
                                         </View>
                                     </View>}
 

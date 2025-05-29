@@ -12,14 +12,17 @@ import {
   Text,
   View,
   Dimensions,
-  Pressable
+  Pressable,
+  ActivityIndicator
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 
 export function Lesson({ route, navigation }) {
   const dispatch = useAppDispatch();
   const courses = useAppSelector(selectCourses);
-  const [content, setContent] = useState({ title: '', bulletpoints: [], image: '', id: 0, isDone: false });
+  const [content, setContent] = useState({ title: '', bulletpoints: [[]], image: '', id: 0, isDone: false });
+  const [loading, setLoading] = useState(false);
+  let level = "4/10";
 
   const { courseId, sectionIndex, contentIndex, language } = route.params || {};
   const screenWidth = Dimensions.get('window').width;
@@ -28,6 +31,7 @@ export function Lesson({ route, navigation }) {
     const course = courses.find(course => course.id === courseId);
     if (course) {
       const section = course.sections[sectionIndex];
+      level = course.level;
       if (section) {
         setContent(section.content[contentIndex]);
       }
@@ -89,42 +93,70 @@ export function Lesson({ route, navigation }) {
     }
   };
 
-  const reGenerate = () => {
-    const res = ['new shit', 'niga niga chiken means love', 'money money'];
-    dispatch(regenerateLesson({courseId, sectionIndex, contentIndex, newBulletpoints: res}))
-   }
+  const reGenerate = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('https://learn-ai-w8ke.onrender.com/regenerate-lesson', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ bulletpoints: content.bulletpoints, level, language }),
+      });
+
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      const newBulletpoints = await response.json();
+
+      if (newBulletpoints && Array.isArray(newBulletpoints)) {
+        dispatch(regenerateLesson({ courseId, sectionIndex, contentIndex, newBulletpoints }))
+      } else {
+        throw new Error('Invalid sections data from server');
+      }
+    } catch (error) {
+      console.error('Failed to generate lesson:', error);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <SafeAreaProvider>
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={loading ? styles.safeAreaDisabled : styles.safeArea}>
         <ScrollView contentContainerStyle={styles.container}>
-          {content.image ? (
-            <Image
-              source={{ uri: content.image }}
-              style={[styles.image, { width: screenWidth - 40 }]}
-              resizeMode="cover"
-            />
-          ) : null}
-          <Text style={language === "fa" ? [styles.title, styles.persianText] : styles.title}>{content.title}</Text>
+          {loading && <ActivityIndicator size="large" color="#0000ff" />}
+          {!loading && <>
+            {content.image ? (
+              <Image
+                source={{ uri: content.image }}
+                style={[styles.image, { width: screenWidth - 40 }]}
+                resizeMode="cover"
+              />
+            ) : null}
+            <Text style={language === "fa" ? [styles.title, styles.persianText] : styles.title}>{content.title}</Text>
 
-          <View style={styles.textBlock}>
-            {content.bulletpoints.map((text, index) => (
-              <>
-                {language === 'fa' ? (
-                  <View key={index} style={styles.persianBulletContainer}>
-                    <Text style={styles.persianBullet}>{'\u2013'}</Text>
-                    <Text style={[styles.bulletText, styles.persianText]}>{text}</Text>
-                  </View>
-                ) : (
-                  <View key={index} style={styles.bulletContainer}>
-                    <Text style={styles.bullet}>{'\u2013'}</Text>
-                    <Text style={styles.bulletText}>{text}</Text>
-                  </View>
-                )}
-              </>
+            <View style={styles.textBlock}>
+              {content.bulletpoints.map((paragraphs, index) => (
+                <>
+                  {language === 'fa' ? (
+                    <View key={index} style={styles.persianBulletContainer}>
+                      <Text style={styles.persianBullet}>{'\u2013'}</Text>
+                      {paragraphs.map(text => 
+                      <Text style={[styles.bulletText, styles.persianText]}>{text}</Text>
+                      )}
+                    </View>
+                  ) : (
+                    <View key={index} style={styles.bulletContainer}>
+                      <Text style={styles.bullet}>{'\u2013'}</Text>
+                       {paragraphs.map(text => 
+                      <Text style={styles.bulletText}>{text}</Text>
+                      )}
+                    </View>
+                  )}
+                </>
 
-            ))}
-          </View>
+              ))}
+            </View>
+          </>}
         </ScrollView>
 
         <Pressable style={styles.reGenerateTextButton} onPress={reGenerate}>
@@ -151,6 +183,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 10,
     paddingBottom: 80
+  },
+  safeAreaDisabled:{
+    justifyContent: 'center',
+    paddingHorizontal: 10,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   image: {
     height: 220,

@@ -3,7 +3,7 @@ import { Alert, Button, Modal, StyleSheet, Text, TextInput, TouchableHighlight, 
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 import { useAppDispatch, useAppSelector } from '../../hook';
 import { loadData, selectCourses, selectCoursesList, openLocation, generateCourse } from '../../../features/item/itemSlice';
-import Slider from '@react-native-community/slider';
+import MultiSlider from '@ptomasroos/react-native-multi-slider';
 import { SelectList } from 'react-native-dropdown-select-list';
 
 export function Home({ navigation }) {
@@ -167,24 +167,33 @@ export function Home({ navigation }) {
                 />
 
                 <Text style={styles.modalText}>Select Level: {levelOneToTen}</Text>
-                <Slider
-                  style={styles.slider}
-                  minimumValue={1}
-                  maximumValue={10}
+                <MultiSlider
+                  values={[levelOneToTen]}
+                  onValuesChange={(values) => setLevelOneToTen(values[0])}
+                  min={1}
+                  max={10}
                   step={1}
-                  value={levelOneToTen}
-                  onValueChange={setLevelOneToTen}
+                  sliderLength={280}
+                  selectedStyle={{ backgroundColor: '#fc4848' }}
+                  unselectedStyle={{ backgroundColor: '#ccc' }}
+                  trackStyle={{ height: 4 }}
+                  markerStyle={{ height: 40, width: "100%", backgroundColor: '#fc4848' }}
                 />
 
                 <Text style={styles.modalText}>Time to Learn (min): {time}</Text>
-                <Slider
-                  style={styles.slider}
-                  minimumValue={10}
-                  maximumValue={120}
+                <MultiSlider
+                  values={[time]}
+                  onValuesChange={(values) => setTime(values[0])}
+                  min={10}
+                  max={120}
                   step={10}
-                  value={time}
-                  onValueChange={setTime}
+                  sliderLength={280}
+                  selectedStyle={{ backgroundColor: '#fc4848' }}
+                  unselectedStyle={{ backgroundColor: '#ccc' }}
+                  trackStyle={{ height: 4 }}
+                  markerStyle={{ height: 40, width: "100%", backgroundColor: '#fc4848' }}
                 />
+
 
                 <Text style={styles.modalText}>Select Language:</Text>
                 <SelectList
@@ -282,6 +291,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     marginBottom: 10,
     width: '100%',
+    color: "black"
   },
   centeredView: {
     flex: 1,

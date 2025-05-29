@@ -91,7 +91,7 @@ JSON format:
   "content": [  
     {
       "title": "Concept",
-      "bulletpoints": ["Para1", "Para2", "..."],
+      "bulletpoints": [["Para1", "Para2", "..."], ["Para1", "Para2", "..."]],
       "image": "https://placeholder.com/image.jpg"
     }
   ],
@@ -194,6 +194,54 @@ app.post('/generate-course', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+// 🔁 Regenerate bulletpoints with same meaning but rewritten
+app.post('/regenerate-lesson', async (req, res) => {
+  const { language, level, bulletpoints } = req.body;
+
+  if (!language || !level || !Array.isArray(bulletpoints)) {
+    return res.status(400).json({ error: 'Missing required fields: language, level, or bulletpoints' });
+  }
+
+  const prompt = `
+You are a rewriting engine for educational mobile content.
+
+Task:
+- Rewrite the following bulletpoints in ${language} for a level ${level}/10 learner.
+- Maintain the original meaning and information.
+- The rewritten version must have the same number of bulletpoints.
+- Each rewritten bulletpoint should have the same paragraph count as the original.
+- Ensure mobile-friendly, clear language.
+
+Bulletpoints to rewrite:
+${JSON.stringify(bulletpoints, null, 2)}
+
+Return format:
+[
+  ["Rewritten paragraph 1", "Rewritten paragraph 2", ...],
+  ["Another rewritten paragraph 1", "Another rewritten paragraph 2", ...]
+]
+`;
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: CONTENT_MODEL,
+      messages: [
+        { role: 'system', content: SYSTEM_ROLE },
+        { role: 'user', content: prompt }
+      ],
+    });
+
+    const raw = response.choices[0].message.content.replace(/```json|```/g, '').trim();
+    const parsed = JSON.parse(raw);
+
+    res.json({ newBulletpoints: parsed });
+  } catch (err) {
+    console.error('❌ Error during regeneration:', err.message);
+    res.status(500).json({ error: 'Failed to regenerate bulletpoints' });
+  }
+});
+
 
 // Start server
 const PORT = process.env.PORT || 4000;
