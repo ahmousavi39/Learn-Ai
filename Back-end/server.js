@@ -73,7 +73,6 @@ Create a section titled "${section.title}" for a level ${level}/10 learner in ${
 Instructions:
 - Total words ≈ ${section.availableTime * 50}
 - Include ${bulletCount} bulletpoints
-- Each bulletpoint has 2–4 short paragraphs
 - Add 4-question quiz at end (1 correct + 3 wrong)
 - Use a public related image for every bulletpoint if neccersery
 - Time allocation per bulletpoint (based on complexity ${section.complexity}):
@@ -91,10 +90,7 @@ JSON format:
   "content": [  
     {
       "title": "Concept",
-      "bulletpoints": [
-      ["bulletpoint1 paragraph 1", "bulletpoint1 paragraph 2", ...],
-      ["bulletpoint2 paragraph 1", "bulletpoint2 paragraph 2", ...]
-      ],
+      "bulletpoints": ["bulletpoint1", "bulletpoint2", ...],
       "image": "https://placeholder.com/image.jpg"
     }
   ],
@@ -219,8 +215,7 @@ ${JSON.stringify(bulletpoints, null, 2)}
 
 Return format:
 [
-  ["bulletpoint1 Rewritten paragraph 1", "bulletpoint1 Rewritten paragraph 2", ...],
-  ["bulletpoint2 rewritten paragraph 1", "bulletpoint2 rewritten paragraph 2", ...]
+  "bulletpoint1", "bulletpoint2" , ...
 ]
 `;
 

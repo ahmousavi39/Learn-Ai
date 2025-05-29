@@ -20,7 +20,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 export function Lesson({ route, navigation }) {
   const dispatch = useAppDispatch();
   const courses = useAppSelector(selectCourses);
-  const [content, setContent] = useState({ title: '', bulletpoints: [[]], image: '', id: 0, isDone: false });
+  const [content, setContent] = useState({ title: '', bulletpoints: [], image: '', id: 0, isDone: false });
   const [loading, setLoading] = useState(false);
   let level = "4/10";
 
@@ -135,17 +135,17 @@ export function Lesson({ route, navigation }) {
             <Text style={language === "fa" ? [styles.title, styles.persianText] : styles.title}>{content.title}</Text>
 
             <View style={styles.textBlock}>
-              {content.bulletpoints.map((paragraphs, index) => (
+              {content.bulletpoints.map((text, index) => (
                 <>
                   {language === 'fa' ? (
                     <View key={index} style={styles.persianBulletContainer}>
                       <Text style={styles.persianBullet}>{'\u2013'}</Text>
-                      <Text style={[styles.bulletText, styles.persianText]}>{paragraphs.map(text => <>{text}{'\n'}</>)}</Text>
+                      <Text style={[styles.bulletText, styles.persianText]}>{text}</Text>
                     </View>
                   ) : (
                     <View key={index} style={styles.bulletContainer}>
                       <Text style={styles.bullet}>{'\u2013'}</Text>
-                      <Text style={styles.bulletText}>{paragraphs.map(text => <>{text}{'\n'}</>)}</Text>
+                      <Text style={styles.bulletText}>{text}</Text>
                     </View>
                   )}
                 </>

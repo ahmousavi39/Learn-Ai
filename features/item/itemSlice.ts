@@ -9,7 +9,7 @@ interface SectionObjectState {
     content: {
         title: string;
         id: number,
-        bulletpoints: string[][];
+        bulletpoints: string[];
         image: string;
         isDone: boolean;
     }[];
@@ -120,7 +120,7 @@ export const itemSlice = createSlice({
             const { courseId, sectionIndex, contentIndex, isTest } = action.payload || null;
             state.currentLocation = { courseId, sectionIndex, contentIndex, isTest };
         },
-        regenerateLesson: (state, action: PayloadAction<{ courseId: number, sectionIndex: number, contentIndex: number, newBulletpoints: string[][] }>) => {
+        regenerateLesson: (state, action: PayloadAction<{ courseId: number, sectionIndex: number, contentIndex: number, newBulletpoints: string[] }>) => {
             state.courses.map((course, courseIndex) => {
                 if (course.id == action.payload.courseId) {
                     state.courses[courseIndex].sections[action.payload.sectionIndex].content[action.payload.contentIndex].bulletpoints = action.payload.newBulletpoints;
