@@ -184,6 +184,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 10,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    width: "100%",
+    height: "100%"
   },
   image: {
     height: 220,

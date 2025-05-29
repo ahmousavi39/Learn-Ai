@@ -216,8 +216,8 @@ ${JSON.stringify(bulletpoints, null, 2)}
 
 Return format:
 [
-  ["Rewritten paragraph 1", "Rewritten paragraph 2", ...],
-  ["Another rewritten paragraph 1", "Another rewritten paragraph 2", ...]
+  ["bulletpoint1 Rewritten paragraph 1", "bulletpoint1 Rewritten paragraph 2", ...],
+  ["bulletpoint2 rewritten paragraph 1", "bulletpoint2 rewritten paragraph 2", ...]
 ]
 `;
 
