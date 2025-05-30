@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
+const puppeteer = require('puppeteer');
 
 const { OpenAI } = require('openai');
 
@@ -17,6 +18,26 @@ const SYSTEM_ROLE = 'You generate educational course structures in JSON and foll
 // OpenAI client
 const openai = new OpenAI({ apiKey: API_KEY });
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+async function getFirstUnsplashImage(query) {
+  const searchUrl = `https://unsplash.com/s/photos/${encodeURIComponent(query)}`;
+  const browser = await puppeteer.launch({ headless: 'new' });
+  const page = await browser.newPage();
+
+  await page.goto(searchUrl, { waitUntil: 'networkidle2' });
+
+  // Wait for image to load
+  await page.waitForSelector('figure[itemtype="http://schema.org/ImageObject"] img');
+
+  // Get the first image URL
+  const imageUrl = await page.evaluate(() => {
+    const img = document.querySelector('figure[itemtype="http://schema.org/ImageObject"] img');
+    return img?.src || null;
+  });
+
+  await browser.close();
+  return imageUrl;
+}
 
 // ✅ STEP 1: Generate a course plan using gpt-3.5
 async function getCoursePlan(topic, level, time, language) {
@@ -73,15 +94,8 @@ Instructions:
 - Include ${bulletCount} bulletpoints
 - Each bulletpoint has 2–4 short paragraphs
 - Add 4-question quiz at end (1 correct + 3 wrong)
-- Use a public related image for every bulletpoint if neccersery
 - Time allocation per bulletpoint (based on complexity ${section.complexity}):
 - Use clear, mobile-friendly language and structure
-- DO NOT USE ANY PLACEHOLDER AND SELFMADE LINKS TO IMAGES   
-- Use image from https://images.unsplash.com
-- Use a public related image for every bulletpoint if necessary
-- Use only real, verified image URLs from reliable sources 
-- DO NOT USE ANY PLACEHOLDER AND SELFMADE LINKS TO IMAGES OF WEKIPEDIA
-- the images most be related to the content of the bulletpoint
 
 JSON format:
 {
@@ -89,8 +103,7 @@ JSON format:
   "content": [  
     {
       "title": "Concept",
-      "bulletpoints": ["Para1", "Para2", "..."],
-      "image": "https://placeholder.com/image.jpg"
+      "bulletpoints": ["Para1", "Para2", "..."]
     }
   ],
   "test": [
@@ -126,11 +139,24 @@ Only return valid JSON.
     console.warn(`⚠️ "${section.title}" has ${wordCount} words (expected ${section.availableTime * 50})`);
 
     // Assign unique ids and isDone: false to each content item
-    const contentWithIds = parsed.content.map((item, index) => ({
-      id: index,
-      isDone: false,
-      ...item
+    const contentWithIds = await Promise.all(parsed.content.map(async (item, index) => {
+      const searchQuery = item.title || section.title; // Use bulletpoint or fallback
+      let imageUrl = item.image;
+
+      try {
+        imageUrl = await getFirstUnsplashImage(searchQuery);
+      } catch (e) {
+        console.warn(`⚠️ Failed to fetch image for "${searchQuery}": ${e.message}`);
+      }
+
+      return {
+        id: index,
+        isDone: false,
+        ...item,
+        image: imageUrl || null
+      };
     }));
+
 
     // Assign isDone: false to each test question
     const testWithIsDone = (parsed.test || []).map((item, index) => ({
