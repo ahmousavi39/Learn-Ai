@@ -236,17 +236,19 @@ export function QuestionRender({ route, navigation }) {
                         ))}
                     </View>
 
-                    {showResetButton && (
-                        <Pressable style={styles.retryTextButton} onPress={resetWrongAnswer}>
-                            <MaterialIcons name="refresh" size={36} color="white" />
+                    <View style={styles.footer}>
+                        {showResetButton && (
+                            <Pressable style={styles.retryTextButton} onPress={resetWrongAnswer}>
+                                <MaterialIcons name="refresh" size={36} color="white" />
+                            </Pressable>
+                        )}
+                        <Pressable style={styles.nextButton} onPress={language === "fa" ? goToPrevious : goToNext}>
+                            <MaterialIcons name="navigate-next" size={36} color="#3730a3" />
                         </Pressable>
-                    )}
-                    <Pressable style={styles.nextButton} onPress={language === "fa" ? goToPrevious : goToNext}>
-                        <MaterialIcons name="navigate-next" size={36} color="#3730a3" />
-                    </Pressable>
-                    <Pressable style={styles.backButton} onPress={language === "fa" ? goToNext : goToPrevious}>
-                        <MaterialIcons name="navigate-before" size={36} color="#3730a3" />
-                    </Pressable>
+                        <Pressable style={styles.backButton} onPress={language === "fa" ? goToNext : goToPrevious}>
+                            <MaterialIcons name="navigate-before" size={36} color="#3730a3" />
+                        </Pressable>
+                    </View>
                 </View>
 
             </SafeAreaView>
@@ -257,7 +259,6 @@ export function QuestionRender({ route, navigation }) {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        paddingHorizontal: 10,
         paddingVertical: 10,
         justifyContent: 'space-between', // spread question and options/buttons
     },
@@ -265,6 +266,7 @@ const styles = StyleSheet.create({
     questionWrapper: {
         marginTop: 40, // push question down a bit from top
         alignItems: 'center',
+        paddingHorizontal: 10
     },
 
     optionsContainer: {
@@ -282,6 +284,7 @@ const styles = StyleSheet.create({
 
     optionWrapper: {
         width: '100%',
+        paddingHorizontal: 10
     },
     optionButton: {
         backgroundColor: '#3b82f6',
@@ -304,32 +307,33 @@ const styles = StyleSheet.create({
     },
 
     retryTextButton: {
-        position: 'absolute',
-        bottom: 37.5,
         alignSelf: 'center',
         backgroundColor: '#16a34a',
         paddingHorizontal: 48,
         paddingVertical: 2,
         borderRadius: 8,
-    },
-
-    retryText: {
-        color: '#fff',
-        fontSize: 16,
-        fontWeight: '600',
+        marginVertical: "auto"
     },
     nextButton: {
         position: 'absolute',
         right: 20,
-        bottom: 40,
         backgroundColor: 'transparent',
+        marginVertical: "auto",
+        paddingVertical: 17,
     },
     backButton: {
         position: 'absolute',
         left: 20,
-        bottom: 40,
         backgroundColor: 'transparent',
+        marginVertical: "auto",
+        paddingVertical: 17,
+    },
+    footer: {
+        width: "100%",
+        height: 70,
+        backgroundColor: "",
+        position: 'absolute',
+        bottom: 0
     }
-
 
 });

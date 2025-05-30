@@ -155,9 +155,11 @@ export function Lesson({ route, navigation }) {
         </ScrollView>
 
         <View style={styles.footer}>
-          <Pressable style={styles.reGenerateTextButton} onPress={reGenerate}>
-            <MaterialIcons name="refresh" size={36} color="orange" />
-          </Pressable>
+          <View style={styles.reGenerateTextButtonContainer}>
+            <Pressable style={styles.reGenerateTextButton} onPress={reGenerate}>
+              <MaterialIcons name="refresh" size={36} color="orange" />
+            </Pressable>
+          </View>
           <Pressable style={styles.nextButton} onPress={language === "fa" ? goToPrevious : goToNext}>
             <MaterialIcons name="navigate-next" size={36} color="#3730a3" />
           </Pressable>
@@ -175,6 +177,9 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#f9f9f9',
+    paddingVertical: 10,
+    justifyContent: 'space-between', // spread question and options/buttons
+
   },
   disabledSafeArea: {
     flex: 1,
@@ -239,14 +244,14 @@ const styles = StyleSheet.create({
     right: 20,
     backgroundColor: 'transparent',
     marginVertical: "auto",
-    paddingVertical: 12,
+    paddingVertical: 17,
   },
   backButton: {
     position: 'absolute',
     left: 20,
     backgroundColor: 'transparent',
     marginVertical: "auto",
-    paddingVertical: 12,
+    paddingVertical: 17,
   },
   reGenerateTextButton: {
     alignSelf: 'center',
@@ -258,6 +263,9 @@ const styles = StyleSheet.create({
     borderColor: 'orange',
     marginVertical: "auto"
   },
+  reGenerateTextButtonContainer: {
+    paddingTop: 14
+  },
   centeredView: {
     flex: 1,
     justifyContent: 'center',
@@ -265,7 +273,7 @@ const styles = StyleSheet.create({
   },
   footer: {
     width: "100%",
-    height: 70,
+    height: 105,
     backgroundColor: "white",
     position: 'absolute',
     bottom: 0

@@ -138,7 +138,7 @@ Only return valid JSON.
     console.warn(`⚠️ "${section.title}" has ${wordCount} words (expected ${section.availableTime * 50})`);
 
     const contentWithIds = await Promise.all(parsed.content.map(async (item, index) => {
-      const searchQuery = topic + "->" + section.title + "->" + item.title + " [education concept]";
+      const searchQuery = topic + "->" + item.title + " [education concept]";
       let imageUrl = null;
 
       try {
