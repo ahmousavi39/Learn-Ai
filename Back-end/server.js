@@ -1,8 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
-const puppeteer = require('puppeteer');
-
+const axios = require('axios');
 const { OpenAI } = require('openai');
 
 const app = express();
@@ -19,24 +18,23 @@ const SYSTEM_ROLE = 'You generate educational course structures in JSON and foll
 const openai = new OpenAI({ apiKey: API_KEY });
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-async function getFirstUnsplashImage(query) {
-  const searchUrl = `https://unsplash.com/s/photos/${encodeURIComponent(query)}`;
-  const browser = await puppeteer.launch({ headless: 'new' });
-  const page = await browser.newPage();
+async function getFirstPexelsImage(query) {
+  const apiKey = process.env.PEXELS_API_KEY;
+  const endpoint = `https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&per_page=1`;
 
-  await page.goto(searchUrl, { waitUntil: 'networkidle2' });
+  try {
+    const response = await axios.get(endpoint, {
+      headers: {
+        Authorization: apiKey
+      }
+    });
 
-  // Wait for image to load
-  await page.waitForSelector('figure[itemtype="http://schema.org/ImageObject"] img');
-
-  // Get the first image URL
-  const imageUrl = await page.evaluate(() => {
-    const img = document.querySelector('figure[itemtype="http://schema.org/ImageObject"] img');
-    return img?.src || null;
-  });
-
-  await browser.close();
-  return imageUrl;
+    const photo = response.data.photos[0];
+    return photo?.src?.medium || null;
+  } catch (err) {
+    console.warn(`❌ Failed to fetch image from Pexels for "${query}": ${err.message}`);
+    return null;
+  }
 }
 
 // ✅ STEP 1: Generate a course plan using gpt-3.5
@@ -96,6 +94,7 @@ Instructions:
 - Add 4-question quiz at end (1 correct + 3 wrong)
 - Time allocation per bulletpoint (based on complexity ${section.complexity}):
 - Use clear, mobile-friendly language and structure
+- NEVER INCLUDE TIMES (HOW MUCH TIME EVERY CONTETNT OR SECTION TAKES) TO THE JSON
 
 JSON format:
 {
@@ -138,13 +137,12 @@ Only return valid JSON.
 
     console.warn(`⚠️ "${section.title}" has ${wordCount} words (expected ${section.availableTime * 50})`);
 
-    // Assign unique ids and isDone: false to each content item
     const contentWithIds = await Promise.all(parsed.content.map(async (item, index) => {
-      const searchQuery = item.title || section.title; // Use bulletpoint or fallback
-      let imageUrl = item.image;
+      const searchQuery = item.title || section.title;
+      let imageUrl = null;
 
       try {
-        imageUrl = await getFirstUnsplashImage(searchQuery);
+        imageUrl = await getFirstPexelsImage(searchQuery);
       } catch (e) {
         console.warn(`⚠️ Failed to fetch image for "${searchQuery}": ${e.message}`);
       }
@@ -153,9 +151,10 @@ Only return valid JSON.
         id: index,
         isDone: false,
         ...item,
-        image: imageUrl || null
+        image: imageUrl
       };
     }));
+
 
 
     // Assign isDone: false to each test question
