@@ -104,7 +104,7 @@ export function Course({ route, navigation }) {
                                             style={styles.testButton}
                                             onPress={() => {
                                                 dispatch(openLocation({ courseId, sectionIndex: index, contentIndex: null, isTest: true }))
-                                                navigation.navigate("Test", { questions: section.test, courseId, sectionIndex: index });
+                                                navigation.navigate("Test", { questions: section.test, courseId, sectionIndex: index, language });
                                             }}
                                         >
 

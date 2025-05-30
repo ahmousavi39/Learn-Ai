@@ -17,7 +17,7 @@ async function wrongSound() {
 }
 
 export function QuestionRender({ route, navigation }) {
-    const { questions, courseId, sectionIndex } = route.params || [];
+    const { questions, courseId, sectionIndex, language } = route.params || [];
     const [isOption0, setIsOption0] = useState(null);
     const [isOption1, setIsOption1] = useState(null);
     const [isOption2, setIsOption2] = useState(null);
@@ -181,6 +181,7 @@ export function QuestionRender({ route, navigation }) {
                     courseId,
                     sectionIndex,
                     contentIndex: lastContentIndex,
+                    language
                 });
             } else {
                 // No content, just go back to course
@@ -240,10 +241,10 @@ export function QuestionRender({ route, navigation }) {
                             <MaterialIcons name="refresh" size={36} color="white" />
                         </Pressable>
                     )}
-                    <Pressable style={styles.nextButton} onPress={goToNext}>
+                    <Pressable style={styles.nextButton} onPress={language === "fa" ? goToPrevious : goToNext}>
                         <MaterialIcons name="navigate-next" size={36} color="#3730a3" />
                     </Pressable>
-                    <Pressable style={styles.backButton} onPress={goToPrevious}>
+                    <Pressable style={styles.backButton} onPress={language === "fa" ? goToNext : goToPrevious}>
                         <MaterialIcons name="navigate-before" size={36} color="#3730a3" />
                     </Pressable>
                 </View>
@@ -285,7 +286,7 @@ const styles = StyleSheet.create({
     optionButton: {
         backgroundColor: '#3b82f6',
         borderWidth: 2,
-        borderColor: '#fff',
+        borderColor: '#3b82f6',
         borderRadius: 12,
         paddingVertical: 14,
         paddingHorizontal: 20,

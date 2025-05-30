@@ -79,7 +79,7 @@ Return valid JSON:
   const parsed = JSON.parse(raw);
   return parsed;
 }
-async function generateSection(section, level, language, maxRetries = 3) {
+async function generateSection(section, level, language, topic) {
   const bulletCount = section.bulletCount || 3;
   let finalResult;
   const prompt = `
@@ -138,7 +138,7 @@ Only return valid JSON.
     console.warn(`⚠️ "${section.title}" has ${wordCount} words (expected ${section.availableTime * 50})`);
 
     const contentWithIds = await Promise.all(parsed.content.map(async (item, index) => {
-      const searchQuery = item.title || section.title;
+      const searchQuery = topic + "->" + section.title + "->" + item.title + " [education concept]";
       let imageUrl = null;
 
       try {
@@ -197,7 +197,7 @@ app.post('/generate-course', async (req, res) => {
       console.log(`🛠 Generating section ${i + 1}/${coursePlan.sections.length} — "${section.title}"`);
 
       try {
-        const generated = await generateSection(section, level, language);
+        const generated = await generateSection(section, level, language, topic);
         sectionsData.push(generated);
       } catch (e) {
         console.error(e.message);

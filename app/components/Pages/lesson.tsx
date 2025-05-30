@@ -34,7 +34,7 @@ export function Lesson({ route, navigation }) {
       level = course.level;
       if (section) {
         setContent(section.content[contentIndex]);
-        console.log(content)
+        console.log(content.image)
       }
     }
   }, [courses, courseId, sectionIndex, contentIndex]);
@@ -62,7 +62,7 @@ export function Lesson({ route, navigation }) {
       // No more content, go to test if exists
       if (section.test && section.test.length > 0) {
         dispatch(openLocation({ courseId, sectionIndex, contentIndex: null, isTest: true }))
-        navigation.navigate('Test', { questions: section.test, courseId, sectionIndex });
+        navigation.navigate('Test', { questions: section.test, courseId, sectionIndex, language });
       } else {
         // If no test, maybe go back or somewhere else
         dispatch(openLocation({ courseId, sectionIndex: sectionIndex + 1, contentIndex: null, isTest: true }));
@@ -84,6 +84,7 @@ export function Lesson({ route, navigation }) {
         courseId,
         sectionIndex,
         contentIndex: contentIndex - 1,
+        language
       });
     } else {
       // First content of first section, just go back to course
@@ -123,6 +124,7 @@ export function Lesson({ route, navigation }) {
   return (
     <SafeAreaProvider>
       <SafeAreaView style={!loading ? styles.safeArea : styles.disabledSafeArea}>
+        {loading && <View style={styles.centeredView}><ActivityIndicator size="large" color="#0000ff" /></View>}
         <ScrollView contentContainerStyle={styles.container}>
           {content.image ? (
             <Image
@@ -152,18 +154,18 @@ export function Lesson({ route, navigation }) {
           </View>
         </ScrollView>
 
-        {loading && <View style={styles.centeredView}><ActivityIndicator size="large" color="#0000ff" /></View>}
+        <View style={styles.footer}>
+          <Pressable style={styles.reGenerateTextButton} onPress={reGenerate}>
+            <MaterialIcons name="refresh" size={36} color="orange" />
+          </Pressable>
+          <Pressable style={styles.nextButton} onPress={language === "fa" ? goToPrevious : goToNext}>
+            <MaterialIcons name="navigate-next" size={36} color="#3730a3" />
+          </Pressable>
 
-        <Pressable style={styles.reGenerateTextButton} onPress={reGenerate}>
-          <MaterialIcons name="refresh" size={36} color="orange" />
-        </Pressable>
-        <Pressable style={styles.nextButton} onPress={goToNext}>
-          <MaterialIcons name="navigate-next" size={36} color="#3730a3" />
-        </Pressable>
-
-        <Pressable style={styles.backButton} onPress={goToPrevious}>
-          <MaterialIcons name="navigate-before" size={36} color="#3730a3" />
-        </Pressable>
+          <Pressable style={styles.backButton} onPress={language === "fa" ? goToNext : goToPrevious}>
+            <MaterialIcons name="navigate-before" size={36} color="#3730a3" />
+          </Pressable>
+        </View>
       </SafeAreaView>
     </SafeAreaProvider >
   );
@@ -200,7 +202,7 @@ const styles = StyleSheet.create({
   textBlock: {
     gap: 12,
   },
-    bulletContainer: {
+  bulletContainer: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     marginBottom: 12,
@@ -235,29 +237,37 @@ const styles = StyleSheet.create({
   nextButton: {
     position: 'absolute',
     right: 20,
-    bottom: 40,
     backgroundColor: 'transparent',
+    marginVertical: "auto",
+    paddingVertical: 12,
   },
   backButton: {
     position: 'absolute',
     left: 20,
-    bottom: 40,
     backgroundColor: 'transparent',
+    marginVertical: "auto",
+    paddingVertical: 12,
   },
   reGenerateTextButton: {
-    position: 'absolute',
-    bottom: 35,
     alignSelf: 'center',
     backgroundColor: 'transparent',      // no fill
     paddingHorizontal: 48,
     paddingVertical: 2,
     borderRadius: 8,
     borderWidth: 2,
-    borderColor: 'orange',              // red outline
+    borderColor: 'orange',
+    marginVertical: "auto"
   },
-    centeredView: {
+  centeredView: {
     flex: 1,
     justifyContent: 'center',
-    alignItems: 'center',
+    alignItems: 'center'
   },
+  footer: {
+    width: "100%",
+    height: 70,
+    backgroundColor: "white",
+    position: 'absolute',
+    bottom: 0
+  }
 });
