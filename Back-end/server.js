@@ -3,7 +3,7 @@ const cors = require('cors');
 require('dotenv').config();
 const axios = require('axios');
 const { OpenAI } = require('openai');
-const {translate} = require('google-translate-api-x')
+const { translate } = require('google-translate-api-x')
 const app = express();
 app.use(cors());
 app.use(express.json());
