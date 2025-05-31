@@ -18,24 +18,21 @@ const SYSTEM_ROLE = 'You generate educational course structures in JSON and foll
 const openai = new OpenAI({ apiKey: API_KEY });
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-async function getFirstPexelsImage(query) {
-  const apiKey = process.env.PEXELS_API_KEY;
-  const endpoint = `https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&per_page=1`;
+async function getFirstGoogleImage(query) {
+  const apiKey = process.env.GOOGLE_CSE_API_KEY;
+  const cx = process.env.GOOGLE_CSE_CX;
+  const endpoint = `https://www.googleapis.com/customsearch/v1?q=${encodeURIComponent(query)}&cx=${cx}&searchType=image&num=1&key=${apiKey}`;
 
   try {
-    const response = await axios.get(endpoint, {
-      headers: {
-        Authorization: apiKey
-      }
-    });
-
-    const photo = response.data.photos[0];
-    return photo?.src?.medium || null;
+    const response = await axios.get(endpoint);
+    const imageUrl = response.data.items?.[0]?.link || null;
+    return imageUrl;
   } catch (err) {
-    console.warn(`❌ Failed to fetch image from Pexels for "${query}": ${err.message}`);
+    console.warn(`❌ Google CSE image fetch failed for "${query}": ${err.message}`);
     return null;
   }
 }
+
 
 // ✅ STEP 1: Generate a course plan using gpt-3.5
 async function getCoursePlan(topic, level, time, language) {
@@ -77,6 +74,7 @@ Return valid JSON:
 
   const raw = response.choices[0].message.content.replace(/```json|```/g, '').trim();
   const parsed = JSON.parse(raw);
+  console.log(parsed);
   return parsed;
 }
 async function generateSection(section, level, language, topic) {
@@ -126,6 +124,7 @@ Only return valid JSON.
       ],
     });
 
+    console.log(prompt);
     const raw = response.choices[0].message.content.replace(/```json|```/g, '').trim();
     const parsed = JSON.parse(raw);
 
@@ -144,7 +143,7 @@ Only return valid JSON.
       let imageUrl = null;
 
       try {
-        imageUrl = await getFirstPexelsImage(searchQuery);
+        imageUrl = await getFirstGoogleImage(topic + " " + item.title || section.title);
       } catch (e) {
         console.warn(`⚠️ Failed to fetch image for "${searchQuery}": ${e.message}`);
       }
