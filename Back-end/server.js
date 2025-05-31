@@ -1,12 +1,12 @@
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
-const axios = require('axios');
 const { OpenAI } = require('openai');
 const { translate } = require('google-translate-api-x')
 const app = express();
 app.use(cors());
 app.use(express.json());
+const { getDuckDuckGoImage } = require('./getDuckDuckGoImageWithResolutionCheck');
 
 // Constants
 const API_KEY = process.env.OPENAI_API_KEY;
@@ -17,22 +17,6 @@ const SYSTEM_ROLE = 'You generate educational course structures in JSON and foll
 // OpenAI client
 const openai = new OpenAI({ apiKey: API_KEY });
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-async function getFirstGoogleImage(query) {
-  const apiKey = process.env.GOOGLE_CSE_API_KEY;
-  const cx = process.env.GOOGLE_CSE_CX;
-  const endpoint = `https://www.googleapis.com/customsearch/v1?q=${encodeURIComponent(query)}&cx=${cx}&searchType=image&num=1&key=${apiKey}`;
-
-  try {
-    const response = await axios.get(endpoint);
-    const imageUrl = response.data.items?.[0]?.link || null;
-    return imageUrl;
-  } catch (err) {
-    console.warn(`❌ Google CSE image fetch failed for "${query}": ${err.message}`);
-    return null;
-  }
-}
-
 
 // ✅ STEP 1: Generate a course plan using gpt-3.5
 async function getCoursePlan(topic, level, time, language) {
@@ -143,7 +127,7 @@ Only return valid JSON.
       let imageUrl = null;
 
       try {
-        imageUrl = await getFirstGoogleImage(topic + " " + item.title || section.title);
+        imageUrl = await getDuckDuckGoImage(`${topic} ${item.title}`); // ✅ Add resolution check here      
       } catch (e) {
         console.warn(`⚠️ Failed to fetch image for "${searchQuery}": ${e.message}`);
       }
