@@ -3,7 +3,7 @@ const cors = require('cors');
 require('dotenv').config();
 const axios = require('axios');
 const { OpenAI } = require('openai');
-
+const {translate} = require('google-translate-api-x')
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -138,7 +138,9 @@ Only return valid JSON.
     console.warn(`⚠️ "${section.title}" has ${wordCount} words (expected ${section.availableTime * 50})`);
 
     const contentWithIds = await Promise.all(parsed.content.map(async (item, index) => {
-      const searchQuery = topic + "->" + item.title + " [education concept]";
+      const topicTranslated = language !== "en" ? await translate(topic, { from: language, to: 'en' }) : topic;
+      const titleTranslated = language !== "en" ? await translate(item.title, { from: language, to: 'en' }) : item.title;
+      const searchQuery = topicTranslated + "->" + titleTranslated + " [education concept]";
       let imageUrl = null;
 
       try {
