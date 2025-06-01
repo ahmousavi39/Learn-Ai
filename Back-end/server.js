@@ -6,7 +6,7 @@ const { translate } = require('google-translate-api-x')
 const app = express();
 app.use(cors());
 app.use(express.json());
-const { getDuckDuckGoImage } = require('./getDuckDuckGoImageWithResolutionCheck');
+const { getImageLinks } = require('./getDuckDuckGoImageWithResolutionCheck');
 
 // Constants
 const API_KEY = process.env.OPENAI_API_KEY;
@@ -126,7 +126,7 @@ Only return valid JSON.
       let imageUrl = null;
 
       try {
-        imageUrl = await getDuckDuckGoImage(`${topic} ${item.title}`); // ✅ Add resolution check here      
+        imageUrl = await getImageLinks(`${topic} ${item.title}`); // ✅ Add resolution check here      
       } catch (e) {
         console.warn(`⚠️ Failed to fetch image for "${searchQuery}": ${e.message}`);
       }
@@ -152,7 +152,7 @@ Only return valid JSON.
   } catch (err) {
     console.warn(`❌ Attempt ${attempt} failed for "${section.title}": ${err.message}`);
     await delay(1500);
-  }
+  }   
 
   if (!finalResult) {
     return {

@@ -15,8 +15,6 @@
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
     "google-translate-api-x": "^10.7.2",
-    "openai": "^4.100.0",
-    "probe-image-size": "^7.2.3",
-    "puppeteer": "^24.9.0"
+    "openai": "^4.100.0"
   }
 }
