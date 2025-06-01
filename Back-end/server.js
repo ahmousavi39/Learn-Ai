@@ -9,21 +9,21 @@ app.use(express.json());
 const puppeteer = require('puppeteer');
 
 async function getFirstDuckDuckGoImageLink(query) {
-  const browser = await puppeteer.launch({ headless: 'new' });
-  const page = await browser.newPage();
+  const browser = await puppeteer.launch({
+    headless: 'new',
+    executablePath: puppeteer.executablePath(), // key change
+  });
 
+  const page = await browser.newPage();
   const searchUrl = `https://duckduckgo.com/?q=${encodeURIComponent(query)}&iax=images&ia=images`;
   await page.goto(searchUrl);
-
   await page.waitForSelector('.tile--img__img', { timeout: 10000 });
 
   const imageUrl = await page.evaluate(() => {
     const images = Array.from(document.querySelectorAll('.tile--img__img'));
     for (let img of images) {
       let src = img.getAttribute('src') || img.getAttribute('data-src');
-      if (src && src.startsWith('https://')) {
-        return src;
-      }
+      if (src && src.startsWith('https://')) return src;
     }
     return null;
   });
@@ -31,7 +31,6 @@ async function getFirstDuckDuckGoImageLink(query) {
   await browser.close();
   return imageUrl;
 }
-
 
 // Constants
 const API_KEY = process.env.OPENAI_API_KEY;
@@ -148,7 +147,7 @@ Only return valid JSON.
     const contentWithIds = await Promise.all(parsed.content.map(async (item, index) => {
       const topicTranslated = language !== "en" ? await translate(topic, { from: language, to: 'en' }) : topic;
       const titleTranslated = language !== "en" ? await translate(item.title, { from: language, to: 'en' }) : item.title;
-      const searchQuery = topicTranslated + "->" + titleTranslated + " [education concept]";
+      const searchQuery = topicTranslated + " " + titleTranslated + " [education concept]";
       let imageUrl = null;
 
       try {
