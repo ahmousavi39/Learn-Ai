@@ -127,7 +127,7 @@ async function image_search({ query, moderate, retries, iterations }) {
 }
 
 
-async function getImageLinks(query) {
+export async function getImageLinks(query) {
     try {
         const results = await image_search({ query });
 
