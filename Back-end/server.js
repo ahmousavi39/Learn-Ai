@@ -8,129 +8,71 @@ app.use(cors());
 app.use(express.json());
 const axios = require('axios');
 
-const url = 'https://duckduckgo.com/';
+const BASE_URL = 'https://duckduckgo.com';
 const headers = {
-    'dnt': '1',
-    'accept-encoding': 'gzip, deflate, sdch',
-    'x-requested-with': 'XMLHttpRequest',
-    'accept-language': 'en-GB,en-US;q=0.8,en;q=0.6,ms;q=0.4',
-    'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Safari/537.36',
-    'accept': 'application/json, text/javascript, */*; q=0.01',
-    'referer': 'https://duckduckgo.com/',
-    'authority': 'duckduckgo.com',
-};
-const max_iter = 2;
-const max_retries = 2;
-const params_template = {
-    l: "wt-wt",
-    o: "json",
-    q: null,
-    vqd: null,
-    f: ",,,",
-    p: null
+  'user-agent': 'Mozilla/5.0',
+  'referer': BASE_URL,
 };
 
 function sleep(ms) {
-    return new Promise(resolve => {
-        setTimeout(resolve, ms)
-    })
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 async function getToken(keywords) {
-
-    let token = null;
-    try {
-        let res = await axios.get(url, {
-            params: {
-                q: keywords
-            }
-        })
-
-        token = res.data.match(/vqd=([\d-]+)\&/)[1]
-
-    } catch (error) {
-        console.error(error)
-    }
-
-    return new Promise((resolve, reject) => {
-        if (!token)
-            reject('Failed to get token')
-        resolve(token)
-    })
-
+  try {
+    const res = await axios.get(BASE_URL, { headers });
+    const match = res.data.match(/vqd='([a-zA-Z0-9-]+)'/);
+    if (!match) throw new Error('Token not found in page');
+    return match[1];
+  } catch (error) {
+    console.error('Token error:', error.message);
+    throw error;
+  }
 }
-async function image_search({ query, moderate, retries, iterations }) {
 
-    let reqUrl = url + 'i.js';
-    let keywords = query
-    let p = moderate ? 1 : -1;      // by default moderate false
-    let attempt = 0;
-    if (!retries) retries = max_retries; // default to max if none provided
-    if (!iterations) iterations = max_iter; // default to max if none provided
+async function image_search({ query, moderate = false, retries = 2, iterations = 2 }) {
+  const results = [];
+  const p = moderate ? 1 : -1;
+  let attempt = 0;
 
-    let results = [];
+  try {
+    const token = await getToken(query);
+    let reqUrl = `${BASE_URL}/i.js`;
+    let params = {
+      q: query,
+      o: 'json',
+      vqd: token,
+      f: ',,,',
+      p: p.toString(),
+      l: 'wt-wt',
+    };
 
-    try {
+    for (let i = 0; i < iterations; i++) {
+      while (true) {
+        try {
+          const response = await axios.get(reqUrl, { params, headers });
+          const data = response.data;
+          if (!data.results) throw new Error('No results found');
 
-        let token = await getToken(keywords);
+          results.push(...data.results);
 
-        let params = {
-            "l": "wt-wt",
-            "o": "json",
-            "q": keywords,
-            "vqd": token,
-            "f": ",,,",
-            "p": "" + (p)
+          if (!data.next) return results;
+          reqUrl = BASE_URL + data.next;
+          break;
+        } catch (err) {
+          attempt++;
+          if (attempt > retries) return results;
+          console.warn(`Retrying... (${attempt}/${retries})`);
+          await sleep(2000);
         }
-
-        let data = null;
-        let itr = 0;
-
-
-        while (itr < iterations) {
-
-            while (true) {
-                try {
-
-                    let response = await axios.get(reqUrl, {
-                        params,
-                        headers
-                    })
-
-                    data = response.data;
-                    if (!data.results) throw "No results";
-                    break;
-
-                } catch (error) {
-                    console.error(error)
-                    attempt += 1;
-                    if (attempt > retries) {
-                        return new Promise((resolve, reject) => {
-                            resolve(results)
-                        });
-                    }
-                    await sleep(5000);
-                    continue;
-                }
-
-            }
-
-            results = [...results, ...data.results]
-            if (!data.next) {
-                return new Promise((resolve, reject) => {
-                    resolve(results)
-                });
-            }
-            reqUrl = url + data["next"];
-            itr += 1;
-            attempt = 0;
-        }
-
-    } catch (error) {
-        console.error(error);
+      }
     }
-    return results;
 
+    return results;
+  } catch (error) {
+    console.error('Search error:', error.message);
+    return results;
+  }
 }
 
 
@@ -145,20 +87,20 @@ const openai = new OpenAI({ apiKey: API_KEY });
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function getImageLinks(query) {
-    try {
-        const results = await image_search({ query });
+  try {
+    const results = await image_search({ query });
 
-        const filtered = results.filter(img =>
-            img.width >= 1024 && img.height >= 768
-        );
+    const filtered = results.filter(img =>
+      img.width >= 1024 && img.height >= 768
+    );
 
-        const imageLinks = filtered.map(img => img.image);
+    const imageLinks = filtered.map(img => img.image);
 
-        return imageLinks;
-    } catch (error) {
-        console.error('Error:', error);
-        return [];
-    }
+    return imageLinks;
+  } catch (error) {
+    console.error('Error:', error);
+    return [];
+  }
 }
 
 // ✅ STEP 1: Generate a course plan using gpt-3.5
@@ -207,10 +149,10 @@ Return valid JSON:
 async function generateSection(section, level, language, topic) {
   const bulletCount = section.bulletCount || 3;
   let finalResult;
- const prompt = `
+  const prompt = `
 You are a mobile course content generator.
 
-Create a section titled "${section.title}" for a level ${level}/10 learner in ${language} with ${section.availableTime} minutes available (50 words/min reading).
+Create a section titled "${section.title}" about "${topic}" for a level ${level}/10 learner in ${language} with ${section.availableTime} minutes available (50 words/min reading).
 
 Instructions:
 - Total words ≈ ${section.availableTime * 50}
@@ -270,7 +212,9 @@ Only return valid JSON.
       let imageUrl = null;
 
       try {
-        imageUrl = await getImageLinks(`${topic} ${item.title}`); // ✅ Add resolution check here      
+        imageUrl = await getImageLinks({ query: `${topic} ${item.title}`, moderate: true }); // ✅ Add resolution check here      
+        const urls = imageUrl.map(img => img.image);
+        console.log(urls);
       } catch (e) {
         console.warn(`⚠️ Failed to fetch image for "${searchQuery}": ${e.message}`);
       }
@@ -296,7 +240,7 @@ Only return valid JSON.
   } catch (err) {
     console.warn(`❌ Attempt ${attempt} failed for "${section.title}": ${err.message}`);
     await delay(1500);
-  }   
+  }
 
   if (!finalResult) {
     return {
