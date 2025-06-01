@@ -10,30 +10,35 @@ const axios = require('axios');
 
 const BASE_URL = 'https://duckduckgo.com';
 const headers = {
-  'user-agent': 'Mozilla/5.0',
-  'referer': BASE_URL,
+  'User-Agent': 'Mozilla/5.0',
+  'Accept': 'application/json',
+  'Referer': 'https://duckduckgo.com/',
 };
 
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-async function getToken(keywords) {
+async function getToken(query) {
   try {
-    const res = await axios.get(BASE_URL, { headers });
-    const match = res.data.match(/vqd='([a-zA-Z0-9-]+)'/);
-    if (!match) throw new Error('Token not found in page');
-    return match[1];
+    const params = new URLSearchParams({ q: query });
+    const response = await axios.post(`${BASE_URL}/`, params, { headers });
+
+    const tokenMatch = response.data.match(/vqd='([\d-]+)'/);
+    if (tokenMatch && tokenMatch[1]) {
+      return tokenMatch[1];
+    }
+
+    throw new Error('Failed to extract vqd token');
   } catch (error) {
     console.error('Token error:', error.message);
     throw error;
   }
 }
 
-async function image_search({ query, moderate = false, retries = 2, iterations = 2 }) {
+async function image_search({ query, moderate = false, retries = 2, iterations = 1 }) {
   const results = [];
   const p = moderate ? 1 : -1;
-  let attempt = 0;
 
   try {
     const token = await getToken(query);
@@ -44,15 +49,18 @@ async function image_search({ query, moderate = false, retries = 2, iterations =
       vqd: token,
       f: ',,,',
       p: p.toString(),
-      l: 'wt-wt',
+      l: 'us-en',
     };
 
     for (let i = 0; i < iterations; i++) {
-      while (true) {
+      let attempt = 0;
+
+      while (attempt <= retries) {
         try {
           const response = await axios.get(reqUrl, { params, headers });
           const data = response.data;
-          if (!data.results) throw new Error('No results found');
+
+          if (!data.results) throw new Error('No results');
 
           results.push(...data.results);
 
@@ -62,8 +70,8 @@ async function image_search({ query, moderate = false, retries = 2, iterations =
         } catch (err) {
           attempt++;
           if (attempt > retries) return results;
-          console.warn(`Retrying... (${attempt}/${retries})`);
-          await sleep(2000);
+          console.warn(`Retry ${attempt}/${retries}...`);
+          await sleep(1000);
         }
       }
     }
@@ -88,7 +96,7 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function getImageLinks(query) {
   try {
-    const results = await image_search({ query });
+    const results = await image_search(query);
 
     const filtered = results.filter(img =>
       img.width >= 1024 && img.height >= 768
