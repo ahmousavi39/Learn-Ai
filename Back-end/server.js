@@ -11,7 +11,8 @@ const puppeteer = require('puppeteer');
 async function getFirstDuckDuckGoImageLink(query) {
   const browser = await puppeteer.launch({
     headless: 'new',
-    executablePath: puppeteer.executablePath(), // key change
+    executablePath: puppeteer.executablePath(), // auto-resolves Chromium path
+    args: ['--no-sandbox', '--disable-setuid-sandbox'], // needed on Render/Docker
   });
 
   const page = await browser.newPage();
@@ -22,7 +23,7 @@ async function getFirstDuckDuckGoImageLink(query) {
   const imageUrl = await page.evaluate(() => {
     const images = Array.from(document.querySelectorAll('.tile--img__img'));
     for (let img of images) {
-      let src = img.getAttribute('src') || img.getAttribute('data-src');
+      const src = img.getAttribute('src') || img.getAttribute('data-src');
       if (src && src.startsWith('https://')) return src;
     }
     return null;
@@ -31,6 +32,7 @@ async function getFirstDuckDuckGoImageLink(query) {
   await browser.close();
   return imageUrl;
 }
+
 
 // Constants
 const API_KEY = process.env.OPENAI_API_KEY;
