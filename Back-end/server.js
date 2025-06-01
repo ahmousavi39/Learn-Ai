@@ -67,12 +67,11 @@ async function generateSection(section, level, language, topic) {
   const prompt = `
 You are a mobile course content generator.
 
-Create a section titled "${section.title}" for a level ${level}/10 learner in ${language} with ${section.availableTime} minutes available (50 words/min reading).
+Create a section titled "${section.title}" for a level ${level}/10 learner in ${language} language with ${section.availableTime} minutes available (50 words/min reading).
 
 Instructions:
 - Total words ≈ ${section.availableTime * 50}
-- Include ${bulletCount} bulletpoints
-- Each bulletpoint has 2–4 short paragraphs
+- Include ${bulletCount} bulletpoint paragraphs
 - Add 4-question quiz at end (1 correct + 3 wrong)
 - Time allocation per bulletpoint (based on complexity ${section.complexity}):
 - Use clear, mobile-friendly language and structure
