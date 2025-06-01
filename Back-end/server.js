@@ -6,81 +6,30 @@ const { translate } = require('google-translate-api-x')
 const app = express();
 app.use(cors());
 app.use(express.json());
-const axios = require('axios');
+const puppeteer = require('puppeteer');
 
-const BASE_URL = 'https://duckduckgo.com';
-const headers = {
-  'User-Agent': 'Mozilla/5.0',
-  'Accept': 'application/json',
-  'Referer': 'https://duckduckgo.com/',
-};
+async function getFirstDuckDuckGoImageLink(query) {
+  const browser = await puppeteer.launch({ headless: 'new' });
+  const page = await browser.newPage();
 
-function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
+  const searchUrl = `https://duckduckgo.com/?q=${encodeURIComponent(query)}&iax=images&ia=images`;
+  await page.goto(searchUrl);
 
-async function getToken(query) {
-  try {
-    const params = new URLSearchParams({ q: query });
-    const response = await axios.post(`${BASE_URL}/`, params, { headers });
+  await page.waitForSelector('.tile--img__img', { timeout: 10000 });
 
-    const tokenMatch = response.data.match(/vqd='([\d-]+)'/);
-    if (tokenMatch && tokenMatch[1]) {
-      return tokenMatch[1];
-    }
-
-    throw new Error('Failed to extract vqd token');
-  } catch (error) {
-    console.error('Token error:', error.message);
-    throw error;
-  }
-}
-
-async function image_search({ query, moderate = false, retries = 2, iterations = 1 }) {
-  const results = [];
-  const p = moderate ? 1 : -1;
-
-  try {
-    const token = await getToken(query);
-    let reqUrl = `${BASE_URL}/i.js`;
-    let params = {
-      q: query,
-      o: 'json',
-      vqd: token,
-      f: ',,,',
-      p: p.toString(),
-      l: 'us-en',
-    };
-
-    for (let i = 0; i < iterations; i++) {
-      let attempt = 0;
-
-      while (attempt <= retries) {
-        try {
-          const response = await axios.get(reqUrl, { params, headers });
-          const data = response.data;
-
-          if (!data.results) throw new Error('No results');
-
-          results.push(...data.results);
-
-          if (!data.next) return results;
-          reqUrl = BASE_URL + data.next;
-          break;
-        } catch (err) {
-          attempt++;
-          if (attempt > retries) return results;
-          console.warn(`Retry ${attempt}/${retries}...`);
-          await sleep(1000);
-        }
+  const imageUrl = await page.evaluate(() => {
+    const images = Array.from(document.querySelectorAll('.tile--img__img'));
+    for (let img of images) {
+      let src = img.getAttribute('src') || img.getAttribute('data-src');
+      if (src && src.startsWith('https://')) {
+        return src;
       }
     }
+    return null;
+  });
 
-    return results;
-  } catch (error) {
-    console.error('Search error:', error.message);
-    return results;
-  }
+  await browser.close();
+  return imageUrl;
 }
 
 
@@ -93,23 +42,6 @@ const SYSTEM_ROLE = 'You generate educational course structures in JSON and foll
 // OpenAI client
 const openai = new OpenAI({ apiKey: API_KEY });
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-async function getImageLinks(query) {
-  try {
-    const results = await image_search(query);
-
-    const filtered = results.filter(img =>
-      img.width >= 1024 && img.height >= 768
-    );
-
-    const imageLinks = filtered.map(img => img.image);
-
-    return imageLinks;
-  } catch (error) {
-    console.error('Error:', error);
-    return [];
-  }
-}
 
 // ✅ STEP 1: Generate a course plan using gpt-3.5
 async function getCoursePlan(topic, level, time, language) {
@@ -220,9 +152,8 @@ Only return valid JSON.
       let imageUrl = null;
 
       try {
-        imageUrl = await getImageLinks({ query: `${topic} ${item.title}`, moderate: true }); // ✅ Add resolution check here      
-        const urls = imageUrl.map(img => img.image);
-        console.log(urls);
+        imageUrl = await getFirstDuckDuckGoImageLink(searchQuery);
+        console.log(imageUrl);
       } catch (e) {
         console.warn(`⚠️ Failed to fetch image for "${searchQuery}": ${e.message}`);
       }
