@@ -11,13 +11,14 @@ const puppeteer = require('puppeteer');
 async function getFirstDuckDuckGoImageLink(query) {
   const browser = await puppeteer.launch({
     headless: 'new',
-    executablePath: puppeteer.executablePath(), // auto-resolves Chromium path
-    args: ['--no-sandbox', '--disable-setuid-sandbox'], // needed on Render/Docker
+    executablePath: '/opt/render/.cache/puppeteer/chrome/linux-136.0.7103.94/chrome-linux64/chrome',
+    args: ['--no-sandbox', '--disable-setuid-sandbox'], // Required in headless environments
   });
 
   const page = await browser.newPage();
   const searchUrl = `https://duckduckgo.com/?q=${encodeURIComponent(query)}&iax=images&ia=images`;
-  await page.goto(searchUrl);
+  await page.goto(searchUrl, { waitUntil: 'networkidle2' });
+
   await page.waitForSelector('.tile--img__img', { timeout: 10000 });
 
   const imageUrl = await page.evaluate(() => {
