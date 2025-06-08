@@ -259,6 +259,7 @@ export function QuestionRender({ route, navigation }) {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
+        // paddingHorizontal: 10,
         paddingVertical: 10,
         justifyContent: 'space-between', // spread question and options/buttons
     },
@@ -308,29 +309,28 @@ const styles = StyleSheet.create({
 
     retryTextButton: {
         alignSelf: 'center',
+        position: 'absolute',
         backgroundColor: '#16a34a',
         paddingHorizontal: 48,
         paddingVertical: 2,
         borderRadius: 8,
-        marginVertical: "auto"
+        marginVertical: "auto",
     },
     nextButton: {
         position: 'absolute',
         right: 20,
         backgroundColor: 'transparent',
         marginVertical: "auto",
-        paddingVertical: 17,
     },
     backButton: {
         position: 'absolute',
         left: 20,
         backgroundColor: 'transparent',
         marginVertical: "auto",
-        paddingVertical: 17,
     },
     footer: {
         width: "100%",
-        height: 70,
+        height: 90,
         backgroundColor: "",
         position: 'absolute',
         bottom: 0
