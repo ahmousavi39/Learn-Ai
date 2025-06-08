@@ -130,7 +130,7 @@ async function getFirstDuckDuckGoImageLink(query) {
   try {
     browser = await puppeteer.launch({
       headless: 'new', // Set to false temporarily if you want to see the browser UI
-      executablePath: 'chrome@137.0.7151.55 /opt/render/.cache/puppeteer/chrome/linux-137.0.7151.55/chrome-linux64/chrome',
+      executablePath: '/opt/render/.cache/puppeteer/chrome/linux-137.0.7151.55/chrome-linux64/chrome',
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
@@ -281,7 +281,7 @@ You are a course structure designer for a mobile learning app.
 Design a course on "${topic}" for a learner at level ${level}/10. The learner has ${time} minutes total and prefers to learn in "${language}" language.
 
 ✅ Course Structure Rules:
-- ${time < 30 ? 4 : time / 10} sections
+- ${time <= 30 ? 4 : time / 10} sections
 - Use a simple language if the level low 
 - Use a complex language if the level high
 - Course title and section title must be in "${language}" language
