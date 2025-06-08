@@ -130,7 +130,7 @@ async function getFirstDuckDuckGoImageLink(query) {
   try {
     browser = await puppeteer.launch({
       headless: 'new', // Set to false temporarily if you want to see the browser UI
-      executablePath: '/opt/render/.cache/puppeteer/chrome/linux-136.0.7103.94/chrome-linux64/chrome',
+      executablePath: 'chrome@137.0.7151.55 /opt/render/.cache/puppeteer/chrome/linux-137.0.7151.55/chrome-linux64/chrome',
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
