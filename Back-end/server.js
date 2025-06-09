@@ -126,7 +126,7 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 async function getFirstDuckDuckGoImageLink(query) {
   const browser = await puppeteer.launch({
     headless: 'new',
-    executablePath: './puppeteer/chrome/linux-136.0.7103.94/chrome-linux64/chrome',
+    executablePath: './chrome/linux-136.0.7103.94/chrome-linux64/chrome',
     args: ['--no-sandbox', '--disable-setuid-sandbox'], // Required in headless environments
   });
 
