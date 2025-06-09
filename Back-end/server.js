@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 const { translate } = require('google-translate-api-x')
-const GoogleGenerativeAI = require('@google/generative-ai');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 const puppeteer = require('puppeteer');
 // import fetch from 'node-fetch';
 
