@@ -5,7 +5,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { translate } from 'google-translate-api-x';
 // import fetch from 'node-fetch';
 import puppeteer from 'puppeteer';
-import chromium from '@sparticvs/chromium';
+import chromium from '@sparticuz/chromium';
 
 dotenv.config();
 
