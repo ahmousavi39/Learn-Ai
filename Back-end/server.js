@@ -126,20 +126,11 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // --- DuckDucGo Image Search Function (Puppeteer-based) ---
 async function getFirstDuckDuckGoImageLink(query) {
-  let browser;
-  try {
-    browser = await puppeteer.launch({
-      headless: 'new', // Set to false temporarily if you want to see the browser UI
-      executablePath: '/opt/render/.cache/puppeteer/chrome/linux-136.0.7103.94/chrome-linux64/chrome',
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        // '--disable-gpu',
-        // '--no-zygote',
-        // '--single-process'
-      ],
-    });
+  const browser = await puppeteer.launch({
+    headless: 'new',
+    executablePath: '/opt/render/.cache/puppeteer/chrome/linux-136.0.7103.94/chrome-linux64/chrome',
+    args: ['--no-sandbox', '--disable-setuid-sandbox'], // Required in headless environments
+  });
 
     await new Promise(resolve => setTimeout(resolve, 500)); // Wait for 500ms
 
@@ -254,17 +245,8 @@ async function getFirstDuckDuckGoImageLink(query) {
     // const screenshotPathAfterExtraction = `./ddg_after_image_extraction_${Date.now()}.png`;
     // await page.screenshot({ path: screenshotPathAfterExtraction, fullPage: true });
     // console.log(`[${new Date().toLocaleString()}] Screenshot after image extraction saved to: ${screenshotPathAfterExtraction}`); // Removed log
-
+    await browser.close();
     return imageUrl;
-
-  } catch (error) {
-    console.error(`Fatal error in getFirstDuckDuckGoImageLink for query "${query}": ${error.message}`); // Simplified error log
-    return null;
-  } finally {
-    if (browser) {
-      await browser.close();
-    }
-  }
 }
 
 // 🔹 Gemini prompt call wrapper
