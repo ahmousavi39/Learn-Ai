@@ -17,6 +17,6 @@
     "express": "^5.1.0",
     "google-translate-api-x": "^10.7.2",
     "node-fetch": "^3.3.2",
-    "puppeteer": "^24.9.0"
+    "puppeteer": "21.3.8"
   }
 }
