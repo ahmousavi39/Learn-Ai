@@ -131,15 +131,14 @@ async function getFirstDuckDuckGoImageLink(query) {
   });
 
     const page = await browser.newPage();
-    // await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36');
-    // await page.setViewport({ width: 1366, height: 768 });
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36');
+    await page.setViewport({ width: 1366, height: 768 });
 
     const searchUrl = `https://duckduckgo.com/?t=h_&q=${encodeURIComponent(query)}&ia=images&iax=images&iaf=size%3ALarge`; // Using Large size filter
     // console.log(`[${new Date().toLocaleString()}] Attempting to navigate directly to image results: ${searchUrl}`); // Removed log
 
     try {
-      await page.goto(searchUrl, { waitUntil: 'networkidle2'});
-      // await page.goto(searchUrl, { waitUntil: 'networkidle0', timeout: 90000 });
+      await page.goto(searchUrl, { waitUntil: 'networkidle0', timeout: 90000 });
       // console.log(`[${new Date().toLocaleString()}] Successfully navigated to: ${page.url()}`); // Removed log
 
     } catch (navigationError) {

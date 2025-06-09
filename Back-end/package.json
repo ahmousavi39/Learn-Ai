@@ -4,7 +4,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "postinstall": "npx puppeteer browsers install chrome@136.0.7103.94"
+    "postinstall": "npx puppeteer browsers install chrome"
   },
   "keywords": [],
   "author": "",
@@ -17,6 +17,6 @@
     "express": "^5.1.0",
     "google-translate-api-x": "^10.7.2",
     "node-fetch": "^3.3.2",
-    "puppeteer": "21.3.8"
+    "puppeteer": "^24.9.0"
   }
 }
