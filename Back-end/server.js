@@ -6,7 +6,6 @@ const GoogleGenerativeAI = require('@google/generative-ai');
 const puppeteer = require('puppeteer');
 // import fetch from 'node-fetch';
 
-dotenv.config();
 const app = express();
 app.use(cors());
 app.use(express.json());
