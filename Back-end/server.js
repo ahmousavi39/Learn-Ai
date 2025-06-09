@@ -130,20 +130,22 @@ async function getFirstDuckDuckGoImageLink(query) {
   try {
     browser = await puppeteer.launch({
       headless: 'new', // Set to false temporarily if you want to see the browser UI
-      executablePath: '/opt/render/.cache/puppeteer/chrome/linux-126.0.0.0/chrome-linux64/chrome',
+      executablePath: '/opt/render/.cache/puppeteer/chrome/linux-136.0.7103.94/chrome-linux64/chrome',
       args: [
         '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-gpu',
-        '--no-zygote',
-        '--single-process'
-      ]
+        '--disable-setuid-sandbox'
+        // ,'--disable-dev-shm-usage',
+        // '--disable-gpu',
+        // '--no-zygote',
+        // '--single-process'
+      ],
     });
 
+        await new Promise(resolve => setTimeout(resolve, 500)); // Wait for 500ms
+
     const page = await browser.newPage();
-    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36');
-    await page.setViewport({ width: 1366, height: 768 });
+    // await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36');
+    // await page.setViewport({ width: 1366, height: 768 });
 
     const searchUrl = `https://duckduckgo.com/?t=h_&q=${encodeURIComponent(query)}&ia=images&iax=images&iaf=size%3ALarge`; // Using Large size filter
     // console.log(`[${new Date().toLocaleString()}] Attempting to navigate directly to image results: ${searchUrl}`); // Removed log
