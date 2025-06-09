@@ -5,6 +5,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { translate } from 'google-translate-api-x';
 // import fetch from 'node-fetch';
 import puppeteer from 'puppeteer';
+import chromium from '@sparticvs/chromium';
 
 dotenv.config();
 
@@ -129,16 +130,12 @@ async function getFirstDuckDuckGoImageLink(query) {
   let browser;
   try {
     browser = await puppeteer.launch({
-      headless: 'new', // Set to false temporarily if you want to see the browser UI
-      executablePath: '/opt/render/.cache/puppeteer/chrome/linux-137.0.7151.55/chrome-linux64/chrome',
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-gpu',
-        '--no-zygote',
-        '--single-process'
-      ],
+      args: [...chromium.args, '--hide-scrollbars', '--disable-web-security'], // Use chromium.args
+      executablePath: await chromium.executablePath(), // Get the executable path
+      headless: chromium.headless, // Use chromium.headless
+      // ... your existing args
+      // Remove the hardcoded executablePath
+      // executablePath: '/opt/render/.cache/puppeteer/chrome/linux-137.0.7151.55/chrome-linux64/chrome',
     });
 
     const page = await browser.newPage();
