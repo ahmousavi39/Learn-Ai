@@ -52,7 +52,7 @@ export function Home({ navigation }) {
   const generate = async (topic, level, readingTimeMin, language) => {
     try {
       setLoading(true);
-      const response = await fetch('http://192.168.2.107:4000/generate-course', {
+      const response = await fetch('https://learn-ai-w8ke.onrender.com/generate-course', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
