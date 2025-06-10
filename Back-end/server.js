@@ -127,7 +127,7 @@ async function getFirstDuckDuckGoImageLink(query) {
   try {
     browser = await puppeteer.launch({
       headless: 'new', // Set to false temporarily if you want to see the browser UI
-          // executablePath: 'chrome/linux-139.0.7230.0/chrome-linux64/chrome',
+          executablePath: 'chrome/linux-139.0.7230.0/chrome-linux64/chrome',
     args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
@@ -143,7 +143,7 @@ async function getFirstDuckDuckGoImageLink(query) {
     await page.setViewport({ width: 1366, height: 768 });
 
     const searchUrl = `https://duckduckgo.com/?t=h_&q=${encodeURIComponent(query)}&ia=images&iax=images&iaf=size%3ALarge`; // Using Large size filter
-    // console.log(`[${new Date().toLocaleString()}] Attempting to navigate directly to image results: ${searchUrl}`); // Removed log
+    console.log(`[${new Date().toLocaleString()}] Attempting to navigate directly to image results: ${searchUrl}`); // Removed log
 
     try {
       await page.goto(searchUrl, { waitUntil: 'networkidle0', timeout: 90000 });
@@ -152,25 +152,25 @@ async function getFirstDuckDuckGoImageLink(query) {
     } catch (navigationError) {
       console.error(`Initial navigation to DuckDuckGo Images failed: ${navigationError.message}`); // Simplified error log
       // await page.screenshot({ path: `./ddg_nav_fail_debug_${Date.now()}.png`, fullPage: true });
-      // console.log(`[${new Date().toLocaleString()}] Screenshot of failed navigation saved.`); // Removed log
+      console.log(`[${new Date().toLocaleString()}] Screenshot of failed navigation saved.`); // Removed log
       return null;
     }
 
     // --- Attempt to dismiss any potential popups ---
-    // console.log(`[${new Date().toLocaleString()}] Attempting to dismiss browser promo popup...`); // Removed log
+    console.log(`[${new Date().toLocaleString()}] Attempting to dismiss browser promo popup...`); // Removed log
     try {
       const closeButtonSelector = '[data-testid="serp-popover-promo-close"]';
       const promoBannerSelector = '.ddg-extension-promo, #browser-promo-banner, .js-modal-modern.modal-flex.modal-popout, .ddg-promo-modal, .badge-link, .modal-themed, [data-testid*="popover-promo"]';
 
       const dismissButton = await page.waitForSelector(closeButtonSelector, { visible: true, timeout: 5000 }).catch(() => null);
       if (dismissButton) {
-        // console.log(`[${new Date().toLocaleString()}] Clicking browser promo dismiss button: ${closeButtonSelector}`); // Removed log
+        console.log(`[${new Date().toLocaleString()}] Clicking browser promo dismiss button: ${closeButtonSelector}`); // Removed log
         await dismissButton.click();
         await delay(1000);
       } else {
         const promoBanner = await page.waitForSelector(promoBannerSelector, { visible: true, timeout: 5000 }).catch(() => null);
         if (promoBanner) {
-          // console.log(`[${new Date().toLocaleString()}] Hiding browser promo banner via JS: ${promoBannerSelector}`); // Removed log
+          console.log(`[${new Date().toLocaleString()}] Hiding browser promo banner via JS: ${promoBannerSelector}`); // Removed log
           await page.evaluate((selector) => {
             const banner = document.querySelector(selector);
             if (banner) {
@@ -179,7 +179,7 @@ async function getFirstDuckDuckGoImageLink(query) {
           }, promoBannerSelector);
           await delay(500);
         } else {
-          // console.log(`[${new Date().toLocaleString()}] Browser promo popup not found or not visible.`); // Removed log
+          console.log(`[${new Date().toLocaleString()}] Browser promo popup not found or not visible.`); // Removed log
         }
       }
     } catch (popupError) {
@@ -188,13 +188,13 @@ async function getFirstDuckDuckGoImageLink(query) {
 
     // const screenshotPathPostPopup = `./ddg_images_debug_post_popup_${Date.now()}.png`;
     // await page.screenshot({ path: screenshotPathPostPopup, fullPage: true });
-    // console.log(`[${new Date().toLocaleString()}] Screenshot (after popup dismissed) saved to: ${screenshotPathPostPopup}`); // Removed log
+    console.log(`[${new Date().toLocaleString()}] Screenshot (after popup dismissed) saved to: ${screenshotPathPostPopup}`); // Removed log
 
     // --- Wait for any image element to be loaded before clicking ---
     const firstImageSelector = 'img'; // Selector to get any <img> tag
     try {
       await page.waitForSelector(firstImageSelector, { visible: true, timeout: 15000 });
-      // console.log(`[${new Date().toLocaleString()}] An image element is visible on the results page.`); // Removed log
+      console.log(`[${new Date().toLocaleString()}] An image element is visible on the results page.`); // Removed log
     } catch (selectorError) {
       console.error(`No image elements found or visible on results page: ${selectorError.message}`); // Simplified error log
       // await page.screenshot({ path: `./ddg_no_images_found_debug_${Date.now()}.png`, fullPage: true });
@@ -202,12 +202,12 @@ async function getFirstDuckDuckGoImageLink(query) {
     }
 
     // --- Click the first image found ---
-    // console.log(`[${new Date().toLocaleString()}] Attempting to click the first image element.`); // Removed log
+    console.log(`[${new Date().toLocaleString()}] Attempting to click the first image element.`); // Removed log
     try {
       await page.click(firstImageSelector);
       // Wait a short moment for the overlay to start appearing
       await delay(1000);
-      // console.log(`[${new Date().toLocaleString()}] First image element clicked. Waiting for overlay...`); // Removed log
+      console.log(`[${new Date().toLocaleString()}] First image element clicked. Waiting for overlay...`); // Removed log
     } catch (clickError) {
       console.error(`Failed to click the first image element: ${clickError.message}`); // Simplified error log
       // await page.screenshot({ path: `./ddg_first_image_click_fail_${Date.now()}.png`, fullPage: true });
@@ -219,7 +219,7 @@ async function getFirstDuckDuckGoImageLink(query) {
 
     try {
       await page.waitForSelector(imageOverlaySelector, { visible: true, timeout: 15000 });
-      // console.log(`[${new Date().toLocaleString()}] Image overlay (aside element) is visible.`); // Removed log
+      console.log(`[${new Date().toLocaleString()}] Image overlay (aside element) is visible.`); // Removed log
     } catch (overlayError) {
       console.error(`Image overlay (aside element) did not appear or timed out: ${overlayError.message}`); // Simplified error log
       // await page.screenshot({ path: `./ddg_overlay_not_found_debug_${Date.now()}.png`, fullPage: true });
@@ -243,7 +243,7 @@ async function getFirstDuckDuckGoImageLink(query) {
       return null;
     }
 
-    // console.log(`[${new Date().toLocaleString()}] Successfully extracted image URL: ${imageUrl}`); // Removed log
+    console.log(`[${new Date().toLocaleString()}] Successfully extracted image URL: ${imageUrl}`); // Removed log
 
     // --- Debugging: Screenshot after extracting URL from overlay ---
     // const screenshotPathAfterExtraction = `./ddg_after_image_extraction_${Date.now()}.png`;
