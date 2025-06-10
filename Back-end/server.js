@@ -122,55 +122,63 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 //   }
 // }
 
-async function getFirstDuckDuckGoImageLink(query) {
-  let browser;
-  try {
-    browser = await puppeteer.launch({
-      headless: 'new', // Set to false temporarily if you want to see the browser UI
-          executablePath: 'chrome/linux-139.0.7230.0/chrome-linux64/chrome',
-    args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-gpu',
-        '--no-zygote',
-        '--single-process'
-      ],
-    });
+let globalBrowserInstance; // Declare a global variable for the browser
 
-    const page = await browser.newPage();
+// Function to initialize the browser
+async function initializeBrowser() {
+  globalBrowserInstance = await puppeteer.launch({
+    headless: 'new',
+      // executablePath: 'chrome/linux-139.0.7230.0/chrome-linux64/chrome',
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-gpu',
+      '--no-zygote',
+      '--single-process'
+    ],
+  });
+  console.log('Puppeteer browser launched globally.');
+}
+
+// Function to close the browser when the app shuts down
+async function closeBrowser() {
+  if (globalBrowserInstance) {
+    await globalBrowserInstance.close();
+    console.log('Puppeteer browser closed globally.');
+  }
+}
+// Function to fetch the first DuckDuckGo image link
+async function getFirstDuckDuckGoImageLink(query) {
+  const page = await globalBrowserInstance.newPage();
+  let imageUrl = null; // Initialize imageUrl to null
+
+  try {
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36');
     await page.setViewport({ width: 1366, height: 768 });
 
-    const searchUrl = `https://duckduckgo.com/?t=h_&q=${encodeURIComponent(query)}&ia=images&iax=images&iaf=size%3ALarge`; // Using Large size filter
-    console.log(`[${new Date().toLocaleString()}] Attempting to navigate directly to image results: ${searchUrl}`); // Removed log
+    const searchUrl = `https://duckduckgo.com/?t=h_&q=${encodeURIComponent(query)}&ia=images&iax=images&iaf=size%3ALarge`;
+    console.log(`[${new Date().toLocaleString()}] Attempting to navigate directly to image results: ${searchUrl}`);
 
     try {
       await page.goto(searchUrl, { waitUntil: 'networkidle0', timeout: 90000 });
-      // console.log(`[${new Date().toLocaleString()}] Successfully navigated to: ${page.url()}`); // Removed log
-
     } catch (navigationError) {
-      console.error(`Initial navigation to DuckDuckGo Images failed: ${navigationError.message}`); // Simplified error log
-      // await page.screenshot({ path: `./ddg_nav_fail_debug_${Date.now()}.png`, fullPage: true });
-      console.log(`[${new Date().toLocaleString()}] Screenshot of failed navigation saved.`); // Removed log
-      return null;
+      console.error(`Initial navigation to DuckDuckGo Images failed: ${navigationError.message}`);
+      return null; // Return null if navigation fails
     }
 
     // --- Attempt to dismiss any potential popups ---
-    console.log(`[${new Date().toLocaleString()}] Attempting to dismiss browser promo popup...`); // Removed log
     try {
       const closeButtonSelector = '[data-testid="serp-popover-promo-close"]';
       const promoBannerSelector = '.ddg-extension-promo, #browser-promo-banner, .js-modal-modern.modal-flex.modal-popout, .ddg-promo-modal, .badge-link, .modal-themed, [data-testid*="popover-promo"]';
 
       const dismissButton = await page.waitForSelector(closeButtonSelector, { visible: true, timeout: 5000 }).catch(() => null);
       if (dismissButton) {
-        console.log(`[${new Date().toLocaleString()}] Clicking browser promo dismiss button: ${closeButtonSelector}`); // Removed log
         await dismissButton.click();
         await delay(1000);
       } else {
         const promoBanner = await page.waitForSelector(promoBannerSelector, { visible: true, timeout: 5000 }).catch(() => null);
         if (promoBanner) {
-          console.log(`[${new Date().toLocaleString()}] Hiding browser promo banner via JS: ${promoBannerSelector}`); // Removed log
           await page.evaluate((selector) => {
             const banner = document.querySelector(selector);
             if (banner) {
@@ -178,58 +186,42 @@ async function getFirstDuckDuckGoImageLink(query) {
             }
           }, promoBannerSelector);
           await delay(500);
-        } else {
-          console.log(`[${new Date().toLocaleString()}] Browser promo popup not found or not visible.`); // Removed log
         }
       }
     } catch (popupError) {
-      console.warn(`Failed to dismiss popup gracefully: ${popupError.message}`); // Simplified warning log
+      console.warn(`Failed to dismiss popup gracefully: ${popupError.message}`);
     }
 
-    // const screenshotPathPostPopup = `./ddg_images_debug_post_popup_${Date.now()}.png`;
-    // await page.screenshot({ path: screenshotPathPostPopup, fullPage: true });
-    console.log(`[${new Date().toLocaleString()}] Screenshot (after popup dismissed) saved to: ${screenshotPathPostPopup}`); // Removed log
-
     // --- Wait for any image element to be loaded before clicking ---
-    const firstImageSelector = 'img'; // Selector to get any <img> tag
+    const firstImageSelector = 'img';
     try {
       await page.waitForSelector(firstImageSelector, { visible: true, timeout: 15000 });
-      console.log(`[${new Date().toLocaleString()}] An image element is visible on the results page.`); // Removed log
     } catch (selectorError) {
-      console.error(`No image elements found or visible on results page: ${selectorError.message}`); // Simplified error log
-      // await page.screenshot({ path: `./ddg_no_images_found_debug_${Date.now()}.png`, fullPage: true });
+      console.error(`No image elements found or visible on results page: ${selectorError.message}`);
       return null;
     }
 
     // --- Click the first image found ---
-    console.log(`[${new Date().toLocaleString()}] Attempting to click the first image element.`); // Removed log
     try {
       await page.click(firstImageSelector);
-      // Wait a short moment for the overlay to start appearing
       await delay(1000);
-      console.log(`[${new Date().toLocaleString()}] First image element clicked. Waiting for overlay...`); // Removed log
     } catch (clickError) {
-      console.error(`Failed to click the first image element: ${clickError.message}`); // Simplified error log
-      // await page.screenshot({ path: `./ddg_first_image_click_fail_${Date.now()}.png`, fullPage: true });
+      console.error(`Failed to click the first image element: ${clickError.message}`);
       return null;
     }
 
     // --- Wait for the image overlay/lightbox to appear ---
     const imageOverlaySelector = 'aside';
-
     try {
       await page.waitForSelector(imageOverlaySelector, { visible: true, timeout: 15000 });
-      console.log(`[${new Date().toLocaleString()}] Image overlay (aside element) is visible.`); // Removed log
     } catch (overlayError) {
-      console.error(`Image overlay (aside element) did not appear or timed out: ${overlayError.message}`); // Simplified error log
-      // await page.screenshot({ path: `./ddg_overlay_not_found_debug_${Date.now()}.png`, fullPage: true });
+      console.error(`Image overlay (aside element) did not appear or timed out: ${overlayError.message}`);
       return null;
     }
 
     // --- Extract the high-resolution image URL from the overlay ---
     const largeImageSrcSelector = 'aside img';
-
-    const imageUrl = await page.evaluate((selector) => {
+    imageUrl = await page.evaluate((selector) => {
       const imgElement = document.querySelector(selector);
       if (imgElement) {
         return imgElement.src || imgElement.getAttribute('data-src') || imgElement.getAttribute('data-url');
@@ -238,29 +230,22 @@ async function getFirstDuckDuckGoImageLink(query) {
     }, largeImageSrcSelector);
 
     if (!imageUrl) {
-      console.warn(`Could not extract image URL from the overlay (using '${largeImageSrcSelector}').`); // Simplified warning log
-      // await page.screenshot({ path: `./ddg_image_url_extract_fail_${Date.now()}.png`, fullPage: true });
-      return null;
+      console.warn(`Could not extract image URL from the overlay (using '${largeImageSrcSelector}').`);
     }
 
-    console.log(`[${new Date().toLocaleString()}] Successfully extracted image URL: ${imageUrl}`); // Removed log
-
-    // --- Debugging: Screenshot after extracting URL from overlay ---
-    // const screenshotPathAfterExtraction = `./ddg_after_image_extraction_${Date.now()}.png`;
-    // await page.screenshot({ path: screenshotPathAfterExtraction, fullPage: true });
-    // console.log(`[${new Date().toLocaleString()}] Screenshot after image extraction saved to: ${screenshotPathAfterExtraction}`); // Removed log
-
-    return imageUrl;
-
-  } catch (error) {
-    console.error(`Fatal error in getFirstDuckDuckGoImageLink for query "${query}": ${error.message}`); // Simplified error log
-    return null;
   } finally {
-    if (browser) {
-      await browser.close();
+    // ✨ Crucial: Ensure the page is always closed
+    if (page && !page.isClosed()) {
+      await page.close();
+      console.log(`[${new Date().toLocaleString()}] Page closed for query: "${query}"`);
     }
   }
+
+  return imageUrl;
 }
+
+// ... (rest of your code remains the same) ...
+
 
 // 🔹 Gemini prompt call wrapper
 async function generateGeminiResponse(prompt) {
@@ -315,7 +300,6 @@ Return a valid JSON object in this format:
 async function generateSection(section, level, language, topic) {
   const bulletCount = section.bulletCount || 3;
   let finalResult;
-
   const prompt = `
 You are a mobile course content generator.
 
@@ -354,7 +338,6 @@ Return this valid JSON format:
   try {
     const raw = await generateGeminiResponse(prompt);
     const parsed = JSON.parse(raw.replace(/```json|```/g, '').trim());
-
     const contentWithIds = await Promise.all(parsed.content.map(async (item, index) => {
       // const topicTranslated = language !== "en" ? await translate(topic, { from: language, to: 'en' }).then(res => res.text) : topic;
       // const titleTranslated = language !== "en" ? await translate(item.title, { from: language, to: 'en' }).then(res => res.text) : item.title;
@@ -374,13 +357,13 @@ Return this valid JSON format:
       }
       //   }
       // }
-
       return {
         id: index,
         isDone: false,
         ...item,
         image: imageUrl
       };
+
     }));
 
     const testWithIsDone = (parsed.test || []).map((item, index) => ({
@@ -409,7 +392,7 @@ app.post('/generate-course', async (req, res) => {
   try {
     const coursePlan = await getCoursePlan(topic, level, time, language);
     const sectionsData = [];
-
+    await initializeBrowser();
     for (let i = 0; i < coursePlan.sections.length; i++) {
       const section = coursePlan.sections[i];
       console.log(`🛠 Generating section ${i + 1}/${coursePlan.sections.length} — "${section.title}"`);
@@ -424,6 +407,8 @@ app.post('/generate-course', async (req, res) => {
       language,
       sections: sectionsData
     });
+
+    await closeBrowser();
   } catch (error) {
     console.error(error.message);
     res.status(500).json({ error: error.message });
