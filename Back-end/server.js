@@ -124,169 +124,146 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 //   }
 // }
 
-// --- DuckDucGo Image Search Function (Puppeteer-based) ---
-// async function getFirstDuckDuckGoImageLink(query) {
-//   let browser;
-//   try {
-//     browser = await puppeteer.launch({
-//       headless: 'new', // Set to false temporarily if you want to see the browser UI
-//     executablePath: 'chrome/linux-137.0.7151.55/chrome-linux64/chrome',       
-//     args: [
-//         '--no-sandbox',
-//         '--disable-setuid-sandbox',
-//         '--disable-dev-shm-usage',
-//         '--disable-gpu',
-//         '--no-zygote',
-//         '--single-process'
-//       ],
-//     });
-
-//     const page = await browser.newPage();
-//     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36');
-//     await page.setViewport({ width: 1366, height: 768 });
-
-//     const searchUrl = `https://duckduckgo.com/?t=h_&q=${encodeURIComponent(query)}&ia=images&iax=images&iaf=size%3ALarge`; // Using Large size filter
-//     // console.log(`[${new Date().toLocaleString()}] Attempting to navigate directly to image results: ${searchUrl}`); // Removed log
-
-//     try {
-//       await page.goto(searchUrl, { waitUntil: 'networkidle0', timeout: 90000 });
-//       // console.log(`[${new Date().toLocaleString()}] Successfully navigated to: ${page.url()}`); // Removed log
-
-//     } catch (navigationError) {
-//       console.error(`Initial navigation to DuckDuckGo Images failed: ${navigationError.message}`); // Simplified error log
-//       // await page.screenshot({ path: `./ddg_nav_fail_debug_${Date.now()}.png`, fullPage: true });
-//       // console.log(`[${new Date().toLocaleString()}] Screenshot of failed navigation saved.`); // Removed log
-//       return null;
-//     }
-
-//     // --- Attempt to dismiss any potential popups ---
-//     // console.log(`[${new Date().toLocaleString()}] Attempting to dismiss browser promo popup...`); // Removed log
-//     try {
-//       const closeButtonSelector = '[data-testid="serp-popover-promo-close"]';
-//       const promoBannerSelector = '.ddg-extension-promo, #browser-promo-banner, .js-modal-modern.modal-flex.modal-popout, .ddg-promo-modal, .badge-link, .modal-themed, [data-testid*="popover-promo"]';
-
-//       const dismissButton = await page.waitForSelector(closeButtonSelector, { visible: true, timeout: 5000 }).catch(() => null);
-//       if (dismissButton) {
-//         // console.log(`[${new Date().toLocaleString()}] Clicking browser promo dismiss button: ${closeButtonSelector}`); // Removed log
-//         await dismissButton.click();
-//         await delay(1000);
-//       } else {
-//         const promoBanner = await page.waitForSelector(promoBannerSelector, { visible: true, timeout: 5000 }).catch(() => null);
-//         if (promoBanner) {
-//           // console.log(`[${new Date().toLocaleString()}] Hiding browser promo banner via JS: ${promoBannerSelector}`); // Removed log
-//           await page.evaluate((selector) => {
-//             const banner = document.querySelector(selector);
-//             if (banner) {
-//               banner.style.display = 'none';
-//             }
-//           }, promoBannerSelector);
-//           await delay(500);
-//         } else {
-//           // console.log(`[${new Date().toLocaleString()}] Browser promo popup not found or not visible.`); // Removed log
-//         }
-//       }
-//     } catch (popupError) {
-//       console.warn(`Failed to dismiss popup gracefully: ${popupError.message}`); // Simplified warning log
-//     }
-
-//     // const screenshotPathPostPopup = `./ddg_images_debug_post_popup_${Date.now()}.png`;
-//     // await page.screenshot({ path: screenshotPathPostPopup, fullPage: true });
-//     // console.log(`[${new Date().toLocaleString()}] Screenshot (after popup dismissed) saved to: ${screenshotPathPostPopup}`); // Removed log
-
-//     // --- Wait for any image element to be loaded before clicking ---
-//     const firstImageSelector = 'img'; // Selector to get any <img> tag
-//     try {
-//       await page.waitForSelector(firstImageSelector, { visible: true, timeout: 15000 });
-//       // console.log(`[${new Date().toLocaleString()}] An image element is visible on the results page.`); // Removed log
-//     } catch (selectorError) {
-//       console.error(`No image elements found or visible on results page: ${selectorError.message}`); // Simplified error log
-//       // await page.screenshot({ path: `./ddg_no_images_found_debug_${Date.now()}.png`, fullPage: true });
-//       return null;
-//     }
-
-//     // --- Click the first image found ---
-//     // console.log(`[${new Date().toLocaleString()}] Attempting to click the first image element.`); // Removed log
-//     try {
-//       await page.click(firstImageSelector);
-//       // Wait a short moment for the overlay to start appearing
-//       await delay(1000);
-//       // console.log(`[${new Date().toLocaleString()}] First image element clicked. Waiting for overlay...`); // Removed log
-//     } catch (clickError) {
-//       console.error(`Failed to click the first image element: ${clickError.message}`); // Simplified error log
-//       // await page.screenshot({ path: `./ddg_first_image_click_fail_${Date.now()}.png`, fullPage: true });
-//       return null;
-//     }
-
-//     // --- Wait for the image overlay/lightbox to appear ---
-//     const imageOverlaySelector = 'aside';
-
-//     try {
-//       await page.waitForSelector(imageOverlaySelector, { visible: true, timeout: 15000 });
-//       // console.log(`[${new Date().toLocaleString()}] Image overlay (aside element) is visible.`); // Removed log
-//     } catch (overlayError) {
-//       console.error(`Image overlay (aside element) did not appear or timed out: ${overlayError.message}`); // Simplified error log
-//       // await page.screenshot({ path: `./ddg_overlay_not_found_debug_${Date.now()}.png`, fullPage: true });
-//       return null;
-//     }
-
-//     // --- Extract the high-resolution image URL from the overlay ---
-//     const largeImageSrcSelector = 'aside img';
-
-//     const imageUrl = await page.evaluate((selector) => {
-//       const imgElement = document.querySelector(selector);
-//       if (imgElement) {
-//         return imgElement.src || imgElement.getAttribute('data-src') || imgElement.getAttribute('data-url');
-//       }
-//       return null;
-//     }, largeImageSrcSelector);
-
-//     if (!imageUrl) {
-//       console.warn(`Could not extract image URL from the overlay (using '${largeImageSrcSelector}').`); // Simplified warning log
-//       // await page.screenshot({ path: `./ddg_image_url_extract_fail_${Date.now()}.png`, fullPage: true });
-//       return null;
-//     }
-
-//     // console.log(`[${new Date().toLocaleString()}] Successfully extracted image URL: ${imageUrl}`); // Removed log
-
-//     // --- Debugging: Screenshot after extracting URL from overlay ---
-//     // const screenshotPathAfterExtraction = `./ddg_after_image_extraction_${Date.now()}.png`;
-//     // await page.screenshot({ path: screenshotPathAfterExtraction, fullPage: true });
-//     // console.log(`[${new Date().toLocaleString()}] Screenshot after image extraction saved to: ${screenshotPathAfterExtraction}`); // Removed log
-
-//     return imageUrl;
-
-//   } catch (error) {
-//     console.error(`Fatal error in getFirstDuckDuckGoImageLink for query "${query}": ${error.message}`); // Simplified error log
-//     return null;
-//   } finally {
-//     if (browser) {
-//       await browser.close();
-//     }
-//   }
-// }
-
+--- DuckDucGo Image Search Function (Puppeteer-based) ---
 async function getFirstDuckDuckGoImageLink(query) {
-  const searchUrl = `https://duckduckgo.com/?q=${encodeURIComponent(query)}&iax=images&ia=images`;
+  let browser;
+  try {
+    browser = await puppeteer.launch({
+      headless: 'new', // Set to false temporarily if you want to see the browser UI
+    executablePath: 'chrome/linux-137.0.7151.55/chrome-linux64/chrome',       
+    args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--no-zygote',
+        '--single-process'
+      ],
+    });
 
-  // Step 1: Get the token (vqd) from initial HTML
-  const res = await axios.get(searchUrl);
-  const vqdMatch = res.data.match(/vqd='([^']+)'/);
-  if (!vqdMatch) throw new Error('Failed to extract vqd token');
+    const page = await browser.newPage();
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36');
+    await page.setViewport({ width: 1366, height: 768 });
 
-  const vqd = vqdMatch[1];
+    const searchUrl = `https://duckduckgo.com/?t=h_&q=${encodeURIComponent(query)}&ia=images&iax=images&iaf=size%3ALarge`; // Using Large size filter
+    // console.log(`[${new Date().toLocaleString()}] Attempting to navigate directly to image results: ${searchUrl}`); // Removed log
 
-  // Step 2: Get image results using the token
-  const apiUrl = `https://duckduckgo.com/i.js?l=us-en&o=json&q=${encodeURIComponent(query)}&vqd=${vqd}`;
-  const imgRes = await axios.get(apiUrl, {
-    headers: {
-      'Referer': searchUrl,
-      'User-Agent': 'Mozilla/5.0'
+    try {
+      await page.goto(searchUrl, { waitUntil: 'networkidle0', timeout: 90000 });
+      // console.log(`[${new Date().toLocaleString()}] Successfully navigated to: ${page.url()}`); // Removed log
+
+    } catch (navigationError) {
+      console.error(`Initial navigation to DuckDuckGo Images failed: ${navigationError.message}`); // Simplified error log
+      // await page.screenshot({ path: `./ddg_nav_fail_debug_${Date.now()}.png`, fullPage: true });
+      // console.log(`[${new Date().toLocaleString()}] Screenshot of failed navigation saved.`); // Removed log
+      return null;
     }
-  });
 
-  return imgRes.data.results?.[0]?.image || null;
+    // --- Attempt to dismiss any potential popups ---
+    // console.log(`[${new Date().toLocaleString()}] Attempting to dismiss browser promo popup...`); // Removed log
+    try {
+      const closeButtonSelector = '[data-testid="serp-popover-promo-close"]';
+      const promoBannerSelector = '.ddg-extension-promo, #browser-promo-banner, .js-modal-modern.modal-flex.modal-popout, .ddg-promo-modal, .badge-link, .modal-themed, [data-testid*="popover-promo"]';
+
+      const dismissButton = await page.waitForSelector(closeButtonSelector, { visible: true, timeout: 5000 }).catch(() => null);
+      if (dismissButton) {
+        // console.log(`[${new Date().toLocaleString()}] Clicking browser promo dismiss button: ${closeButtonSelector}`); // Removed log
+        await dismissButton.click();
+        await delay(1000);
+      } else {
+        const promoBanner = await page.waitForSelector(promoBannerSelector, { visible: true, timeout: 5000 }).catch(() => null);
+        if (promoBanner) {
+          // console.log(`[${new Date().toLocaleString()}] Hiding browser promo banner via JS: ${promoBannerSelector}`); // Removed log
+          await page.evaluate((selector) => {
+            const banner = document.querySelector(selector);
+            if (banner) {
+              banner.style.display = 'none';
+            }
+          }, promoBannerSelector);
+          await delay(500);
+        } else {
+          // console.log(`[${new Date().toLocaleString()}] Browser promo popup not found or not visible.`); // Removed log
+        }
+      }
+    } catch (popupError) {
+      console.warn(`Failed to dismiss popup gracefully: ${popupError.message}`); // Simplified warning log
+    }
+
+    // const screenshotPathPostPopup = `./ddg_images_debug_post_popup_${Date.now()}.png`;
+    // await page.screenshot({ path: screenshotPathPostPopup, fullPage: true });
+    // console.log(`[${new Date().toLocaleString()}] Screenshot (after popup dismissed) saved to: ${screenshotPathPostPopup}`); // Removed log
+
+    // --- Wait for any image element to be loaded before clicking ---
+    const firstImageSelector = 'img'; // Selector to get any <img> tag
+    try {
+      await page.waitForSelector(firstImageSelector, { visible: true, timeout: 15000 });
+      // console.log(`[${new Date().toLocaleString()}] An image element is visible on the results page.`); // Removed log
+    } catch (selectorError) {
+      console.error(`No image elements found or visible on results page: ${selectorError.message}`); // Simplified error log
+      // await page.screenshot({ path: `./ddg_no_images_found_debug_${Date.now()}.png`, fullPage: true });
+      return null;
+    }
+
+    // --- Click the first image found ---
+    // console.log(`[${new Date().toLocaleString()}] Attempting to click the first image element.`); // Removed log
+    try {
+      await page.click(firstImageSelector);
+      // Wait a short moment for the overlay to start appearing
+      await delay(1000);
+      // console.log(`[${new Date().toLocaleString()}] First image element clicked. Waiting for overlay...`); // Removed log
+    } catch (clickError) {
+      console.error(`Failed to click the first image element: ${clickError.message}`); // Simplified error log
+      // await page.screenshot({ path: `./ddg_first_image_click_fail_${Date.now()}.png`, fullPage: true });
+      return null;
+    }
+
+    // --- Wait for the image overlay/lightbox to appear ---
+    const imageOverlaySelector = 'aside';
+
+    try {
+      await page.waitForSelector(imageOverlaySelector, { visible: true, timeout: 15000 });
+      // console.log(`[${new Date().toLocaleString()}] Image overlay (aside element) is visible.`); // Removed log
+    } catch (overlayError) {
+      console.error(`Image overlay (aside element) did not appear or timed out: ${overlayError.message}`); // Simplified error log
+      // await page.screenshot({ path: `./ddg_overlay_not_found_debug_${Date.now()}.png`, fullPage: true });
+      return null;
+    }
+
+    // --- Extract the high-resolution image URL from the overlay ---
+    const largeImageSrcSelector = 'aside img';
+
+    const imageUrl = await page.evaluate((selector) => {
+      const imgElement = document.querySelector(selector);
+      if (imgElement) {
+        return imgElement.src || imgElement.getAttribute('data-src') || imgElement.getAttribute('data-url');
+      }
+      return null;
+    }, largeImageSrcSelector);
+
+    if (!imageUrl) {
+      console.warn(`Could not extract image URL from the overlay (using '${largeImageSrcSelector}').`); // Simplified warning log
+      // await page.screenshot({ path: `./ddg_image_url_extract_fail_${Date.now()}.png`, fullPage: true });
+      return null;
+    }
+
+    // console.log(`[${new Date().toLocaleString()}] Successfully extracted image URL: ${imageUrl}`); // Removed log
+
+    // --- Debugging: Screenshot after extracting URL from overlay ---
+    // const screenshotPathAfterExtraction = `./ddg_after_image_extraction_${Date.now()}.png`;
+    // await page.screenshot({ path: screenshotPathAfterExtraction, fullPage: true });
+    // console.log(`[${new Date().toLocaleString()}] Screenshot after image extraction saved to: ${screenshotPathAfterExtraction}`); // Removed log
+
+    return imageUrl;
+
+  } catch (error) {
+    console.error(`Fatal error in getFirstDuckDuckGoImageLink for query "${query}": ${error.message}`); // Simplified error log
+    return null;
+  } finally {
+    if (browser) {
+      await browser.close();
+    }
+  }
 }
-
 
 // 🔹 Gemini prompt call wrapper
 async function generateGeminiResponse(prompt) {
