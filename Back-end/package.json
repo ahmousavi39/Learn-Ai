@@ -4,7 +4,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "postinstall": "npx puppeteer browsers install chrome@137.0.7151.55 --path ./"
+    "postinstall": "npx puppeteer browsers install chrome@139.0.7230.0 --path ./"
   },
   "keywords": [],
   "author": "",
@@ -12,13 +12,9 @@
   "description": "",
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
-    "axios": "^1.9.0",
-    "cheerio": "^1.1.0",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
-    "google-translate-api-x": "^10.7.2",
-    "node-fetch": "^3.3.2",
-    "puppeteer": "^24.9.0"
+    "puppeteer": "^24.10.0"
   }
 }

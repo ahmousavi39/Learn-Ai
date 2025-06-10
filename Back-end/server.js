@@ -4,8 +4,6 @@ require('dotenv').config();
 const { translate } = require('google-translate-api-x')
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const puppeteer = require('puppeteer');
-const axios = require('axios');
-const cheerio = require('cheerio');
 // import fetch from 'node-fetch';
 
 const app = express();
@@ -124,13 +122,12 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 //   }
 // }
 
---- DuckDucGo Image Search Function (Puppeteer-based) ---
 async function getFirstDuckDuckGoImageLink(query) {
   let browser;
   try {
     browser = await puppeteer.launch({
       headless: 'new', // Set to false temporarily if you want to see the browser UI
-    executablePath: 'chrome/linux-137.0.7151.55/chrome-linux64/chrome',       
+          // executablePath: 'chrome/linux-139.0.7230.0/chrome-linux64/chrome',
     args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
@@ -359,9 +356,9 @@ Return this valid JSON format:
     const parsed = JSON.parse(raw.replace(/```json|```/g, '').trim());
 
     const contentWithIds = await Promise.all(parsed.content.map(async (item, index) => {
-      const topicTranslated = language !== "en" ? await translate(topic, { from: language, to: 'en' }).then(res => res.text) : topic;
-      const titleTranslated = language !== "en" ? await translate(item.title, { from: language, to: 'en' }).then(res => res.text) : item.title;
-      const searchQuery = `${topicTranslated} ${titleTranslated}`;
+      // const topicTranslated = language !== "en" ? await translate(topic, { from: language, to: 'en' }).then(res => res.text) : topic;
+      // const titleTranslated = language !== "en" ? await translate(item.title, { from: language, to: 'en' }).then(res => res.text) : item.title;
+      const searchQuery = `${topic} ${item.title}`;
       let imageUrl = null;
       try {
         imageUrl = await getFirstDuckDuckGoImageLink(searchQuery)
