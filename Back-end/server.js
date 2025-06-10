@@ -4,6 +4,8 @@ require('dotenv').config();
 const { translate } = require('google-translate-api-x')
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const puppeteer = require('puppeteer');
+const axios = require('axios');
+const cheerio = require('cheerio');
 // import fetch from 'node-fetch';
 
 const app = express();
@@ -264,52 +266,25 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 // }
 
 async function getFirstDuckDuckGoImageLink(query) {
-  let browser;
-  try {
-    browser = await puppeteer.launch({
-      headless: 'new',
-      executablePath: 'chrome/linux-137.0.7151.55/chrome-linux64/chrome',
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-gpu',
-        '--no-zygote',
-        '--single-process'
-      ]
-    });
+  const searchUrl = `https://duckduckgo.com/?q=${encodeURIComponent(query)}&iax=images&ia=images`;
 
-    const page = await browser.newPage();
-    await page.setUserAgent(
-      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36'
-    );
-    await page.setViewport({ width: 1366, height: 768 });
+  // Step 1: Get the token (vqd) from initial HTML
+  const res = await axios.get(searchUrl);
+  const vqdMatch = res.data.match(/vqd='([^']+)'/);
+  if (!vqdMatch) throw new Error('Failed to extract vqd token');
 
-    const searchUrl = `https://duckduckgo.com/?q=${encodeURIComponent(query)}&iax=images&ia=images`;
+  const vqd = vqdMatch[1];
 
-    await page.goto(searchUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+  // Step 2: Get image results using the token
+  const apiUrl = `https://duckduckgo.com/i.js?l=us-en&o=json&q=${encodeURIComponent(query)}&vqd=${vqd}`;
+  const imgRes = await axios.get(apiUrl, {
+    headers: {
+      'Referer': searchUrl,
+      'User-Agent': 'Mozilla/5.0'
+    }
+  });
 
-    // Dismiss popup if present
-    try {
-      const closeBtn = await page.$('[data-testid="serp-popover-promo-close"]');
-      if (closeBtn) await closeBtn.click();
-    } catch (_) {}
-
-    // Wait for image grid and extract first image URL directly
-    await page.waitForSelector('img.tile--img__img', { visible: true, timeout: 10000 });
-
-    const imageUrl = await page.evaluate(() => {
-      const img = document.querySelector('img.tile--img__img');
-      return img?.src || img?.getAttribute('data-src') || null;
-    });
-
-    return imageUrl || null;
-  } catch (err) {
-    console.error(`Error: ${err.message}`);
-    return null;
-  } finally {
-    if (browser) await browser.close();
-  }
+  return imgRes.data.results?.[0]?.image || null;
 }
 
 
