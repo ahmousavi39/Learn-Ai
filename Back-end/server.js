@@ -128,7 +128,7 @@ let globalBrowserInstance; // Declare a global variable for the browser
 async function initializeBrowser() {
   globalBrowserInstance = await puppeteer.launch({
     headless: 'new',
-      // executablePath: 'chrome/linux-139.0.7230.0/chrome-linux64/chrome',
+      executablePath: 'chrome/linux-139.0.7230.0/chrome-linux64/chrome',
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
