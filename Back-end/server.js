@@ -92,7 +92,7 @@ async function getImageLink(query) {
     const results = response.data.results;
 
     for (const item of results) {
-      if (item.image && await isImageUrl(item.image)) {
+      if (item.image && await isImageUrl(item.image) && !item.image.includes("ytimg.com")) {
         return item.image;
       }
     }
