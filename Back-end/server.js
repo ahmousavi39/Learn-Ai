@@ -85,7 +85,7 @@ async function getImageLink(query) {
 // Gemini setup
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 // const MODEL = 'models/gemini-1.5-flash-latest'; 
-const MODEL = 'models/gemini-2.5-flash-preview-05-20';
+const MODEL = 'models/gemini-2.0-flash';
 
 // Utility
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -293,7 +293,6 @@ Return format:
   }
 });
 
-const progressClients = new Map(); // requestId -> res
 
 // Start server
 const PORT = process.env.PORT || 4000;
