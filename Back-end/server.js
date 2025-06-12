@@ -1,14 +1,55 @@
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
-// const { translate } = require('google-translate-api-x')
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-const puppeteer = require('puppeteer');
-// import fetch from 'node-fetch';
+const axios = require("axios");
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+async function getVQDFromHTML(query) {
+  const url = `https://duckduckgo.com/?q=${encodeURIComponent(query)}&iar=images&t=h_`;
+  const headers = {
+    "User-Agent":
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
+      "(KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36",
+  };
+
+  try {
+    const response = await axios.get(url, { headers });
+    const html = response.data;
+
+    // Extract vqd from the JavaScript variable in the HTML
+    const match = html.match(/vqd="([^"]+)"/);
+    if (match) {
+      return match[1];
+    } else {
+      throw new Error("vqd not found in HTML");
+    }
+  } catch (error) {
+    console.error("Failed to get vqd:", error);
+  }
+}
+
+async function getImageLink(query) {
+  const vqd = await getVQDFromHTML(query);
+  const url = `https://duckduckgo.com/i.js?o=json&q=${encodeURIComponent(query)}&l=us-en&vqd=${encodeURIComponent(vqd)}&p=1&f=size%3ALarge`;
+  const headers = {
+    "User-Agent":
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
+      "(KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36",
+  };
+
+  try {
+    const response = await axios.get(url, { headers });
+    console.log(response.data.results[0].image);
+    return response.data.results[0].image;
+  } catch (error) {
+    console.error("Failed to get vqd:", error);
+    return null;
+  }
+}
 
 // Gemini setup
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
@@ -16,236 +57,6 @@ const MODEL = 'models/gemini-1.5-flash-latest'; // Gemini Flash 2.5
 
 // Utility
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-// async function getFirstWikimediaCommonsImageLinkFromAPI(query) {
-//   try {
-//     const encodedQuery = encodeURIComponent(query);
-//     // Request up to 50 results to have more options to filter
-//     const apiUrl = `https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodedQuery}&gsrnamespace=6&prop=imageinfo&iiprop=url|dimensions|size|mime&format=json&origin=*&gsrlimit=50`;
-
-//     console.log(`[${new Date().toLocaleString()}] Fetching from Wikimedia Commons API for query: "${query}"`);
-//     console.log(`API URL: ${apiUrl}`);
-
-//     const response = await fetch(apiUrl);
-//     const data = await response.json();
-
-//     if (data.error) {
-//       console.error(`[${new Date().toLocaleString()}] Wikimedia Commons API Error: ${data.error.info}`);
-//       return null;
-//     }
-
-//     const pages = data.query && data.query.pages;
-
-//     if (!pages) {
-//       console.warn(`[${new Date().toLocaleString()}] No image results found for query: "${query}" from Wikimedia Commons API.`);
-//       return null;
-//     }
-
-//     const MIN_WIDTH = 150;  // Minimum width for a showable image in a mobile app
-//     const MIN_HEIGHT = 150; // Minimum height for a showable image in a mobile app
-//     const MAX_FILE_SIZE_KB = 5000; // Max file size in KB (e.g., 5MB) to avoid huge downloads
-
-//     // Iterate through the results, prioritizing larger, common image types
-//     const candidates = [];
-//     for (const pageId in pages) {
-//       const page = pages[pageId];
-//       if (page.imageinfo && page.imageinfo.length > 0) {
-//         const imageInfo = page.imageinfo[0];
-
-//         const imageUrl = imageInfo.url;
-//         const width = imageInfo.width;
-//         const height = imageInfo.height;
-//         const size = imageInfo.size; // Size in bytes
-//         const mime = imageInfo.mime;
-
-//         // 1. Basic URL and dimension checks
-//         if (!imageUrl || !imageUrl.startsWith('http') || width < MIN_WIDTH || height < MIN_HEIGHT) {
-//           continue; // Skip images that are too small or invalid URL
-//         }
-
-//         // 2. MIME type check for common image formats
-//         if (!['image/jpeg', 'image/png', 'image/gif', 'image/webp'].includes(mime)) {
-//           continue; // Skip non-standard image types or other file types
-//         }
-
-//         // 3. File size check (convert bytes to KB)
-//         if (size / 1024 > MAX_FILE_SIZE_KB) {
-//           // Optionally, you could try to get a thumbnail URL for larger images
-//           // For now, we'll just skip them.
-//           console.log(`[${new Date().toLocaleString()}] Skipping image due to large size (${(size / 1024 / 1024).toFixed(2)} MB): ${imageUrl}`);
-//           continue;
-//         }
-
-//         // 4. Filter out common Wikimedia UI/placeholder images (SVGs, icons)
-//         if (imageUrl.includes('.svg') ||
-//           imageUrl.includes('Question_book-new') ||
-//           imageUrl.includes('Magnifying_glass_icon') ||
-//           imageUrl.includes('Padlock-alt-green') ||
-//           imageUrl.includes('Privacy_policy_info') ||
-//           imageUrl.includes('Ambox')) { // 'Ambox' often indicates a message box icon
-//           continue;
-//         }
-
-//         // If all checks pass, add to candidates. We'll pick the 'best' later.
-//         candidates.push({
-//           url: imageUrl,
-//           width: width,
-//           height: height,
-//           size: size,
-//           mime: mime
-//         });
-//       }
-//     }
-
-//     if (candidates.length === 0) {
-//       console.warn(`[${new Date().toLocaleString()}] No suitable images found after filtering for query: "${query}" from Wikimedia Commons API.`);
-//       return null;
-//     }
-
-//     // Sort candidates to prioritize larger images (closer to screen-filling, but not excessively large)
-//     // You can adjust this sorting logic based on what "best" means for your app
-//     candidates.sort((a, b) => {
-//       // Prioritize higher resolution, but consider aspect ratio, or simply total pixels
-//       const aPixels = a.width * a.height;
-//       const bPixels = b.width * b.height;
-//       return bPixels - aPixels; // Descending order of pixels
-//     });
-
-//     const bestImage = candidates[0];
-//     console.log(`[${new Date().toLocaleString()}] Found suitable image via API for query "${query}": ${bestImage.url}`);
-//     console.log(`  Details: ${bestImage.width}x${bestImage.height}, ${(bestImage.size / 1024).toFixed(2)} KB, ${bestImage.mime}`);
-//     return bestImage.url;
-
-//   } catch (error) {
-//     console.error(`[${new Date().toLocaleString()}] Error in getFirstWikimediaCommonsImageLinkFromAPI for query "${query}": ${error.message}`);
-//     return null;
-//   }
-// }
-
-let globalBrowserInstance; // Declare a global variable for the browser
-
-// Function to initialize the browser
-async function initializeBrowser() {
-  globalBrowserInstance = await puppeteer.launch({
-    headless: 'new',
-      executablePath: 'chrome/linux-139.0.7230.0/chrome-linux64/chrome',
-    args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage',
-      '--disable-gpu',
-      '--no-zygote',
-      '--single-process'
-    ],
-  });
-  console.log('Puppeteer browser launched globally.');
-}
-
-// Function to close the browser when the app shuts down
-async function closeBrowser() {
-  if (globalBrowserInstance) {
-    await globalBrowserInstance.close();
-    console.log('Puppeteer browser closed globally.');
-  }
-}
-// Function to fetch the first DuckDuckGo image link
-async function getFirstDuckDuckGoImageLink(query) {
-  const page = await globalBrowserInstance.newPage();
-  let imageUrl = null; // Initialize imageUrl to null
-
-  try {
-    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36');
-    await page.setViewport({ width: 1366, height: 768 });
-
-    const searchUrl = `https://duckduckgo.com/?t=h_&q=${encodeURIComponent(query)}&ia=images&iax=images&iaf=size%3ALarge`;
-    console.log(`[${new Date().toLocaleString()}] Attempting to navigate directly to image results: ${searchUrl}`);
-
-    try {
-      await page.goto(searchUrl, { waitUntil: 'networkidle0', timeout: 90000 });
-    } catch (navigationError) {
-      console.error(`Initial navigation to DuckDuckGo Images failed: ${navigationError.message}`);
-      return null; // Return null if navigation fails
-    }
-
-    // --- Attempt to dismiss any potential popups ---
-    try {
-      const closeButtonSelector = '[data-testid="serp-popover-promo-close"]';
-      const promoBannerSelector = '.ddg-extension-promo, #browser-promo-banner, .js-modal-modern.modal-flex.modal-popout, .ddg-promo-modal, .badge-link, .modal-themed, [data-testid*="popover-promo"]';
-
-      const dismissButton = await page.waitForSelector(closeButtonSelector, { visible: true, timeout: 5000 }).catch(() => null);
-      if (dismissButton) {
-        await dismissButton.click();
-        await delay(1000);
-      } else {
-        const promoBanner = await page.waitForSelector(promoBannerSelector, { visible: true, timeout: 5000 }).catch(() => null);
-        if (promoBanner) {
-          await page.evaluate((selector) => {
-            const banner = document.querySelector(selector);
-            if (banner) {
-              banner.style.display = 'none';
-            }
-          }, promoBannerSelector);
-          await delay(500);
-        }
-      }
-    } catch (popupError) {
-      console.warn(`Failed to dismiss popup gracefully: ${popupError.message}`);
-    }
-
-    // --- Wait for any image element to be loaded before clicking ---
-    const firstImageSelector = 'img';
-    try {
-      await page.waitForSelector(firstImageSelector, { visible: true, timeout: 15000 });
-    } catch (selectorError) {
-      console.error(`No image elements found or visible on results page: ${selectorError.message}`);
-      return null;
-    }
-
-    // --- Click the first image found ---
-    try {
-      await page.click(firstImageSelector);
-      await delay(1000);
-    } catch (clickError) {
-      console.error(`Failed to click the first image element: ${clickError.message}`);
-      return null;
-    }
-
-    // --- Wait for the image overlay/lightbox to appear ---
-    const imageOverlaySelector = 'aside';
-    try {
-      await page.waitForSelector(imageOverlaySelector, { visible: true, timeout: 15000 });
-    } catch (overlayError) {
-      console.error(`Image overlay (aside element) did not appear or timed out: ${overlayError.message}`);
-      return null;
-    }
-
-    // --- Extract the high-resolution image URL from the overlay ---
-    const largeImageSrcSelector = 'aside img';
-    imageUrl = await page.evaluate((selector) => {
-      const imgElement = document.querySelector(selector);
-      if (imgElement) {
-        return imgElement.src || imgElement.getAttribute('data-src') || imgElement.getAttribute('data-url');
-      }
-      return null;
-    }, largeImageSrcSelector);
-
-    if (!imageUrl) {
-      console.warn(`Could not extract image URL from the overlay (using '${largeImageSrcSelector}').`);
-    }
-
-  } finally {
-    // ✨ Crucial: Ensure the page is always closed
-    if (page && !page.isClosed()) {
-      await page.close();
-      console.log(`[${new Date().toLocaleString()}] Page closed for query: "${query}"`);
-    }
-  }
-
-  return imageUrl;
-}
-
-// ... (rest of your code remains the same) ...
-
 
 // 🔹 Gemini prompt call wrapper
 async function generateGeminiResponse(prompt) {
@@ -269,6 +80,7 @@ Design a course on "${topic}" for a learner at level ${level}/10. The learner ha
 - Course title and section title must be in "${language}" language
 - Must start with an "Introduction" section
 - Should progress from easier to harder topics
+- Be carefull not to have doubbled content
 - Final section should be a "Summary" or "Review" of the course
 - Allocate available time smartly across sections based on complexity
 - Each section must include:
@@ -344,19 +156,11 @@ Return this valid JSON format:
       const searchQuery = `${topic} ${item.title}`;
       let imageUrl = null;
       try {
-        imageUrl = await getFirstDuckDuckGoImageLink(searchQuery)
-        // imageUrl = await getFirstWikimediaCommonsImageLinkFromAPI(searchQuery)
-        // } catch (e) {
-        //   try {
-        //     imageUrl = await getFirstWikimediaCommonsImageLinkFromAPI(titleTranslated);
-        //   } catch (e) {
-        //     try {
-        //       imageUrl = await getFirstWikimediaCommonsImageLinkFromAPI(topicTranslated);
+        imageUrl = await getImageLink(searchQuery);
       } catch (e) {
         console.warn(`⚠️ Failed to fetch image for "${searchQuery}": ${e.message}`);
       }
-      //   }
-      // }
+
       return {
         id: index,
         isDone: false,
@@ -392,7 +196,6 @@ app.post('/generate-course', async (req, res) => {
   try {
     const coursePlan = await getCoursePlan(topic, level, time, language);
     const sectionsData = [];
-    await initializeBrowser();
     for (let i = 0; i < coursePlan.sections.length; i++) {
       const section = coursePlan.sections[i];
       console.log(`🛠 Generating section ${i + 1}/${coursePlan.sections.length} — "${section.title}"`);
@@ -408,14 +211,12 @@ app.post('/generate-course', async (req, res) => {
       sections: sectionsData
     });
 
-    await closeBrowser();
   } catch (error) {
     console.error(error.message);
     res.status(500).json({ error: error.message });
   }
 });
 
-// 🔁 Rewrite Bulletpoints
 app.post('/regenerate-lesson', async (req, res) => {
   const { language, level, bulletpoints } = req.body;
 
