@@ -233,17 +233,15 @@ app.post('/generate-course', async (req, res) => {
     const sectionsData = [];
     for (let i = 0; i < coursePlan.sections.length; i++) {
       const section = coursePlan.sections[i];
-      console.log(`🛠 Generating section ${i + 1}/${coursePlan.sections.length} — "${section.title}"`);
-      const generated = await generateSection(section, level, language, topic);
-      sectionsData.push(generated);
       sendProgress(requestId, {
         type: 'progress',
         current: i + 1,
         total: coursePlan.sections.length,
         sectionTitle: section.title
       });
-
-      await delay(1500);
+      console.log(`🛠 Generating section ${i + 1}/${coursePlan.sections.length} — "${section.title}"`);
+      const generated = await generateSection(section, level, language, topic);
+      sectionsData.push(generated);
     }
 
     sendProgress(requestId, { type: 'done' });
