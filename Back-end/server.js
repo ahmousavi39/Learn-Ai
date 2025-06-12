@@ -3,10 +3,42 @@ const cors = require('cors');
 require('dotenv').config();
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const axios = require("axios");
-
+const WebSocket = require('ws');
+const http = require('http');
 const app = express();
 app.use(cors());
 app.use(express.json());
+const server = http.createServer(app);
+const wss = new WebSocket.Server({ server });
+
+const clients = new Map(); // requestId -> ws
+
+wss.on('connection', (ws) => {
+  ws.on('message', (msg) => {
+    try {
+      const data = JSON.parse(msg);
+      if (data.type === 'register' && data.requestId) {
+        clients.set(data.requestId, ws);
+        console.log(`Client registered: ${data.requestId}`);
+      }
+    } catch (e) {
+      console.error('Invalid message:', msg);
+    }
+
+    ws.on('close', () => {
+      for (const [id, clientWs] of clients) {
+        if (clientWs === ws) clients.delete(id);
+      }
+    });
+  });
+});
+
+function sendProgress(requestId, message) {
+  const ws = clients.get(requestId);
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify(message));
+  }
+}
 
 async function getVQDFromHTML(query) {
   const url = `https://duckduckgo.com/?q=${encodeURIComponent(query)}&iar=images&t=h_`;
@@ -43,7 +75,6 @@ async function getImageLink(query) {
 
   try {
     const response = await axios.get(url, { headers });
-    console.log(response.data.results[0].image);
     return response.data.results[0].image;
   } catch (error) {
     console.error("Failed to get vqd:", error);
@@ -53,7 +84,8 @@ async function getImageLink(query) {
 
 // Gemini setup
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const MODEL = 'models/gemini-1.5-flash-latest'; // Gemini Flash 2.5
+// const MODEL = 'models/gemini-1.5-flash-latest'; 
+const MODEL = 'models/gemini-2.5-flash-preview-05-20';
 
 // Utility
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -99,7 +131,7 @@ Return a valid JSON object in this format:
       "complexity": 1-5,
       "availableTime": minutes,
       "bulletCount": number,
-      "bulletTitles": ["1. bulletTitle", "2. bulletTitle"]
+      "bulletTitles": ["first bulletTitle", "second bulletTitle"]
     }
   ]
 }
@@ -194,7 +226,7 @@ Return this valid JSON format:
 
 // 🔸 STEP 3: Generate Full Course
 app.post('/generate-course', async (req, res) => {
-  const { topic, level, time, language } = req.body;
+  const { topic, level, time, language, requestId } = req.body;
 
   try {
     const coursePlan = await getCoursePlan(topic, level, time, language);
@@ -204,8 +236,17 @@ app.post('/generate-course', async (req, res) => {
       console.log(`🛠 Generating section ${i + 1}/${coursePlan.sections.length} — "${section.title}"`);
       const generated = await generateSection(section, level, language, topic);
       sectionsData.push(generated);
+      sendProgress(requestId, {
+        type: 'progress',
+        current: i + 1,
+        total: coursePlan.sections.length,
+        sectionTitle: section.title
+      });
+
       await delay(1500);
     }
+
+    sendProgress(requestId, { type: 'done' });
 
     res.json({
       topic: coursePlan.title,
@@ -254,6 +295,8 @@ Return format:
   }
 });
 
+const progressClients = new Map(); // requestId -> res
+
 // Start server
 const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => console.log(`🚀 Server running on http://localhost:${PORT}`));
+server.listen(PORT, () => console.log(`🚀 Server running on http://localhost:${PORT}`));
