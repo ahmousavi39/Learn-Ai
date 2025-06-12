@@ -88,6 +88,7 @@ Design a course on "${topic}" for a learner at level ${level}/10. The learner ha
   - "complexity": from 1 (easy) to 5 (hard)
   - "availableTime": time allocated in minutes
   - "bulletCount": how many content blocks the section should include
+  - "bulletTitles": title of content blocks the section should include
 
 Return a valid JSON object in this format:
 {
@@ -97,7 +98,8 @@ Return a valid JSON object in this format:
       "title": "Section Title",
       "complexity": 1-5,
       "availableTime": minutes,
-      "bulletCount": number
+      "bulletCount": number,
+      "bulletTitles": ["1. bulletTitle", "2. bulletTitle"]
     }
   ]
 }
@@ -120,9 +122,10 @@ Create a section titled "${section.title}" about "${topic}" for a level ${level}
 Instructions:
 - The sections must have ${section.availableTime * 50} words
 - Generate exactly ${bulletCount} contents
+- Titles of contents: ${section.bulletTitles}
 - Each content should be:
-  - A "title" (string)
-  - 2 to 4 short paragraphs (in a "bulletpoints" array)
+  - The title (already given)
+  - 2 to 4 short paragraphs (in a "bulletpoints" array) explaining the part of course concept tageted by the title
 - For each content item, generate **1 multiple-choice quiz question** with 4 options (1 correct + 3 wrong)
 - Quiz must include exactly ${bulletCount} questions (one per content item)
 - Use clear, mobile-friendly language
@@ -133,7 +136,7 @@ Return this valid JSON format:
   "title": "Section Title",
   "content": [
     {
-      "title": "Concept",
+      "title": The title given,
       "bulletpoints": ["Para1", "Para2", "..."]
     }
   ],
