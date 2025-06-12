@@ -64,6 +64,20 @@ async function getVQDFromHTML(query) {
   }
 }
 
+async function isImageUrl(url) {
+  try {
+    const response = await axios.get(url, {
+      method: 'HEAD', // Use HEAD to avoid downloading the full image
+      validateStatus: () => true, // Don't throw on HTTP errors
+    });
+
+    const contentType = response.headers['content-type'];
+    return contentType && contentType.startsWith('image/');
+  } catch (error) {
+    return false;
+  }
+}
+
 async function getImageLink(query) {
   const vqd = await getVQDFromHTML(query);
   const url = `https://duckduckgo.com/i.js?o=json&q=${encodeURIComponent(query)}&l=us-en&vqd=${encodeURIComponent(vqd)}&p=1&f=size%3ALarge`;
@@ -75,9 +89,16 @@ async function getImageLink(query) {
 
   try {
     const response = await axios.get(url, { headers });
-    return response.data.results[0].image;
+    const results = response.data.results;
+
+    for (const item of results) {
+      if (item.image && await isImageUrl(item.image)) {
+        return item.image;
+      }
+    }
+    return null; 
   } catch (error) {
-    console.error("Failed to get vqd:", error);
+    console.error('Error fetching or checking images:', error.message);
     return null;
   }
 }
