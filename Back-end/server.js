@@ -101,30 +101,34 @@ async function generateGeminiResponse(prompt) {
 // 🔸 STEP 1: Get Course Plan
 async function getCoursePlan(topic, level, time, language) {
   const prompt = `
-You are a course structure designer for a mobile learning app.
+**Role:** Course Structure Designer for a mobile learning app.
 
-Design a course on "${topic}" for a learner at level ${level}/10. The learner has ${time} minutes total and prefers to learn in "${language}" language.
+**Task:** Design a course on "${topic}" for a learner at level ${level}/10. The learner has ${time} minutes total and prefers to learn in "${language}" language.
 
-✅ Course Structure Rules:
-- ${time <= 30 ? 4 : time / 10} sections
-- Use a simple language if the level low 
-- Use a complex language if the level high
-- Course title and section title must be in "${language}" language
-- Must start with an "Introduction" section
-- Should progress from easier to harder topics
-- Be carefull not to have doubbled content
-- Final section should be a "Summary" or "Review" of the course
-- Allocate available time smartly across sections based on complexity
-- Each section must include:
-  - "title": a short clear section title
-  - "complexity": from 1 (easy) to 5 (hard)
-  - "availableTime": time allocated in minutes
-  - "bulletCount": how many content blocks the section should include
-  - "bulletTitles": title of content blocks the section should include
+**Course Structure Requirements:**
+* **Sections:** ${time <= 30 ? 4 : time / 10} sections
+* **Language Tone:**
+    * Simple language for low levels.
+    * Complex language for high levels.
+* **Titles:** Course title and section titles must be in "${language}".
+* **Flow:**
+    * Start with an "Introduction" section.
+    * Progress from easier to harder topics.
+    * Avoid duplicated content.
+    * Final section: "Summary" or "Review" of the course.
+* **Time Allocation:** Smartly allocate available time across sections based on complexity.
 
-Return a valid JSON object in this format:
+**Each Section Must Include (JSON Fields):**
+* ${"`"}"title"${"`"}: A short, clear section title.
+* ${"`"}"complexity"${"`"}: 1 (easy) to 5 (hard).
+* ${"`"}"availableTime"${"`"}: Time allocated in minutes.
+* ${"`"}"bulletCount"${"`"}: Number of content blocks.
+* ${"`"}"bulletTitles"${"`"}: Titles of content blocks (array of strings).
+
+**Output Format (Strict JSON Object Only):**
+${"```"}json
 {
-  "title": "a one word title wich explains the topic ONLY",
+  "title": "a one word title which explains the topic ONLY",
   "sections": [
     {
       "title": "Section Title",
@@ -147,28 +151,37 @@ async function generateSection(section, level, language, topic) {
   const bulletCount = section.bulletCount || 3;
   let finalResult;
   const prompt = `
-You are a mobile course content generator.
+**Role:** Mobile Course Content Generator.
 
-Create a section titled "${section.title}" about "${topic}" for a level ${level}/10 learner in "${language}" language with ${section.availableTime} minutes available (50 words/min reading).
+**Task:** Create a course section for a level ${level}/10 learner.
 
-Instructions:
-- The sections must have ${section.availableTime * 50} words
-- Generate exactly ${bulletCount} contents
-- Titles of contents: ${section.bulletTitles}
-- Each content should be:
-  - The title (already given)
-  - 2 to 4 short paragraphs (in a "bulletpoints" array) explaining the part of course concept tageted by the title
-- For each content item, generate **1 multiple-choice quiz question** with 4 options (1 correct + 3 wrong)
-- Quiz must include exactly ${bulletCount} questions (one per content item)
-- Use clear, mobile-friendly language
-- All Titles, bulletpoints, question and answers be in "${language}" language
+**Section Details:**
+* **Title:** "${section.title}"
+* **Topic:** "${topic}"
+* **Language:** "${language}"
+* **Duration:** ${section.availableTime} minutes (target ${section.availableTime * 50} words total, assuming 50 words/min reading).
 
-Return this valid JSON format:
+**Content Generation Rules:**
+* Generate **exactly ${bulletCount} content items**.
+* Use the provided content titles: **${section.bulletTitles}**.
+* Each content item must include:
+    * Its given title.
+    * **2 to 4 short paragraphs** explaining the concept, provided as strings within a "bulletpoints" array.
+* Use **clear, mobile-friendly language**.
+* All content (titles, bulletpoints) must be in "${language}".
+
+**Quiz Generation Rules:**
+* Generate **exactly ${bulletCount} multiple-choice quiz questions**, one per content item.
+* Each question must have **4 options**: 1 correct and 3 incorrect.
+* All questions and answers must be in "${language}".
+
+**Output Format (Strict JSON Object Only):**
+${"```"}json
 {
   "title": "Section Title",
   "content": [
     {
-      "title": The title given,
+      "title": "The title given",
       "bulletpoints": ["Para1", "Para2", "..."]
     }
   ],
@@ -186,8 +199,6 @@ Return this valid JSON format:
     const raw = await generateGeminiResponse(prompt);
     const parsed = JSON.parse(raw.replace(/```json|```/g, '').trim());
     const contentWithIds = await Promise.all(parsed.content.map(async (item, index) => {
-      // const topicTranslated = language !== "en" ? await translate(topic, { from: language, to: 'en' }).then(res => res.text) : topic;
-      // const titleTranslated = language !== "en" ? await translate(item.title, { from: language, to: 'en' }).then(res => res.text) : item.title;
       const searchQuery = `${topic} ${item.title}`;
       let imageUrl = null;
       try {
@@ -267,20 +278,18 @@ app.post('/regenerate-lesson', async (req, res) => {
   }
 
   const prompt = `
-You are a rewriting engine for educational mobile content.
+**Role:** Educational Mobile Content Rewriting Engine.
 
-Task:
-- Rewrite the following bulletpoints in ${language} for a level ${level}/10 learner.
-- Maintain the original meaning and information.
-- Ensure mobile-friendly, clear language.
+**Task:** Rewrite the following bulletpoints.
 
-Bulletpoints to rewrite:
+**Instructions:**
+* Rewrite the provided bulletpoints in **${language}** for a learner at **level ${level}/10**.
+* **Crucially, maintain the original meaning and all information.**
+* Ensure the rewritten content uses **mobile-friendly, clear language**.
+
+**Input Bulletpoints (JSON array of strings):**
+${"```"}json
 ${JSON.stringify(bulletpoints, null, 2)}
-
-Return format:
-[
-  "bulletpoint1", "bulletpoint2", ...
-]
 `;
 
   try {
@@ -288,7 +297,7 @@ Return format:
     const parsed = JSON.parse(raw.replace(/```json|```/g, '').trim());
     res.json({ newBulletpoints: parsed });
   } catch (err) {
-    console.error('❌ Error during regeneration:', err.message);
+    console.error('❌ Error during regeneration:', err.message)
     res.status(500).json({ error: 'Failed to regenerate bulletpoints' });
   }
 });
