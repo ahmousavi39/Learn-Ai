@@ -1,10 +1,16 @@
-import React, { useEffect, useState } from 'react';
-import { Alert, Button, Modal, StyleSheet, Text, TextInput, TouchableHighlight, View, ActivityIndicator } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Alert, Button, Modal, StyleSheet, Text, TextInput, TouchableHighlight, View, Animated } from 'react-native';
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 import { useAppDispatch, useAppSelector } from '../../hook';
 import { loadData, selectCourses, selectCoursesList, openLocation, generateCourse } from '../../../features/item/itemSlice';
 import MultiSlider from '@ptomasroos/react-native-multi-slider';
 import { SelectList } from 'react-native-dropdown-select-list';
+import 'react-native-get-random-values';
+import { v4 as uuidv4 } from 'uuid';
+import LottieView from 'lottie-react-native';
+import generatingAnimation from '../../../assets/generating.json';
+import searchingAnimation from '../../../assets/searching.json';
+
 
 export function Home({ navigation }) {
   const dispatch = useAppDispatch();
@@ -15,6 +21,24 @@ export function Home({ navigation }) {
   const [time, setTime] = useState(10);
   const [lang, setLang] = useState('en');
   const [loading, setLoading] = useState(false);
+  const requestId = useRef(null);
+  const [progress, setProgress] = useState({ current: 0, total: 0, done: false, sectionTitle: "", error: false })
+  const ws = useRef(null);
+  const HTTP_SERVER = "https://learn-ai-w8ke.onrender.com";
+  const LOCAL_HTTP_SERVER = "http://192.168.2.107:4000"
+  const WS_SERVER = "wss://learn-ai-w8ke.onrender.com";
+  const LOCAL_WS_SERVER = "ws://192.168.2.107:4000";
+
+  const progressPercentage = ((progress.current - 1) / progress.total) * 100;
+  const widthAnim = new Animated.Value(progressPercentage);
+
+  React.useEffect(() => {
+    Animated.timing(widthAnim, {
+      toValue: progressPercentage,
+      duration: 300,
+      useNativeDriver: false,
+    }).start();
+  }, [progress.current, progress.total]);
 
   const data = [
     { key: 'en', value: 'English' },
@@ -24,6 +48,44 @@ export function Home({ navigation }) {
     { key: 'ru', value: 'Русский' },
     { key: 'fa', value: 'فارسی' }
   ];
+
+  const connectWebSocket = () => {
+    if (ws.current) {
+      ws.current.close();
+      ws.current = null;
+    }
+
+    ws.current = new WebSocket(WS_SERVER);
+
+    ws.current.onopen = () => {
+      if (requestId.current) {
+        ws.current.send(JSON.stringify({ type: 'register', requestId: requestId.current }));
+        console.log('WebSocket connected and registered with requestId:', requestId.current);
+      } else {
+        console.warn('WebSocket connected but no requestId to register yet');
+      }
+    };
+
+    ws.current.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      console.log(data)
+      if (data.type === 'progress') {
+        setProgress({ current: data.current, total: data.total, done: false, sectionTitle: data.sectionTitle, error: false });
+      } else if (data.type === 'done') {
+        setProgress((p) => ({ ...p, done: true }));
+        setLoading(false);
+      }
+    };
+
+    ws.current.onerror = (error) => {
+      console.error('WebSocket error:', error.message);
+    };
+
+    ws.current.onclose = () => {
+      console.log('WebSocket closed');
+    };
+  };
+
 
   useEffect(() => {
     dispatch(loadData());
@@ -52,13 +114,18 @@ export function Home({ navigation }) {
   const generate = async (topic, level, readingTimeMin, language) => {
     try {
       setLoading(true);
-      // const response = await fetch('http://192.168.2.107:4000/generate-course', {
-      const response = await fetch('https://learn-ai-w8ke.onrender.com/generate-course', {
+      setProgress({ current: 0, total: 0, done: false, sectionTitle: "", error: false });
+
+      // Generate and store requestId in ref
+      requestId.current = uuidv4();
+
+      // Connect WS after new requestId is ready
+      connectWebSocket();
+
+      const response = await fetch(`${HTTP_SERVER}/generate-course`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ topic, level, time: readingTimeMin, language }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ topic, level, time: readingTimeMin, language, requestId: requestId.current }),
       });
 
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
@@ -73,9 +140,9 @@ export function Home({ navigation }) {
       }
     } catch (error) {
       console.error('Failed to generate course:', error);
-      Alert.alert('Error', 'Could not generate course.');
+      setProgress({ current: 0, total: 0, done: false, sectionTitle: "Could not generate course. Please try later!", error: true })
     } finally {
-      setLoading(false);
+      setTimeout(() => { setLoading(false); }, 2000)
     }
   };
 
@@ -152,12 +219,37 @@ export function Home({ navigation }) {
           transparent={true}
           visible={modalVisible}
           onRequestClose={() => {
-            Alert.alert('Modal has been closed.');
             setModalVisible(!modalVisible);
           }}>
           <View style={styles.centeredView}>
             <View style={styles.modalView}>
-              {loading && <ActivityIndicator size="large" color="#0000ff" />}
+              {loading ? (progress.total !== 0 ? <View style={styles.searchingContainer}>
+                <LottieView
+                  source={searchingAnimation}
+                  autoPlay
+                  loop
+                  style={{ width: 100, height: 100 }}
+                />
+                <View style={styles.wrapper}>
+                  <Animated.View style={[styles.progress, {
+                    width: widthAnim.interpolate({
+                      inputRange: [0, 100],
+                      outputRange: ['0%', '100%']
+                    })
+                  }]} />
+                </View>
+                <Text>Generating {progress.current}/{progress.total} sections</Text>
+                <Text>({progress.sectionTitle})</Text>
+              </View> : <View style={styles.generatingContainer}>
+                <LottieView
+                  source={generatingAnimation}
+                  autoPlay
+                  loop
+                  style={{ width: 50, height: 50 }}
+                />
+                <Text>Making a course plan</Text>
+              </View>) : ""}
+
               {!loading && <>
                 <Text style={styles.modalText}>I want to learn </Text>
                 <TextInput
@@ -230,6 +322,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 10,
   },
+  generatingContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    margin: 'auto'
+  },
+    searchingContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+  },
   containerDisabled: {
     flex: 1,
     justifyContent: 'center',
@@ -297,7 +400,7 @@ const styles = StyleSheet.create({
   centeredView: {
     flex: 1,
     justifyContent: 'center',
-    alignItems: 'center',
+    alignItems: 'center'
   },
   modalView: {
     margin: 15,
@@ -308,6 +411,8 @@ const styles = StyleSheet.create({
     width: '90%',
     shadowOpacity: 0.25,
     shadowRadius: 4,
+    minHeight: 200, 
+    minWidth: 200
   },
   modalText: {
     marginBottom: 15,
@@ -336,5 +441,17 @@ const styles = StyleSheet.create({
   slider: {
     width: '100%',
     height: 40,
+  },
+  wrapper: {
+    height: 20,
+    width: '100%',
+    backgroundColor: '#eee',
+    borderRadius: 10,
+    overflow: 'hidden',
+    marginVertical: 10,
+  },
+  progress: {
+    height: '100%',
+    backgroundColor: '#4caf50',
   },
 });

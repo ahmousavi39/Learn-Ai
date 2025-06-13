@@ -23,6 +23,8 @@ export function Lesson({ route, navigation }) {
   const [content, setContent] = useState({ title: '', bulletpoints: [], image: '', id: 0, isDone: false });
   const [loading, setLoading] = useState(false);
   let level = "4/10";
+  const HTTP_SERVER = "https://learn-ai-w8ke.onrender.com";
+  const LOCAL_HTTP_SERVER = "http://192.168.2.107:4000"
 
   const { courseId, sectionIndex, contentIndex, language } = route.params || {};
   const screenWidth = Dimensions.get('window').width;
@@ -98,8 +100,8 @@ export function Lesson({ route, navigation }) {
   const reGenerate = async () => {
     try {
       setLoading(true);
-      const response = await fetch('https://learn-ai-w8ke.onrender.com/regenerate-lesson', {
-      // const response = await fetch('http://192.168.2.107:4000/regenerate-lesson', {
+      const response = await fetch(`${HTTP_SERVER}/regenerate-lesson`, {
+        // const response = await fetch('http://192.168.2.107:4000/regenerate-lesson', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
