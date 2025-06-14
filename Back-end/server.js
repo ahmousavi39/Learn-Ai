@@ -92,11 +92,11 @@ async function getImageLink(query) {
     const results = response.data.results;
 
     for (const item of results) {
-      if (item.image && await isImageUrl(item.image) && !item.image.includes("ytimg.com")) {
+      if (item.image && await isImageUrl(item.image) && !item.image.includes("ytimg.com") && item.height <= (item.width * 2)) {
         return item.image;
       }
     }
-    return null; 
+    return null;
   } catch (error) {
     console.error('Error fetching or checking images:', error.message);
     return null;
@@ -121,6 +121,7 @@ async function generateGeminiResponse(prompt) {
 
 // 🔸 STEP 1: Get Course Plan
 async function getCoursePlan(topic, level, time, language) {
+  let finalResult;
   const prompt = `
 **Role:** Course Structure Designer for a mobile learning app.
 
@@ -162,9 +163,19 @@ ${"```"}json
 }
 `;
 
-  const raw = await generateGeminiResponse(prompt);
-  const json = raw.replace(/```json|```/g, '').trim();
-  return JSON.parse(json);
+  try {
+    const raw = await generateGeminiResponse(prompt);
+    const json = raw.replace(/```json|```/g, '').trim();
+    finalResult = JSON.parse(json);
+  } catch (err) {
+    console.warn(`❌ Error generating the course plan: ${err.message}`);
+  }
+
+  return finalResult || {
+    error: 'Failed to generate valid JSON.',
+    content: [],
+    test: []
+  };
 }
 
 // 🔸 STEP 2: Generate Section Content
@@ -260,23 +271,48 @@ ${"```"}json
 app.post('/generate-course', async (req, res) => {
   const { topic, level, time, language, requestId } = req.body;
 
+  const retryIfInvalid = async (fn, isValid, maxRetries = 2) => {
+    let result;
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      result = await fn();
+      if (isValid(result)) return result;
+      await delay(2000);
+    }
+    throw new Error("Validation failed after retries.");
+  };
+
+
   try {
-    const coursePlan = await getCoursePlan(topic, level, time, language);
+    sendProgress(requestId, {
+      type: 'planing',
+      current: 0,
+      total: 0,
+      sectionTitle: "",
+      error: false
+    });
+    const coursePlan = await retryIfInvalid(
+      () => getCoursePlan(topic, level, time, language),
+      (plan) => plan?.sections?.length >= 4 && plan?.sections !== undefined
+    );
+
     const sectionsData = [];
-    for (let i = 0; i < coursePlan.sections.length; i++) {
-      const section = coursePlan.sections[i];
+    for (const [i, section] of coursePlan.sections.entries()) {
       sendProgress(requestId, {
         type: 'progress',
         current: i + 1,
         total: coursePlan.sections.length,
-        sectionTitle: section.title
+        sectionTitle: section.title,
+        error: false
       });
       console.log(`🛠 Generating section ${i + 1}/${coursePlan.sections.length} — "${section.title}"`);
-      const generated = await generateSection(section, level, language, topic);
+      const generated = await retryIfInvalid(
+        () => generateSection(section, level, language, topic),
+        (gen) => gen?.content?.length > 0
+      );
       sectionsData.push(generated);
     }
 
-    sendProgress(requestId, { type: 'done' });
+    sendProgress(requestId, { type: 'done', done: true, error: false });
 
     res.json({
       topic: coursePlan.title,
@@ -286,6 +322,13 @@ app.post('/generate-course', async (req, res) => {
     });
 
   } catch (error) {
+    sendProgress(requestId, {
+      type: 'error',
+      current: 0,
+      total: 0,
+      sectionTitle: error.message,
+      error: true
+    });
     console.error(error.message);
     res.status(500).json({ error: error.message });
   }

@@ -22,12 +22,12 @@ export function Lesson({ route, navigation }) {
   const courses = useAppSelector(selectCourses);
   const [content, setContent] = useState({ title: '', bulletpoints: [], image: '', id: 0, isDone: false });
   const [loading, setLoading] = useState(false);
+  const [imageHeight, setImageHeight] = useState(220); // dynamic height
   let level = "4/10";
   const HTTP_SERVER = "https://learn-ai-w8ke.onrender.com";
-  const LOCAL_HTTP_SERVER = "http://192.168.2.107:4000"
+  const screenWidth = Dimensions.get('window').width;
 
   const { courseId, sectionIndex, contentIndex, language } = route.params || {};
-  const screenWidth = Dimensions.get('window').width;
 
   useEffect(() => {
     const course = courses.find(course => course.id === courseId);
@@ -35,13 +35,28 @@ export function Lesson({ route, navigation }) {
       const section = course.sections[sectionIndex];
       level = course.level;
       if (section) {
-        setContent(section.content[contentIndex]);
-        console.log(content.image)
+        const newContent = section.content[contentIndex];
+        setContent(newContent);
+
+        // Dynamically calculate image height
+        if (newContent.image) {
+          Image.getSize(
+            newContent.image,
+            (width, height) => {
+              const scaleFactor = (screenWidth - 20) / width;
+              const newHeight = height * scaleFactor;
+              setImageHeight(newHeight);
+            },
+            (error) => {
+              console.warn('Failed to get image size:', error);
+              setImageHeight(220); // fallback height
+            }
+          );
+        }
       }
     }
   }, [courses, courseId, sectionIndex, contentIndex]);
 
-  // Handler for Next button
   const goToNext = () => {
     dispatch(lessonDone({ courseId, sectionIndex, contentIndex }));
     const course = courses.find(course => course.id === courseId);
@@ -52,8 +67,7 @@ export function Lesson({ route, navigation }) {
 
     const nextContentIndex = contentIndex + 1;
     if (nextContentIndex < section.content.length) {
-      dispatch(openLocation({ courseId, sectionIndex, contentIndex, isTest: false }))
-      // Go to next content
+      dispatch(openLocation({ courseId, sectionIndex, contentIndex, isTest: false }));
       navigation.navigate('Lesson', {
         courseId,
         sectionIndex,
@@ -61,14 +75,12 @@ export function Lesson({ route, navigation }) {
         language
       });
     } else {
-      // No more content, go to test if exists
       if (section.test && section.test.length > 0) {
-        dispatch(openLocation({ courseId, sectionIndex, contentIndex: null, isTest: true }))
+        dispatch(openLocation({ courseId, sectionIndex, contentIndex: null, isTest: true }));
         navigation.navigate('Test', { questions: section.test, courseId, sectionIndex, language });
       } else {
-        // If no test, maybe go back or somewhere else
         dispatch(openLocation({ courseId, sectionIndex: sectionIndex + 1, contentIndex: null, isTest: true }));
-        navigation.navigate('Course', { courseId, selectedSectionIndex: sectionIndex })
+        navigation.navigate('Course', { courseId, selectedSectionIndex: sectionIndex });
       }
     }
   };
@@ -81,7 +93,6 @@ export function Lesson({ route, navigation }) {
     if (!section) return;
 
     if (contentIndex > 0) {
-      // Go to previous content in same section
       navigation.navigate('Lesson', {
         courseId,
         sectionIndex,
@@ -89,7 +100,6 @@ export function Lesson({ route, navigation }) {
         language
       });
     } else {
-      // First content of first section, just go back to course
       navigation.navigate('Course', {
         courseId,
         selectedSectionIndex: sectionIndex !== 0 ? sectionIndex - 1 : 0,
@@ -101,11 +111,8 @@ export function Lesson({ route, navigation }) {
     try {
       setLoading(true);
       const response = await fetch(`${HTTP_SERVER}/regenerate-lesson`, {
-        // const response = await fetch('http://192.168.2.107:4000/regenerate-lesson', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ bulletpoints: content.bulletpoints, level, language }),
       });
 
@@ -113,7 +120,7 @@ export function Lesson({ route, navigation }) {
       const res = await response.json();
 
       if (res.newBulletpoints && Array.isArray(res.newBulletpoints)) {
-        dispatch(regenerateLesson({ courseId, sectionIndex, contentIndex, newBulletpoints: res.newBulletpoints }))
+        dispatch(regenerateLesson({ courseId, sectionIndex, contentIndex, newBulletpoints: res.newBulletpoints }));
       } else {
         throw new Error('Invalid sections data from server');
       }
@@ -122,7 +129,7 @@ export function Lesson({ route, navigation }) {
     } finally {
       setLoading(false);
     }
-  }
+  };
 
   return (
     <SafeAreaProvider>
@@ -132,32 +139,37 @@ export function Lesson({ route, navigation }) {
           {content.image ? (
             <Image
               source={{ uri: content.image }}
-              style={[styles.image, { width: screenWidth - 20 }]}
-              resizeMode="cover"
+              style={{
+                width: screenWidth - 20,
+                height: imageHeight,
+                borderRadius: 14,
+                marginBottom: 28,
+                alignSelf: 'center',
+              }}
+              resizeMode="contain"
             />
           ) : null}
           <Text style={language === "fa" ? [styles.title, styles.persianText] : styles.title}>{content.title}</Text>
-
           <View style={styles.textBlock}>
             {content.bulletpoints.map((text, index) => (
-              <>
+              <React.Fragment key={index}>
                 {language === 'fa' ? (
-                  <View key={index} style={styles.persianBulletContainer}>
+                  <View style={styles.persianBulletContainer}>
                     <Text style={styles.persianBullet}>{'\u2013'}</Text>
                     <Text style={[styles.bulletText, styles.persianText]}>{text}</Text>
                   </View>
                 ) : (
-                  <View key={index} style={styles.bulletContainer}>
+                  <View style={styles.bulletContainer}>
                     <Text style={styles.bullet}>{'\u2013'}</Text>
                     <Text style={styles.bulletText}>{text}</Text>
                   </View>
                 )}
-              </>
+              </React.Fragment>
             ))}
           </View>
         </ScrollView>
 
-        <View style={styles.footer}>
+        {/* <View style={styles.footer}>
           <View style={styles.reGenerateTextButtonContainer}>
             <Pressable style={styles.reGenerateTextButton} onPress={reGenerate}>
               <MaterialIcons name="refresh" size={36} color="orange" />
@@ -170,7 +182,7 @@ export function Lesson({ route, navigation }) {
           <Pressable style={styles.backButton} onPress={language === "fa" ? goToNext : goToPrevious}>
             <MaterialIcons name="navigate-before" size={36} color="#3730a3" />
           </Pressable>
-        </View>
+        </View> */}
       </SafeAreaView>
     </SafeAreaProvider >
   );
@@ -181,8 +193,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f9f9f9',
     paddingVertical: 10,
-    justifyContent: 'space-between', // spread question and options/buttons
-
+    justifyContent: 'space-between',
   },
   disabledSafeArea: {
     flex: 1,
@@ -193,13 +204,7 @@ const styles = StyleSheet.create({
   container: {
     paddingHorizontal: 10,
     paddingVertical: 10,
-    paddingBottom: 80
-  },
-  image: {
-    height: 220,
-    borderRadius: 14,
-    marginBottom: 28,
-    alignSelf: 'center',
+    paddingBottom: 80,
   },
   title: {
     fontSize: 24,
@@ -222,14 +227,14 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   persianBulletContainer: {
-    flexDirection: 'row-reverse', // Important for RTL layout
+    flexDirection: 'row-reverse',
     alignItems: 'flex-start',
     marginBottom: 12,
   },
   persianBullet: {
     fontSize: 20,
     lineHeight: 24,
-    marginLeft: 10, // spacing between bullet and text
+    marginLeft: 10,
     color: '#333',
   },
   persianText: {
@@ -258,7 +263,7 @@ const styles = StyleSheet.create({
   },
   reGenerateTextButton: {
     alignSelf: 'center',
-    backgroundColor: 'transparent',      // no fill
+    backgroundColor: 'transparent',
     paddingHorizontal: 48,
     paddingVertical: 2,
     borderRadius: 8,
@@ -267,7 +272,7 @@ const styles = StyleSheet.create({
     marginVertical: "auto"
   },
   reGenerateTextButtonContainer: {
-    paddingTop: 14
+    paddingTop: 14,
   },
   centeredView: {
     flex: 1,

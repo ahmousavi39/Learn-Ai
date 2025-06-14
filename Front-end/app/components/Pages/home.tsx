@@ -8,8 +8,11 @@ import { SelectList } from 'react-native-dropdown-select-list';
 import 'react-native-get-random-values';
 import { v4 as uuidv4 } from 'uuid';
 import LottieView from 'lottie-react-native';
+import { Audio } from 'expo-av';
 import generatingAnimation from '../../../assets/generating.json';
 import searchingAnimation from '../../../assets/searching.json';
+import doneAnimation from '../../../assets/done.json';
+import errorAnimation from '../../../assets/error.json';
 
 
 export function Home({ navigation }) {
@@ -22,20 +25,31 @@ export function Home({ navigation }) {
   const [lang, setLang] = useState('en');
   const [loading, setLoading] = useState(false);
   const requestId = useRef(null);
-  const [progress, setProgress] = useState({ current: 0, total: 0, done: false, sectionTitle: "", error: false })
+  const [progress, setProgress] = useState({ current: 0, total: 0, done: false, sectionTitle: "", error: false, type: "" })
   const ws = useRef(null);
+
   const HTTP_SERVER = "https://learn-ai-w8ke.onrender.com";
   const LOCAL_HTTP_SERVER = "http://192.168.2.107:4000"
   const WS_SERVER = "wss://learn-ai-w8ke.onrender.com";
   const LOCAL_WS_SERVER = "ws://192.168.2.107:4000";
 
-  const progressPercentage = ((progress.current - 1) / progress.total) * 100;
+  const progressPercentage = ((progress.current - 1) / (progress.total - 1)) * 100;
   const widthAnim = new Animated.Value(progressPercentage);
+
+  async function doneSound() {
+    const { sound } = await Audio.Sound.createAsync(require('../../../assets/correct.mp3'));
+    await sound.playAsync();
+  }
+
+  async function errorSound() {
+    const { sound } = await Audio.Sound.createAsync(require('../../../assets/wrong.mp3'));
+    await sound.playAsync();
+  }
 
   React.useEffect(() => {
     Animated.timing(widthAnim, {
       toValue: progressPercentage,
-      duration: 300,
+      duration: 1000,
       useNativeDriver: false,
     }).start();
   }, [progress.current, progress.total]);
@@ -49,41 +63,60 @@ export function Home({ navigation }) {
     { key: 'fa', value: 'فارسی' }
   ];
 
-  const connectWebSocket = () => {
-    if (ws.current) {
-      ws.current.close();
-      ws.current = null;
+  const connectWebSocket = (retry = true) => {
+    try {
+      if (ws.current) {
+        ws.current.close();
+        ws.current = null;
+      }
+
+      ws.current = new WebSocket(WS_SERVER);
+
+      ws.current.onopen = () => {
+        console.log('WebSocket connected');
+        if (requestId.current) {
+          ws.current.send(JSON.stringify({ type: 'register', requestId: requestId.current }));
+          console.log('Registered with requestId:', requestId.current);
+        } else {
+          console.warn('Connected but no requestId to register');
+        }
+      };
+
+      ws.current.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        console.log(data);
+        if (data.type === 'progress') {
+          setProgress({
+            current: data.current,
+            total: data.total,
+            done: false,
+            sectionTitle: data.sectionTitle,
+            type: data.type,
+            error: false,
+          });
+        } else if (data.type === 'done') {
+          setProgress((p) => ({ ...p, done: true, type: "done" }));
+        }
+      };
+
+      ws.current.onerror = (error) => {
+        console.warn('WebSocket error:', error.message);
+      };
+
+      ws.current.onclose = (event) => {
+        console.log('WebSocket closed');
+        if (retry) {
+          console.log('Retrying WebSocket connection...');
+          setTimeout(() => connectWebSocket(false), 1000); // Retry once after 1 second
+        }
+      };
+    } catch (e) {
+      console.warn('WebSocket setup failed:', e.message);
+      if (retry) {
+        console.log('Retrying WebSocket setup...');
+        setTimeout(() => connectWebSocket(false), 1000);
+      }
     }
-
-    ws.current = new WebSocket(WS_SERVER);
-
-    ws.current.onopen = () => {
-      if (requestId.current) {
-        ws.current.send(JSON.stringify({ type: 'register', requestId: requestId.current }));
-        console.log('WebSocket connected and registered with requestId:', requestId.current);
-      } else {
-        console.warn('WebSocket connected but no requestId to register yet');
-      }
-    };
-
-    ws.current.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      console.log(data)
-      if (data.type === 'progress') {
-        setProgress({ current: data.current, total: data.total, done: false, sectionTitle: data.sectionTitle, error: false });
-      } else if (data.type === 'done') {
-        setProgress((p) => ({ ...p, done: true }));
-        setLoading(false);
-      }
-    };
-
-    ws.current.onerror = (error) => {
-      console.error('WebSocket error:', error.message);
-    };
-
-    ws.current.onclose = () => {
-      console.log('WebSocket closed');
-    };
   };
 
 
@@ -112,9 +145,17 @@ export function Home({ navigation }) {
   };
 
   const generate = async (topic, level, readingTimeMin, language) => {
+    const fetchWithTimeout = (url, options, timeout = 120000) => {
+      const controller = new AbortController();
+      const id = setTimeout(() => controller.abort(), timeout);
+      return fetch(url, {
+        ...options,
+        signal: controller.signal,
+      }).finally(() => clearTimeout(id));
+    };
     try {
       setLoading(true);
-      setProgress({ current: 0, total: 0, done: false, sectionTitle: "", error: false });
+      setProgress({ current: 0, total: 0, done: false, sectionTitle: "", error: false, type: "planing" });
 
       // Generate and store requestId in ref
       requestId.current = uuidv4();
@@ -122,27 +163,33 @@ export function Home({ navigation }) {
       // Connect WS after new requestId is ready
       connectWebSocket();
 
-      const response = await fetch(`${HTTP_SERVER}/generate-course`, {
+      const response = await fetchWithTimeout(`${HTTP_SERVER}/generate-course`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ topic, level, time: readingTimeMin, language, requestId: requestId.current }),
       });
+
+      console.log(response)
 
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();
 
       if (data.sections && Array.isArray(data.sections)) {
         dispatch(generateCourse({ name: data.topic, sections: data.sections, language: data.language, level }));
+        setProgress((p) => ({ ...p, done: true, type: "done" }));
+        doneSound();
         setText('');
-        setModalVisible(false);
+        setTimeout(() => {
+          setModalVisible(false);
+          setLoading(false);
+        }, 2000)
       } else {
         throw new Error('Invalid sections data from server');
       }
     } catch (error) {
-      console.error('Failed to generate course:', error);
-      setProgress({ current: 0, total: 0, done: false, sectionTitle: "Could not generate course. Please try later!", error: true })
-    } finally {
-      setTimeout(() => { setLoading(false); }, 2000)
+      setProgress({ current: 0, total: 0, done: false, sectionTitle: "Could not generate course. Please try later!", type: 'error', error: true })
+      errorSound();
+      setTimeout(() => { setLoading(false); }, 5000)
     }
   };
 
@@ -223,12 +270,13 @@ export function Home({ navigation }) {
           }}>
           <View style={styles.centeredView}>
             <View style={styles.modalView}>
-              {loading ? (progress.total !== 0 ? <View style={styles.searchingContainer}>
+
+              {loading ? (progress.type === "progress" ? <View style={styles.searchingContainer}>
                 <LottieView
                   source={searchingAnimation}
                   autoPlay
                   loop
-                  style={{ width: 100, height: 100 }}
+                  style={styles.largeAnimation}
                 />
                 <View style={styles.wrapper}>
                   <Animated.View style={[styles.progress, {
@@ -240,14 +288,39 @@ export function Home({ navigation }) {
                 </View>
                 <Text>Generating {progress.current}/{progress.total} sections</Text>
                 <Text>({progress.sectionTitle})</Text>
-              </View> : <View style={styles.generatingContainer}>
+              </View> : progress.type === "done" ? <View style={styles.searchingContainer}>
+                <LottieView
+                  source={doneAnimation}
+                  autoPlay
+                  loop={false}
+                  style={styles.largeAnimation}
+                />
+                <View style={styles.wrapper}>
+                  <Animated.View style={[styles.progress, {
+                    width: widthAnim.interpolate({
+                      inputRange: [0, 100],
+                      outputRange: ['0%', '100%']
+                    })
+                  }]} />
+                </View>
+                <Text>Done!</Text>
+              </View> : progress.type === "planing" ? <View style={styles.generatingContainer}>
                 <LottieView
                   source={generatingAnimation}
                   autoPlay
                   loop
-                  style={{ width: 50, height: 50 }}
+                  style={styles.largeAnimation}
                 />
                 <Text>Making a course plan</Text>
+              </View> : <View style={styles.searchingContainer}>
+                <LottieView
+                  source={errorAnimation}
+                  autoPlay
+                  loop={false}
+                  style={styles.smallAnimation}
+                />
+                <Text>Opps! something went worng...</Text>
+                <Text>Please try later</Text>
               </View>) : ""}
 
               {!loading && <>
@@ -328,7 +401,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     margin: 'auto'
   },
-    searchingContainer: {
+  searchingContainer: {
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 10,
@@ -411,7 +484,7 @@ const styles = StyleSheet.create({
     width: '90%',
     shadowOpacity: 0.25,
     shadowRadius: 4,
-    minHeight: 200, 
+    minHeight: 200,
     minWidth: 200
   },
   modalText: {
@@ -454,4 +527,6 @@ const styles = StyleSheet.create({
     height: '100%',
     backgroundColor: '#4caf50',
   },
+  largeAnimation: { width: 100, height: 100, paddingVertical: 20 },
+  smallAnimation: { width: 50, height: 50, paddingVertical: 10 }
 });
