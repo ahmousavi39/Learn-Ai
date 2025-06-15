@@ -13,7 +13,8 @@ import generatingAnimation from '../../../assets/generating.json';
 import searchingAnimation from '../../../assets/searching.json';
 import doneAnimation from '../../../assets/done.json';
 import errorAnimation from '../../../assets/error.json';
-
+import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system';
 
 export function Home({ navigation }) {
   const dispatch = useAppDispatch();
@@ -27,6 +28,7 @@ export function Home({ navigation }) {
   const requestId = useRef(null);
   const [progress, setProgress] = useState({ current: 0, total: 0, done: false, sectionTitle: "", error: false, type: "" })
   const ws = useRef(null);
+  const [selectedFiles, setSelectedFiles] = useState([]);
 
   const HTTP_SERVER = "https://learn-ai-w8ke.onrender.com";
   const LOCAL_HTTP_SERVER = "http://192.168.2.107:4000"
@@ -124,6 +126,51 @@ export function Home({ navigation }) {
     dispatch(loadData());
   }, []);
 
+  const pickFiles = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({ multiple: true });
+
+      if (result.canceled || !result.assets?.length) return;
+
+      const validTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'];
+      const maxSize = 5 * 1024 * 1024; // 5MB
+
+      const newFiles = [];
+
+      for (const asset of result.assets) {
+        if (selectedFiles.length + newFiles.length >= 3) {
+          Alert.alert('Limit Exceeded', 'You can upload a maximum of 3 files.');
+          break;
+        }
+
+        if (!validTypes.includes(asset.mimeType || '')) {
+          Alert.alert('Invalid File', `File "${asset.name}" has an unsupported type.`);
+          continue;
+        }
+
+        const fileInfo = await FileSystem.getInfoAsync(asset.uri);
+
+        if (!fileInfo.exists) {
+          Alert.alert('File Error', `Could not access file "${asset.name}".`);
+          continue;
+        }
+
+        const fileSize = fileInfo.size ?? 0;
+
+        if (fileSize > maxSize) {
+          Alert.alert('File Too Large', `File "${asset.name}" exceeds the 5MB limit.`);
+          continue;
+        }
+
+        newFiles.push(asset);
+      }
+
+      setSelectedFiles(prev => [...prev, ...newFiles]);
+    } catch (err) {
+      console.log('File picking error:', err);
+    }
+  };
+
   const getCourseCompletion = (course) => {
     let total = 0;
     let done = 0;
@@ -157,6 +204,20 @@ export function Home({ navigation }) {
       setLoading(true);
       setProgress({ current: 0, total: 0, done: false, sectionTitle: "", error: false, type: "planing" });
 
+      let combinedText = '';
+
+      for (const file of selectedFiles) {
+        if (file.mimeType === 'text/plain') {
+          const content = await FileSystem.readAsStringAsync(file.uri);
+          combinedText += '\n\n' + content;
+        } else {
+          // You could send the file URI to the backend to extract text there
+          // or show a warning if only .txt supported for now
+          Alert.alert('Unsupported File', 'Only TXT files are supported for now.');
+          return;
+        }
+      }
+
       // Generate and store requestId in ref
       requestId.current = uuidv4();
 
@@ -166,7 +227,7 @@ export function Home({ navigation }) {
       const response = await fetchWithTimeout(`${HTTP_SERVER}/generate-course`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ topic, level, time: readingTimeMin, language, requestId: requestId.current }),
+        body: JSON.stringify({ topic, level, time: readingTimeMin, language, requestId: requestId.current, sources: combinedText }),
       });
 
       console.log(response)
@@ -367,6 +428,13 @@ export function Home({ navigation }) {
                   data={data}
                   defaultOption={data.find(lan => (lan.key == 'en'))}
                 />
+
+                <Text style={styles.modalText}>Upload Files (max 3 - txt only):</Text>
+                <Button title="Pick Files" onPress={pickFiles} />
+
+                {selectedFiles.map((file, index) => (
+                  <Text key={index} style={{ fontSize: 12, color: 'gray' }}>{file.name}</Text>
+                ))}
 
                 <View style={styles.buttonContainerModal}>
                   <TouchableHighlight underlayColor={'transparent'} onPress={() => setModalVisible(false)}>
