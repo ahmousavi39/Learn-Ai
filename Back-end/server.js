@@ -174,16 +174,24 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 // 🔹 Gemini prompt call wrapper
 async function generateGeminiResponse(prompt, files = []) {
   const model = genAI.getGenerativeModel({ model: MODEL });
+
   const parts = [
     { text: prompt },
     ...files.map(file => ({
-      inlineData: {
-        data: file.buffer.toString('base64'),
-        mimeType: file.mimetype
+      file: {
+        content: file.buffer.toString('base64'),
+        mimeType: file.mimetype,
+        name: file.originalname
       }
     }))
   ];
-  const result = await model.generateContent({ contents: [{ role: 'user', parts }] });
+
+  const result = await model.generateContent({
+    contents: [
+      { role: 'user', parts }
+    ]
+  });
+
   return (await result.response).text();
 }
 
@@ -338,7 +346,7 @@ ${"```"}json
 }
 
 // 🔸 STEP 3: Generate Full Course
-app.post('/generate-course', upload.array('files', 3), async (req, res) => {  
+app.post('/generate-course', upload.array('files', 3), async (req, res) => {
   const { topic, level, time, language, requestId } = req.body;
   // upload(req, res, async (err) => {
   //   if (err) {
