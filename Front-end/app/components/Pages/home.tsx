@@ -145,7 +145,7 @@ export function Home({ navigation }) {
   };
 
   const generate = async (topic, level, readingTimeMin, language) => {
-    const fetchWithTimeout = (url, options, timeout = 120000) => {
+    const fetchWithTimeout = (url, options, timeout = 180000) => {
       const controller = new AbortController();
       const id = setTimeout(() => controller.abort(), timeout);
       return fetch(url, {
@@ -276,7 +276,7 @@ export function Home({ navigation }) {
                   source={searchingAnimation}
                   autoPlay
                   loop
-                  style={styles.largeAnimation}
+                  style={styles.xtraLargeAnimation}
                 />
                 <View style={styles.wrapper}>
                   <Animated.View style={[styles.progress, {
@@ -293,7 +293,7 @@ export function Home({ navigation }) {
                   source={doneAnimation}
                   autoPlay
                   loop={false}
-                  style={styles.largeAnimation}
+                  style={styles.xtraLargeAnimation}
                 />
                 <View style={styles.wrapper}>
                   <Animated.View style={[styles.progress, {
@@ -521,12 +521,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#eee',
     borderRadius: 10,
     overflow: 'hidden',
-    marginVertical: 10,
+    marginVertical: 20
   },
   progress: {
     height: '100%',
     backgroundColor: '#4caf50',
   },
   largeAnimation: { width: 100, height: 100, paddingVertical: 20 },
-  smallAnimation: { width: 50, height: 50, paddingVertical: 10 }
+  smallAnimation: { width: 50, height: 50, paddingVertical: 10 },
+  xtraLargeAnimation: { width: 200, height: 200, paddingVertical: 20 }
 });

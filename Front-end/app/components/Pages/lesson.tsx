@@ -133,78 +133,74 @@ export function Lesson({ route, navigation }) {
 
   return (
     <SafeAreaProvider>
-      <SafeAreaView style={!loading ? styles.safeArea : styles.disabledSafeArea}>
-        {loading && <View style={styles.centeredView}><ActivityIndicator size="large" color="#0000ff" /></View>}
-        <ScrollView contentContainerStyle={styles.container}>
-          {content.image ? (
-            <Image
-              source={{ uri: content.image }}
-              style={{
-                width: screenWidth - 20,
-                height: imageHeight,
-                borderRadius: 14,
-                marginBottom: 28,
-                alignSelf: 'center',
-              }}
-              resizeMode="contain"
-            />
-          ) : null}
-          <Text style={language === "fa" ? [styles.title, styles.persianText] : styles.title}>{content.title}</Text>
-          <View style={styles.textBlock}>
-            {content.bulletpoints.map((text, index) => (
-              <React.Fragment key={index}>
-                {language === 'fa' ? (
-                  <View style={styles.persianBulletContainer}>
-                    <Text style={styles.persianBullet}>{'\u2013'}</Text>
-                    <Text style={[styles.bulletText, styles.persianText]}>{text}</Text>
-                  </View>
-                ) : (
-                  <View style={styles.bulletContainer}>
-                    <Text style={styles.bullet}>{'\u2013'}</Text>
-                    <Text style={styles.bulletText}>{text}</Text>
-                  </View>
-                )}
-              </React.Fragment>
-            ))}
-          </View>
-        </ScrollView>
+      <SafeAreaView style={{ flex: 1 }}>
+        <View style={!loading ? styles.container : styles.disabledContainer}>
+          {loading && <View style={styles.centeredView}><ActivityIndicator size="large" color="#0000ff" /></View>}
+          <ScrollView>
+            {content.image ? (
+              <Image
+                source={{ uri: content.image }}
+                style={{
+                  width: screenWidth - 20,
+                  height: imageHeight,
+                  borderRadius: 14,
+                  marginBottom: 28,
+                  alignSelf: 'center',
+                }}
+                resizeMode="contain"
+              />
+            ) : null}
 
-        {/* <View style={styles.footer}>
-          <View style={styles.reGenerateTextButtonContainer}>
+            <View style={styles.textContainer}>
+              <Text style={language === "fa" ? [styles.title, styles.persianText] : styles.title}>{content.title}</Text>
+              <View style={styles.textBlock}>
+                {content.bulletpoints.map((text, index) => (
+                  <React.Fragment key={index}>
+                    {language === 'fa' ? (
+                      <View style={styles.persianBulletContainer}>
+                        <Text style={styles.persianBullet}>{'\u2013'}</Text>
+                        <Text style={[styles.bulletText, styles.persianText]}>{text}</Text>
+                      </View>
+                    ) : (
+                      <View style={styles.bulletContainer}>
+                        <Text style={styles.bullet}>{'\u2013'}</Text>
+                        <Text style={styles.bulletText}>{text}</Text>
+                      </View>
+                    )}
+                  </React.Fragment>
+                ))}
+              </View>
+            </View>
+          </ScrollView>
+
+          <View style={styles.footer}>
             <Pressable style={styles.reGenerateTextButton} onPress={reGenerate}>
               <MaterialIcons name="refresh" size={36} color="orange" />
             </Pressable>
+            <Pressable style={styles.nextButton} onPress={language === "fa" ? goToPrevious : goToNext}>
+              <MaterialIcons name="navigate-next" size={36} color="#3730a3" />
+            </Pressable>
+            <Pressable style={styles.backButton} onPress={language === "fa" ? goToNext : goToPrevious}>
+              <MaterialIcons name="navigate-before" size={36} color="#3730a3" />
+            </Pressable>
           </View>
-          <Pressable style={styles.nextButton} onPress={language === "fa" ? goToPrevious : goToNext}>
-            <MaterialIcons name="navigate-next" size={36} color="#3730a3" />
-          </Pressable>
-
-          <Pressable style={styles.backButton} onPress={language === "fa" ? goToNext : goToPrevious}>
-            <MaterialIcons name="navigate-before" size={36} color="#3730a3" />
-          </Pressable>
-        </View> */}
+        </View>
       </SafeAreaView>
     </SafeAreaProvider >
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#f9f9f9',
+  container: {
     paddingVertical: 10,
     justifyContent: 'space-between',
+    flex: 1
   },
-  disabledSafeArea: {
-    flex: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 10,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  container: {
-    paddingHorizontal: 10,
+  disabledContainer: {
     paddingVertical: 10,
-    paddingBottom: 80,
+        justifyContent: 'space-between',
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   title: {
     fontSize: 24,
@@ -252,24 +248,27 @@ const styles = StyleSheet.create({
     right: 20,
     backgroundColor: 'transparent',
     marginVertical: "auto",
-    paddingVertical: 17,
+    marginTop: 10
+
   },
   backButton: {
     position: 'absolute',
     left: 20,
     backgroundColor: 'transparent',
     marginVertical: "auto",
-    paddingVertical: 17,
+    marginTop: 10
   },
   reGenerateTextButton: {
-    alignSelf: 'center',
     backgroundColor: 'transparent',
     paddingHorizontal: 48,
     paddingVertical: 2,
     borderRadius: 8,
     borderWidth: 2,
     borderColor: 'orange',
-    marginVertical: "auto"
+    alignSelf: 'center',
+    position: 'absolute',
+    marginVertical: "auto",
+    marginTop: 10
   },
   reGenerateTextButtonContainer: {
     paddingTop: 14,
@@ -281,9 +280,13 @@ const styles = StyleSheet.create({
   },
   footer: {
     width: "100%",
-    height: 105,
+    height: 90,
     backgroundColor: "white",
     position: 'absolute',
     bottom: 0
-  }
+  },
+  textContainer: {
+    paddingHorizontal: 10,
+    paddingBottom: 100
+  },
 });

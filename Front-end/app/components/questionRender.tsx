@@ -315,18 +315,23 @@ const styles = StyleSheet.create({
         paddingVertical: 2,
         borderRadius: 8,
         marginVertical: "auto",
+        marginTop: 10
+
     },
     nextButton: {
         position: 'absolute',
         right: 20,
         backgroundColor: 'transparent',
         marginVertical: "auto",
+        marginTop: 10
+
     },
     backButton: {
         position: 'absolute',
         left: 20,
         backgroundColor: 'transparent',
         marginVertical: "auto",
+        marginTop: 10
     },
     footer: {
         width: "100%",
