@@ -213,11 +213,8 @@ export function Home({ navigation }) {
       // Convert each file's uri to Blob
       for (const file of selectedFiles) {
         const response = await fetch(file.uri);
-        const arrayBuffer = await response.arrayBuffer();
-        const mimeType = file.mimeType || 'application/octet-stream'; // fallback if missing
-
-        const blob = new Blob([arrayBuffer], { type: mimeType });
-        console.log(file)
+        const blob = await response.blob();
+        console.log(file);
         formData.append('files', blob, file.name);
       }
 
@@ -236,6 +233,7 @@ export function Home({ navigation }) {
         body: formData,
       });
 
+      console.log(response)
 
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();

@@ -174,24 +174,16 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 // 🔹 Gemini prompt call wrapper
 async function generateGeminiResponse(prompt, files = []) {
   const model = genAI.getGenerativeModel({ model: MODEL });
-
   const parts = [
     { text: prompt },
     ...files.map(file => ({
-      file: {
-        content: file.buffer.toString('base64'),
-        mimeType: file.mimetype,
-        name: file.originalname
+      inlineData: {
+        data: file.buffer.toString('base64'),
+        mimeType: file.mimetype
       }
     }))
   ];
-
-  const result = await model.generateContent({
-    contents: [
-      { role: 'user', parts }
-    ]
-  });
-
+  const result = await model.generateContent({ contents: [{ role: 'user', parts }] });
   return (await result.response).text();
 }
 
@@ -346,13 +338,13 @@ ${"```"}json
 }
 
 // 🔸 STEP 3: Generate Full Course
-app.post('/generate-course', upload.array('files', 3), async (req, res) => {
+app.post('/generate-course', upload.array('files', 3), async (req, res) => {  
   const { topic, level, time, language, requestId } = req.body;
-  // upload(req, res, async (err) => {
-  //   if (err) {
-  //     return res.status(400).json({ error: err.message });
-  //   }
-  // })
+  upload(req, res, async (err) => {
+    if (err) {
+      return res.status(400).json({ error: err.message });
+    }
+  })
   const files = req.files || [];
 
   const retryIfInvalid = async (fn, isValid, maxRetries = 2) => {
@@ -374,7 +366,6 @@ app.post('/generate-course', upload.array('files', 3), async (req, res) => {
       sectionTitle: "",
       error: false
     });
-    console.log(files);
     const coursePlan = await retryIfInvalid(() => getCoursePlan(topic, level, time, language, files),
       (plan) => plan?.sections?.length >= 4 && plan?.sections !== undefined
     );
