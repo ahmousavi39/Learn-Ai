@@ -18,7 +18,7 @@
     "http": "^0.0.1-security",
     "mammoth": "^1.9.1",
     "multer": "^2.0.1",
-    "pdf-parser": "^1.0.5",
+    "pdf-parse": "^1.1.1",
     "tesseract.js": "^6.0.1",
     "textract": "^2.5.0",
     "ws": "^8.18.2"
