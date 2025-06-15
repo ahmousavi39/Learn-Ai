@@ -132,9 +132,15 @@ export function Home({ navigation }) {
 
       if (result.canceled || !result.assets?.length) return;
 
-      const validTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'];
-      const maxSize = 5 * 1024 * 1024; // 5MB
+      const validMimeTypes = [
+        'application/pdf',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'image/jpeg',
+        'image/jpg',
+        'image/png'
+      ];
 
+      const maxSize = 10 * 1024 * 1024; // 10MB
       const newFiles = [];
 
       for (const asset of result.assets) {
@@ -143,22 +149,14 @@ export function Home({ navigation }) {
           break;
         }
 
-        if (!validTypes.includes(asset.mimeType || '')) {
-          Alert.alert('Invalid File', `File "${asset.name}" has an unsupported type.`);
+        if (!validMimeTypes.includes(asset.mimeType || '')) {
+          Alert.alert('Invalid File', `"${asset.name}" has an unsupported type.`);
           continue;
         }
 
         const fileInfo = await FileSystem.getInfoAsync(asset.uri);
-
-        if (!fileInfo.exists) {
-          Alert.alert('File Error', `Could not access file "${asset.name}".`);
-          continue;
-        }
-
-        const fileSize = fileInfo.size ?? 0;
-
-        if (fileSize > maxSize) {
-          Alert.alert('File Too Large', `File "${asset.name}" exceeds the 5MB limit.`);
+        if (!fileInfo.exists || fileInfo.size > maxSize) {
+          Alert.alert('File Too Large', `"${asset.name}" exceeds the 10MB limit.`);
           continue;
         }
 
@@ -167,7 +165,7 @@ export function Home({ navigation }) {
 
       setSelectedFiles(prev => [...prev, ...newFiles]);
     } catch (err) {
-      console.log('File picking error:', err);
+      console.error('File picking error:', err);
     }
   };
 
@@ -204,33 +202,40 @@ export function Home({ navigation }) {
       setLoading(true);
       setProgress({ current: 0, total: 0, done: false, sectionTitle: "", error: false, type: "planing" });
 
-      let combinedText = '';
-
-      for (const file of selectedFiles) {
-        if (file.mimeType === 'text/plain') {
-          const content = await FileSystem.readAsStringAsync(file.uri);
-          combinedText += '\n\n' + content;
-        } else {
-          // You could send the file URI to the backend to extract text there
-          // or show a warning if only .txt supported for now
-          Alert.alert('Unsupported File', 'Only TXT files are supported for now.');
-          return;
-        }
-      }
-
       // Generate and store requestId in ref
       requestId.current = uuidv4();
 
       // Connect WS after new requestId is ready
       connectWebSocket();
 
+      const formData = new FormData();
+
+      // Convert each file's uri to Blob
+      for (const file of selectedFiles) {
+        const response = await fetch(file.uri);
+        const arrayBuffer = await response.arrayBuffer();
+        const mimeType = file.mimeType || 'application/octet-stream'; // fallback if missing
+
+        const blob = new Blob([arrayBuffer], { type: mimeType });
+        console.log(file)
+        formData.append('files', blob, file.name);
+      }
+
+      formData.append('topic', topic);
+      formData.append('level', level);
+      formData.append('time', readingTimeMin.toString());
+      formData.append('language', language);
+      formData.append('requestId', requestId.current);
+
       const response = await fetchWithTimeout(`${HTTP_SERVER}/generate-course`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ topic, level, time: readingTimeMin, language, requestId: requestId.current, sources: combinedText }),
+        headers: {
+          // DO NOT set Content-Type manually for multipart/form-data
+          // Let fetch/browser set it including boundary
+        },
+        body: formData,
       });
 
-      console.log(response)
 
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();
