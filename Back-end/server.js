@@ -11,10 +11,10 @@ app.use(express.json());
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 const multer = require('multer');
-const pdfParse = require('pdf-parse');
-const mammoth = require('mammoth');
-const textract = require('textract');
-const Tesseract = require('tesseract.js');
+// const pdfParse = require('pdf-parse');
+// const mammoth = require('mammoth');
+// const textract = require('textract');
+// const Tesseract = require('tesseract.js');
 
 const clients = new Map(); // requestId -> ws
 const storage = multer.memoryStorage();
@@ -22,7 +22,7 @@ const upload = multer({
   storage,
   limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
   fileFilter: (req, file, cb) => {
-   const allowed = [
+    const allowed = [
       'application/pdf',
       'application/msword',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -39,38 +39,38 @@ const upload = multer({
   }
 }).array('files', 3); // max 3 files
 
-async function extractTextFromImage(file) {
-  try {
-    const { data: { text } } = await Tesseract.recognize(file.buffer, 'eng');
-    return text;
-  } catch (e) {
-    console.warn('OCR failed for image:', e.message);
-    return '';
-  }
-}
+// async function extractTextFromImage(file) {
+//   try {
+//     const { data: { text } } = await Tesseract.recognize(file.buffer, 'eng');
+//     return text;
+//   } catch (e) {
+//     console.warn('OCR failed for image:', e.message);
+//     return '';
+//   }
+// }
 
-async function extractTextFromFile(file) {
-  if (file.mimetype === 'application/pdf') {
-    const data = await pdfParse(file.buffer);
-    return data.text;
-  }
-  if (file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
-    const result = await mammoth.extractRawText({ buffer: file.buffer });
-    return result.value;
-  }
-  if (file.mimetype === 'application/msword') {
-    return new Promise((resolve, reject) => {
-      textract.fromBufferWithMime(file.mimetype, file.buffer, (err, text) => {
-        if (err) reject(err);
-        else resolve(text);
-      });
-    });
-  }
-  if (file.mimetype.startsWith('image/')) {
-    return await extractTextFromImage(file);
-  }
-  return '';
-}
+// async function extractTextFromFile(file) {
+//   if (file.mimetype === 'application/pdf') {
+//     const data = await pdfParse(file.buffer);
+//     return data.text;
+//   }
+//   if (file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+//     const result = await mammoth.extractRawText({ buffer: file.buffer });
+//     return result.value;
+//   }
+//   if (file.mimetype === 'application/msword') {
+//     return new Promise((resolve, reject) => {
+//       textract.fromBufferWithMime(file.mimetype, file.buffer, (err, text) => {
+//         if (err) reject(err);
+//         else resolve(text);
+//       });
+//     });
+//   }
+//   if (file.mimetype.startsWith('image/')) {
+//     return await extractTextFromImage(file);
+//   }
+//   return '';
+// }
 
 wss.on('connection', (ws) => {
   ws.on('message', (msg) => {
@@ -171,21 +171,29 @@ const MODEL = 'models/gemini-2.0-flash';
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // 🔹 Gemini prompt call wrapper
-async function generateGeminiResponse(prompt) {
+async function generateGeminiResponse(prompt, files = []) {
   const model = genAI.getGenerativeModel({ model: MODEL });
-  const result = await model.generateContent(prompt);
-  const response = await result.response;
-  return response.text();
+  const parts = [
+    { text: prompt },
+    ...files.map(file => ({
+      inlineData: {
+        data: file.buffer.toString('base64'),
+        mimeType: file.mimetype
+      }
+    }))
+  ];
+  const result = await model.generateContent({ contents: [{ role: 'user', parts }] });
+  return (await result.response).text();
 }
 
 // 🔸 STEP 1: Get Course Plan
-async function getCoursePlan(topic, level, time, language, sources) {
+async function getCoursePlan(topic, level, time, language, files = []) {
   let finalResult;
   const prompt = `
 **Role:** Course Structure Designer for a mobile learning app.
 
 **Task:** Design a course on "${topic}" for a learner at level ${level}/10. The learner has ${time} minutes total and prefers to learn in "${language}" language.
-${sources.length > 1 ? "**IMPORTANT:** The targeted contents to teach should strictly base on the following text! Use this text as source only: " + sources : ""}
+${files.length > 0 ? "**IMPORTANT:** The targeted contents to teach should strictly base on the provided files (" + files.map(file => file.originalname + ", ") +")! Use them as sources only" : ""}
 
 **Course Structure Requirements:**
 * **Sections:** ${time <= 30 ? 4 : time / 10} sections
@@ -224,7 +232,7 @@ ${"```"}json
 `;
 
   try {
-    const raw = await generateGeminiResponse(prompt);
+    const raw = await generateGeminiResponse(prompt, files);
     const json = raw.replace(/```json|```/g, '').trim();
     finalResult = JSON.parse(json);
   } catch (err) {
@@ -239,14 +247,14 @@ ${"```"}json
 }
 
 // 🔸 STEP 2: Generate Section Content
-async function generateSection(section, level, language, topic, sources) {
+async function generateSection(section, level, language, topic, files = []) {
   const bulletCount = section.bulletCount || 3;
   let finalResult;
   const prompt = `
 **Role:** Mobile Course Content Generator.
 
 **Task:** Create a course section for a level ${level}/10 learner.
-${sources.length > 1 ? "**IMPORTANT:** The content should strictly base on the following text! Use this text as source only: " + sources : ""}
+${files.length > 0 ? "**IMPORTANT:** The content strictly base on the provided files (" + files.map(file => file.originalname + ", ") +")! Use them as sources only" : ""}
 
 **Section Details:**
 * **Title:** "${section.title}"
@@ -289,7 +297,7 @@ ${"```"}json
 `;
 
   try {
-    const raw = await generateGeminiResponse(prompt);
+    const raw = await generateGeminiResponse(prompt, files);
     const parsed = JSON.parse(raw.replace(/```json|```/g, '').trim());
     const contentWithIds = await Promise.all(parsed.content.map(async (item, index) => {
       const searchQuery = `${topic} ${item.title}`;
@@ -329,25 +337,14 @@ ${"```"}json
 }
 
 // 🔸 STEP 3: Generate Full Course
-app.post('/generate-course', 
-  // upload.array('files', 3), 
-  async (req, res) => {
-  const { topic, level, time, language, requestId, sources } = req.body;
-  // upload(req, res, async (err) => {
-  //   if (err) {
-  //     return res.status(400).json({ error: err.message });
-  //   }
-  // })
-  // const files = req.files || [];
-  // let combinedText = '';
-  // for (const file of files) {
-  //   try {
-  //     const text = await extractTextFromFile(file);
-  //     combinedText += '\n' + text;
-  //   } catch (e) {
-  //     console.warn(`Failed to extract text from ${file.originalname}:`, e.message);
-  //   }
-  // }
+app.post('/generate-course', upload.array('files', 3), async (req, res) => {  
+  const { topic, level, time, language, requestId } = req.body;
+   upload(req, res, async (err) => {
+    if (err) {
+      return res.status(400).json({ error: err.message });
+    }})
+  const files = req.files || [];
+
   const retryIfInvalid = async (fn, isValid, maxRetries = 2) => {
     let result;
     for (let attempt = 0; attempt < maxRetries; attempt++) {
@@ -367,8 +364,7 @@ app.post('/generate-course',
       sectionTitle: "",
       error: false
     });
-    const coursePlan = await retryIfInvalid(() => getCoursePlan(topic, level, time, language, sources),
-    // const coursePlan = await retryIfInvalid(() => getCoursePlan(topic, level, time, language, combinedText),
+    const coursePlan = await retryIfInvalid(() => getCoursePlan(topic, level, time, language, files),
       (plan) => plan?.sections?.length >= 4 && plan?.sections !== undefined
     );
 
@@ -382,8 +378,7 @@ app.post('/generate-course',
         error: false
       });
       console.log(`🛠 Generating section ${i + 1}/${coursePlan.sections.length} — "${section.title}"`);
-      // const generated = await retryIfInvalid(() => generateSection(section, level, language, topic, combinedText),
-      const generated = await retryIfInvalid(() => generateSection(section, level, language, topic, sources),
+      const generated = await retryIfInvalid(() => generateSection(section, level, language, topic, files),
         (gen) => gen?.content?.length > 0
       );
       sectionsData.push(generated);
