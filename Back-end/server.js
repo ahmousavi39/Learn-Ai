@@ -37,7 +37,7 @@ const upload = multer({
       cb(new Error('Only PDF, Word (.doc/.docx), and images are allowed'));
     }
   }
-}).array('files', 3); // max 3 files
+});
 
 // async function extractTextFromImage(file) {
 //   try {
