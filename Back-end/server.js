@@ -17,6 +17,7 @@ const multer = require('multer');
 // const Tesseract = require('tesseract.js');
 
 const clients = new Map(); // requestId -> ws
+
 const storage = multer.memoryStorage();
 
 const upload = multer({
@@ -338,13 +339,9 @@ ${"```"}json
 }
 
 // 🔸 STEP 3: Generate Full Course
-app.post('/generate-course', upload.array('files', 3), async (req, res) => {  
+app.post('/generate-course', upload.array('files', 3), async (req, res) => {
   const { topic, level, time, language, requestId } = req.body;
-  upload(req, res, async (err) => {
-    if (err) {
-      return res.status(400).json({ error: err.message });
-    }
-  })
+
   const files = req.files || [];
 
   const retryIfInvalid = async (fn, isValid, maxRetries = 2) => {
@@ -356,7 +353,6 @@ app.post('/generate-course', upload.array('files', 3), async (req, res) => {
     }
     throw new Error("Validation failed after retries.");
   };
-
 
   try {
     sendProgress(requestId, {
