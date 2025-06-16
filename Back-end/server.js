@@ -11,68 +11,32 @@ app.use(express.json());
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 const multer = require('multer');
-// const pdfParse = require('pdf-parse');
-// const mammoth = require('mammoth');
-// const textract = require('textract');
-// const Tesseract = require('tesseract.js');
 
 const clients = new Map(); // requestId -> ws
 
 const storage = multer.memoryStorage();
 
-// const upload = multer({
-//   storage,
-//   limits: { fileSize: 10 * 1024 * 1024 },
-//   fileFilter: (req, file, cb) => {
-//     const allowed = [
-//       'application/pdf',
-//       'application/msword',
-//       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-//       'image/jpeg',
-//       'image/png',
-//       'image/gif',
-//       'image/webp'
-//     ];
-//     if (allowed.includes(file.mimetype)) {
-//       cb(null, true);
-//     } else {
-//       cb(new Error('Only PDF, Word (.doc/.docx), and images are allowed'));
-//     }
-//   }
-// });
-const upload = multer({ storage: multer.memoryStorage() }); // or diskStorage if you want to save to disk
-// async function extractTextFromImage(file) {
-//   try {
-//     const { data: { text } } = await Tesseract.recognize(file.buffer, 'eng');
-//     return text;
-//   } catch (e) {
-//     console.warn('OCR failed for image:', e.message);
-//     return '';
-//   }
-// }
-
-// async function extractTextFromFile(file) {
-//   if (file.mimetype === 'application/pdf') {
-//     const data = await pdfParse(file.buffer);
-//     return data.text;
-//   }
-//   if (file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
-//     const result = await mammoth.extractRawText({ buffer: file.buffer });
-//     return result.value;
-//   }
-//   if (file.mimetype === 'application/msword') {
-//     return new Promise((resolve, reject) => {
-//       textract.fromBufferWithMime(file.mimetype, file.buffer, (err, text) => {
-//         if (err) reject(err);
-//         else resolve(text);
-//       });
-//     });
-//   }
-//   if (file.mimetype.startsWith('image/')) {
-//     return await extractTextFromImage(file);
-//   }
-//   return '';
-// }
+const upload = multer({
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowed = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'image/jpeg',
+      'image/png',
+      'image/gif',
+      'image/webp'
+    ];
+    if (allowed.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only PDF, Word (.doc/.docx), and images are allowed'));
+    }
+  }
+});
+// const upload = multer({ storage: multer.memoryStorage() }); // or diskStorage if you want to save to disk
 
 wss.on('connection', (ws) => {
   ws.on('message', (msg) => {

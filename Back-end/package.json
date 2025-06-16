@@ -16,11 +16,7 @@
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
     "http": "^0.0.1-security",
-    "mammoth": "^1.9.1",
     "multer": "^2.0.1",
-    "pdf-parse": "^1.1.1",
-    "tesseract.js": "^6.0.1",
-    "textract": "^2.5.0",
     "ws": "^8.18.2"
   }
 }
