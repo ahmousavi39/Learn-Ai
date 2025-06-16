@@ -20,27 +20,27 @@ const clients = new Map(); // requestId -> ws
 
 const storage = multer.memoryStorage();
 
-const upload = multer({
-  storage,
-  limits: { fileSize: 10 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
-    const allowed = [
-      'application/pdf',
-      'application/msword',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'image/jpeg',
-      'image/png',
-      'image/gif',
-      'image/webp'
-    ];
-    if (allowed.includes(file.mimetype)) {
-      cb(null, true);
-    } else {
-      cb(new Error('Only PDF, Word (.doc/.docx), and images are allowed'));
-    }
-  }
-});
-
+// const upload = multer({
+//   storage,
+//   limits: { fileSize: 10 * 1024 * 1024 },
+//   fileFilter: (req, file, cb) => {
+//     const allowed = [
+//       'application/pdf',
+//       'application/msword',
+//       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+//       'image/jpeg',
+//       'image/png',
+//       'image/gif',
+//       'image/webp'
+//     ];
+//     if (allowed.includes(file.mimetype)) {
+//       cb(null, true);
+//     } else {
+//       cb(new Error('Only PDF, Word (.doc/.docx), and images are allowed'));
+//     }
+//   }
+// });
+const upload = multer({ storage: multer.memoryStorage() }); // or diskStorage if you want to save to disk
 // async function extractTextFromImage(file) {
 //   try {
 //     const { data: { text } } = await Tesseract.recognize(file.buffer, 'eng');
@@ -343,6 +343,7 @@ app.post('/generate-course', upload.array('files', 3), async (req, res) => {
   const { topic, level, time, language, requestId } = req.body;
 
   const files = req.files || [];
+  console.log(files);
 
   const retryIfInvalid = async (fn, isValid, maxRetries = 2) => {
     let result;

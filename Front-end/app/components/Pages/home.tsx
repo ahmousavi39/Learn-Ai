@@ -72,7 +72,7 @@ export function Home({ navigation }) {
         ws.current = null;
       }
 
-      ws.current = new WebSocket(WS_SERVER);
+      ws.current = new WebSocket(LOCAL_WS_SERVER);
 
       ws.current.onopen = () => {
         console.log('WebSocket connected');
@@ -212,10 +212,11 @@ export function Home({ navigation }) {
 
       // Convert each file's uri to Blob
       for (const file of selectedFiles) {
-        const response = await fetch(file.uri);
-        const blob = await response.blob();
-        console.log(file);
-        formData.append('files', blob, file.name);
+        formData.append('files', {
+          uri: file.uri,
+          name: file.name || 'upload.jpg', // fallback if name missing
+          type: file.type || 'image/jpeg', // fallback if type missing
+        } as any);
       }
 
       formData.append('topic', topic);
@@ -224,12 +225,8 @@ export function Home({ navigation }) {
       formData.append('language', language);
       formData.append('requestId', requestId.current);
 
-      const response = await fetchWithTimeout(`${HTTP_SERVER}/generate-course`, {
+      const response = await fetchWithTimeout(`${LOCAL_HTTP_SERVER}/generate-course`, {
         method: 'POST',
-        headers: {
-          // DO NOT set Content-Type manually for multipart/form-data
-          // Let fetch/browser set it including boundary
-        },
         body: formData,
       });
 
