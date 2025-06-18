@@ -11,7 +11,8 @@ app.use(express.json());
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 const multer = require('multer');
-
+const { PDFDocument } = require('pdf-lib');
+const sharp = require('sharp');
 const clients = new Map(); // requestId -> ws
 
 const storage = multer.memoryStorage();
@@ -36,7 +37,6 @@ const upload = multer({
     }
   }
 });
-// const upload = multer({ storage: multer.memoryStorage() }); // or diskStorage if you want to save to disk
 
 wss.on('connection', (ws) => {
   ws.on('message', (msg) => {
@@ -57,6 +57,42 @@ wss.on('connection', (ws) => {
     });
   });
 });
+
+async function compressFile(file) {
+  const type = file.mimetype;
+
+  // 1. Compress images
+  if (type.startsWith('image/')) {
+    const compressedBuffer = await sharp(file.buffer)
+      .resize({ width: 1000 }) // adjust width if needed
+      .jpeg({ quality: 60 })   // or .png({ compressionLevel: 9 })
+      .toBuffer();
+
+    return { ...file, buffer: compressedBuffer, mimetype: 'image/jpeg' };
+  }
+
+  // 2. Compress PDFs
+  if (type === 'application/pdf') {
+    try {
+      const pdfDoc = await PDFDocument.load(file.buffer);
+      const newPdf = await PDFDocument.create();
+      const pages = await newPdf.copyPages(pdfDoc, pdfDoc.getPageIndices());
+
+      for (const page of pages) {
+        newPdf.addPage(page);
+      }
+
+      const compressedBuffer = await newPdf.save();
+      return { ...file, buffer: Buffer.from(compressedBuffer) };
+    } catch (e) {
+      console.warn('⚠️ Failed to compress PDF:', e.message);
+      return file;
+    }
+  }
+
+  // 3. Return unchanged if no compression applied
+  return file;
+}
 
 function sendProgress(requestId, message) {
   const ws = clients.get(requestId);
@@ -307,7 +343,10 @@ app.post('/generate-course', upload.array('files', 3), async (req, res) => {
   const { topic, level, time, language, requestId } = req.body;
 
   const files = req.files || [];
-  console.log(files);
+  const compressedFiles = await Promise.all(
+    files.map(file => compressFile(file))
+  );
+  console.log(compressedFiles);
 
   const retryIfInvalid = async (fn, isValid, maxRetries = 2) => {
     let result;
@@ -327,7 +366,7 @@ app.post('/generate-course', upload.array('files', 3), async (req, res) => {
       sectionTitle: "",
       error: false
     });
-    const coursePlan = await retryIfInvalid(() => getCoursePlan(topic, level, time, language, files),
+    const coursePlan = await retryIfInvalid(() => getCoursePlan(topic, level, time, language, compressedFiles),
       (plan) => plan?.sections?.length >= 4 && plan?.sections !== undefined
     );
 
@@ -341,7 +380,7 @@ app.post('/generate-course', upload.array('files', 3), async (req, res) => {
         error: false
       });
       console.log(`🛠 Generating section ${i + 1}/${coursePlan.sections.length} — "${section.title}"`);
-      const generated = await retryIfInvalid(() => generateSection(section, level, language, topic, files),
+      const generated = await retryIfInvalid(() => generateSection(section, level, language, topic, compressedFiles),
         (gen) => gen?.content?.length > 0
       );
       sectionsData.push(generated);
