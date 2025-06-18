@@ -60,39 +60,44 @@ wss.on('connection', (ws) => {
 
 async function compressFile(file) {
   const type = file.mimetype;
+  const originalSize = file.buffer.length;
+  let compressedBuffer = file.buffer;
+  let newMimeType = file.mimetype;
 
-  // 1. Compress images
-  if (type.startsWith('image/')) {
-    const compressedBuffer = await sharp(file.buffer)
-      .resize({ width: 1000 }) // adjust width if needed
-      .jpeg({ quality: 60 })   // or .png({ compressionLevel: 9 })
-      .toBuffer();
+  try {
+    // 1. Compress images
+    if (type.startsWith('image/')) {
+      compressedBuffer = await sharp(file.buffer)
+        .resize({ width: 1000 }) // Resize for further savings
+        .jpeg({ quality: 60 })   // Reduce quality
+        .toBuffer();
+      newMimeType = 'image/jpeg';
+    }
 
-    return { ...file, buffer: compressedBuffer, mimetype: 'image/jpeg' };
-  }
-
-  // 2. Compress PDFs
-  if (type === 'application/pdf') {
-    try {
+    // 2. Compress PDFs
+    else if (type === 'application/pdf') {
       const pdfDoc = await PDFDocument.load(file.buffer);
       const newPdf = await PDFDocument.create();
       const pages = await newPdf.copyPages(pdfDoc, pdfDoc.getPageIndices());
-
-      for (const page of pages) {
-        newPdf.addPage(page);
-      }
-
-      const compressedBuffer = await newPdf.save();
-      console.log(compressedBuffer);
-      return { ...file, buffer: Buffer.from(compressedBuffer) };
-    } catch (e) {
-      console.warn('⚠️ Failed to compress PDF:', e.message);
-      return file;
+      pages.forEach(page => newPdf.addPage(page));
+      compressedBuffer = Buffer.from(await newPdf.save());
     }
-  }
 
-  // 3. Return unchanged if no compression applied
-  return file;
+    return {
+      ...file,
+      buffer: compressedBuffer,
+      mimetype: newMimeType,
+      originalSize,
+      compressedSize: compressedBuffer.length
+    };
+  } catch (err) {
+    console.warn(`⚠️ Compression failed for ${file.originalname}: ${err.message}`);
+    return {
+      ...file,
+      originalSize,
+      compressedSize: originalSize
+    };
+  }
 }
 
 function sendProgress(requestId, message) {
