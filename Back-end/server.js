@@ -83,6 +83,7 @@ async function compressFile(file) {
       }
 
       const compressedBuffer = await newPdf.save();
+      console.log(compressedBuffer);
       return { ...file, buffer: Buffer.from(compressedBuffer) };
     } catch (e) {
       console.warn('⚠️ Failed to compress PDF:', e.message);
