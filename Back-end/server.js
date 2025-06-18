@@ -11,9 +11,11 @@ app.use(express.json());
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 const multer = require('multer');
-const { PDFDocument } = require('pdf-lib');
+const { execFile } = require('child_process');
+const fs = require('fs/promises');
+const path = require('path');
+const os = require('os');
 const sharp = require('sharp');
-const clients = new Map(); // requestId -> ws
 
 const storage = multer.memoryStorage();
 
@@ -58,6 +60,7 @@ wss.on('connection', (ws) => {
   });
 });
 
+
 async function compressFile(file) {
   const type = file.mimetype;
   const originalSize = file.buffer.length;
@@ -65,22 +68,39 @@ async function compressFile(file) {
   let newMimeType = file.mimetype;
 
   try {
-    // 1. Compress images
+    // 🔹 1. Compress Images (convert to webp for max compression)
     if (type.startsWith('image/')) {
       compressedBuffer = await sharp(file.buffer)
-        .resize({ width: 1000 }) // Resize for further savings
-        .jpeg({ quality: 60 })   // Reduce quality
+        .resize({ width: 1000 }) // Adjust size to optimize further
+        .webp({ quality: 50 })   // Use WebP with lower quality
         .toBuffer();
-      newMimeType = 'image/jpeg';
+      newMimeType = 'image/webp';
     }
 
-    // 2. Compress PDFs
+    // 🔹 2. Compress PDFs using Ghostscript
     else if (type === 'application/pdf') {
-      const pdfDoc = await PDFDocument.load(file.buffer);
-      const newPdf = await PDFDocument.create();
-      const pages = await newPdf.copyPages(pdfDoc, pdfDoc.getPageIndices());
-      pages.forEach(page => newPdf.addPage(page));
-      compressedBuffer = Buffer.from(await newPdf.save());
+      const inputPath = path.join(os.tmpdir(), `input-${Date.now()}.pdf`);
+      const outputPath = path.join(os.tmpdir(), `output-${Date.now()}.pdf`);
+
+      await fs.writeFile(inputPath, file.buffer);
+
+      await new Promise((resolve, reject) => {
+        execFile('gs', [
+          '-sDEVICE=pdfwrite',
+          '-dCompatibilityLevel=1.4',
+          '-dPDFSETTINGS=/screen',  // Use /ebook for slightly better quality
+          '-dNOPAUSE',
+          '-dQUIET',
+          '-dBATCH',
+          `-sOutputFile=${outputPath}`,
+          inputPath
+        ], (error) => {
+          if (error) return reject(error);
+          resolve();
+        });
+      });
+
+      compressedBuffer = await fs.readFile(outputPath);
     }
 
     return {
