@@ -63,6 +63,46 @@ wss.on('connection', (ws) => {
 });
 
 
+async function compressPdfBuffer(buffer) {
+  return new Promise((resolve, reject) => {
+    const input = new PassThrough();
+    input.end(buffer);
+
+    const args = [
+      '-sDEVICE=pdfwrite',
+      '-dCompatibilityLevel=1.4',
+      '-dPDFSETTINGS=/screen',
+      '-dNOPAUSE',
+      '-dQUIET',
+      '-dBATCH',
+      '-dColorImageDownsampleType=/Bicubic',
+      '-dColorImageResolution=72',
+      '-dGrayImageResolution=72',
+      '-dMonoImageResolution=72',
+      '-sOutputFile=%stdout'
+    ];
+
+    const gs = spawn('gs', args);
+
+    let output = [];
+    let error = '';
+
+    gs.stdout.on('data', (data) => output.push(data));
+    gs.stderr.on('data', (data) => error += data.toString());
+
+    gs.on('close', (code) => {
+      if (code !== 0) {
+        reject(new Error(`Ghostscript exited with code ${code}: ${error}`));
+      } else {
+        resolve(Buffer.concat(output));
+      }
+    });
+
+    input.pipe(gs.stdin);
+  });
+}
+
+
 async function compressFile(file) {
   const type = file.mimetype;
   const originalSize = file.buffer.length;
@@ -81,28 +121,11 @@ async function compressFile(file) {
 
     // 🔹 2. Compress PDFs using Ghostscript
     else if (type === 'application/pdf') {
-      const inputPath = path.join(os.tmpdir(), `input-${Date.now()}.pdf`);
-      const outputPath = path.join(os.tmpdir(), `output-${Date.now()}.pdf`);
-
-      await fs.writeFile(inputPath, file.buffer);
-
-      await new Promise((resolve, reject) => {
-        execFile('gs', [
-          '-sDEVICE=pdfwrite',
-          '-dCompatibilityLevel=1.4',
-          '-dPDFSETTINGS=/screen',  // Use /ebook for slightly better quality
-          '-dNOPAUSE',
-          '-dQUIET',
-          '-dBATCH',
-          `-sOutputFile=${outputPath}`,
-          inputPath
-        ], (error) => {
-          if (error) return reject(error);
-          resolve();
-        });
-      });
-
-      compressedBuffer = await fs.readFile(outputPath);
+      try {
+        compressedBuffer = await compressPdfBuffer(file.buffer);
+      } catch (err) {
+        console.warn(`⚠️ PDF compression failed: ${err.message}`);
+      }
     }
 
     return {
