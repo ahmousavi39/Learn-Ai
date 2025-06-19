@@ -218,7 +218,7 @@ async function generateGeminiResponse(prompt, files = []) {
 }
 
 // 🔸 STEP 1: Get Course Plan
-async function getCoursePlan(topic, level, time, language, files = []) {
+async function getCoursePlan({topic, level, time, language, files = []}) {
   let finalResult;
   const prompt = `
 **Role:** Course Structure Designer for a mobile learning app.
@@ -278,7 +278,7 @@ ${"```"}json
 }
 
 // 🔸 STEP 2: Generate Section Content
-async function generateSection(section, level, language, topic, sectionCount, requestId, sectionNumber, files = []) {
+async function generateSection({section, level, language, topic, sectionCount, requestId, sectionNumber, files = []}) {
   const bulletCount = section.bulletCount || 3;
   let finalResult;
   const prompt = `
@@ -295,7 +295,7 @@ ${files.length > 0 ? "**IMPORTANT:** The content strictly base on the provided f
 
 **Content Generation Rules:**
 * Generate **exactly ${bulletCount} content items**.
-* Use the provided content titles: **${section.bulletTitles}**.
+* Use the provided content titles: **${section.bulletTitles.map(title => title + " | ")}**.
 * Each content item must include:
     * Its given title.
     * **2 to 4 short paragraphs** explaining the concept, provided as strings within a "bulletpoints" array.
@@ -393,6 +393,7 @@ app.post('/generate-course', upload.array('files', 3), async (req, res) => {
     sectionTitle: "",
     error: false
   });
+  console.log(topic);
   // const compressedFiles = await Promise.all(
   //   files.map(file => compressFile(file))
   // );
@@ -406,15 +407,14 @@ app.post('/generate-course', upload.array('files', 3), async (req, res) => {
     }
     throw new Error("Validation failed after retries.");
   };
-
   try {
-    const coursePlan = await retryIfInvalid(() => getCoursePlan(topic, level, time, language, files),
+    const coursePlan = await retryIfInvalid(() => getCoursePlan({topic, level, time, language, files}),
       (plan) => plan?.sections?.length >= 4 && plan?.sections !== undefined
     );
     const sectionsData = [];
     for (const [i, section] of coursePlan.sections.entries()) {
       console.log(`🛠 Generating section ${i + 1}/${coursePlan.sections.length} — "${section.title}"`);
-      const generated = await retryIfInvalid(() => generateSection(section, level, language, topic, coursePlan.sections.length, requestId, i, files),
+      const generated = await retryIfInvalid(() => generateSection({section, level, language, topic, sectionCount: coursePlan.sections.length, requestId, sectionNumber: i, files}),
         (gen) => gen?.content?.length > 0
       );
       sectionsData.push(generated);
