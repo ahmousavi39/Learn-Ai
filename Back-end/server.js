@@ -63,46 +63,6 @@ wss.on('connection', (ws) => {
 });
 
 
-async function compressPdfBuffer(buffer) {
-  return new Promise((resolve, reject) => {
-    const input = new PassThrough();
-    input.end(buffer);
-
-    const args = [
-      '-sDEVICE=pdfwrite',
-      '-dCompatibilityLevel=1.4',
-      '-dPDFSETTINGS=/screen',
-      '-dNOPAUSE',
-      '-dQUIET',
-      '-dBATCH',
-      '-dColorImageDownsampleType=/Bicubic',
-      '-dColorImageResolution=72',
-      '-dGrayImageResolution=72',
-      '-dMonoImageResolution=72',
-      '-sOutputFile=%stdout'
-    ];
-
-    const gs = spawn('gs', args);
-
-    let output = [];
-    let error = '';
-
-    gs.stdout.on('data', (data) => output.push(data));
-    gs.stderr.on('data', (data) => error += data.toString());
-
-    gs.on('close', (code) => {
-      if (code !== 0) {
-        reject(new Error(`Ghostscript exited with code ${code}: ${error}`));
-      } else {
-        resolve(Buffer.concat(output));
-      }
-    });
-
-    input.pipe(gs.stdin);
-  });
-}
-
-
 async function compressFile(file) {
   const type = file.mimetype;
   const originalSize = file.buffer.length;
@@ -121,11 +81,28 @@ async function compressFile(file) {
 
     // 🔹 2. Compress PDFs using Ghostscript
     else if (type === 'application/pdf') {
-      try {
-        compressedBuffer = await compressPdfBuffer(file.buffer);
-      } catch (err) {
-        console.warn(`⚠️ PDF compression failed: ${err.message}`);
-      }
+      const inputPath = path.join(os.tmpdir(), `input-${Date.now()}.pdf`);
+      const outputPath = path.join(os.tmpdir(), `output-${Date.now()}.pdf`);
+
+      await fs.writeFile(inputPath, file.buffer);
+
+      await new Promise((resolve, reject) => {
+        execFile('gs', [
+          '-sDEVICE=pdfwrite',
+          '-dCompatibilityLevel=1.4',
+          '-dPDFSETTINGS=/screen',  // Use /ebook for slightly better quality
+          '-dNOPAUSE',
+          '-dQUIET',
+          '-dBATCH',
+          `-sOutputFile=${outputPath}`,
+          inputPath
+        ], (error) => {
+          if (error) return reject(error);
+          resolve();
+        });
+      });
+
+      compressedBuffer = await fs.readFile(outputPath);
     }
 
     return {
@@ -241,7 +218,7 @@ async function generateGeminiResponse(prompt, files = []) {
 }
 
 // 🔸 STEP 1: Get Course Plan
-async function getCoursePlan(topic, level, time, language, requestId, files = []) {
+async function getCoursePlan(topic, level, time, language, files = []) {
   let finalResult;
   const prompt = `
 **Role:** Course Structure Designer for a mobile learning app.
@@ -286,13 +263,6 @@ ${"```"}json
 `;
 
   try {
-    sendProgress(requestId, {
-      type: 'planing',
-      current: 0,
-      total: 0,
-      sectionTitle: "",
-      error: false
-    });
     const raw = await generateGeminiResponse(prompt, files);
     const json = raw.replace(/```json|```/g, '').trim();
     finalResult = JSON.parse(json);
@@ -415,20 +385,18 @@ ${"```"}json
 app.post('/generate-course', upload.array('files', 3), async (req, res) => {
   const { topic, level, time, language, requestId } = req.body;
   const files = req.files || [];
-  if (files.length > 0) {
-    sendProgress(requestId, {
-      type: 'uploading',
-      current: 0,
-      total: 0,
-      sectionTitle: '',
-      error: false
-    });
-  }
+  sendProgress(requestId, {
+    type: 'planing',
+    current: 0,
+    total: 0,
+    sectionTitle: "",
+    error: false
+  });
   console.log("uploaded -> compressing");
-  const compressedFiles = await Promise.all(
-    files.map(file => compressFile(file))
-  );
-  console.log("compressed -> planing");
+  // const compressedFiles = await Promise.all(
+  //   files.map(file => compressFile(file))
+  // );
+  // console.log("compressed -> planing");
   const retryIfInvalid = async (fn, isValid, maxRetries = 2) => {
     let result;
     for (let attempt = 0; attempt < maxRetries; attempt++) {
@@ -440,14 +408,14 @@ app.post('/generate-course', upload.array('files', 3), async (req, res) => {
   };
 
   try {
-    const coursePlan = await retryIfInvalid(() => getCoursePlan(topic, level, time, language, requestId, compressedFiles),
+    const coursePlan = await retryIfInvalid(() => getCoursePlan(topic, level, time, language, requestId, files),
       (plan) => plan?.sections?.length >= 4 && plan?.sections !== undefined
     );
     console.log("planned -> generating");
     const sectionsData = [];
     for (const [i, section] of coursePlan.sections.entries()) {
       console.log(`🛠 Generating section ${i + 1}/${coursePlan.sections.length} — "${section.title}"`);
-      const generated = await retryIfInvalid(() => generateSection(section, level, language, topic, coursePlan.sections.length, requestId, i, compressedFiles),
+      const generated = await retryIfInvalid(() => generateSection(section, level, language, topic, coursePlan.sections.length, requestId, i, files),
         (gen) => gen?.content?.length > 0
       );
       sectionsData.push(generated);
