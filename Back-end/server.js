@@ -417,14 +417,14 @@ app.post('/generate-course', upload.array('files', 3), async (req, res) => {
   };
 
   try {
-    const coursePlan = await retryIfInvalid(() => getCoursePlan(topic, level, time, language, requestId, compressedFiles),
+    const coursePlan = await retryIfInvalid(() => getCoursePlan(topic, level, time, language, requestId, files),
       (plan) => plan?.sections?.length >= 4 && plan?.sections !== undefined
     );
     console.log("planned -> generating");
     const sectionsData = [];
     for (const [i, section] of coursePlan.sections.entries()) {
       console.log(`🛠 Generating section ${i + 1}/${coursePlan.sections.length} — "${section.title}"`);
-      const generated = await retryIfInvalid(() => generateSection(section, level, language, topic, coursePlan.sections.length, requestId, i, compressedFiles),
+      const generated = await retryIfInvalid(() => generateSection(section, level, language, topic, coursePlan.sections.length, requestId, i, files),
         (gen) => gen?.content?.length > 0
       );
       sectionsData.push(generated);
