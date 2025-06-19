@@ -411,7 +411,7 @@ app.post('/generate-course', upload.array('files', 3), async (req, res) => {
     const coursePlan = await retryIfInvalid(() => getCoursePlan(topic, level, time, language, files),
       (plan) => plan?.sections?.length >= 4 && plan?.sections !== undefined
     );
-    console.log("planned -> generating");
+    console.log(coursePlan);
     const sectionsData = [];
     for (const [i, section] of coursePlan.sections.entries()) {
       console.log(`🛠 Generating section ${i + 1}/${coursePlan.sections.length} — "${section.title}"`);
