@@ -402,9 +402,9 @@ app.post('/generate-course', upload.array('files', 3), async (req, res) => {
     });
   }
   console.log("uploaded -> compressing");
-  // const compressedFiles = await Promise.all(
-  //   files.map(file => compressFile(file))
-  // );
+  const compressedFiles = await Promise.all(
+    files.map(file => compressFile(file))
+  );
   console.log("compressed -> planing");
   const retryIfInvalid = async (fn, isValid, maxRetries = 2) => {
     let result;
@@ -417,14 +417,14 @@ app.post('/generate-course', upload.array('files', 3), async (req, res) => {
   };
 
   try {
-    const coursePlan = await retryIfInvalid(() => getCoursePlan(topic, level, time, language, requestId, files),
+    const coursePlan = await retryIfInvalid(() => getCoursePlan(topic, level, time, language, requestId, compressedFiles),
       (plan) => plan?.sections?.length >= 4 && plan?.sections !== undefined
     );
     console.log("planned -> generating");
     const sectionsData = [];
     for (const [i, section] of coursePlan.sections.entries()) {
       console.log(`🛠 Generating section ${i + 1}/${coursePlan.sections.length} — "${section.title}"`);
-      const generated = await retryIfInvalid(() => generateSection(section, level, language, topic, coursePlan.sections.length, requestId, i, files),
+      const generated = await retryIfInvalid(() => generateSection(section, level, language, topic, coursePlan.sections.length, requestId, i, compressedFiles),
         (gen) => gen?.content?.length > 0
       );
       sectionsData.push(generated);
