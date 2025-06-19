@@ -373,7 +373,7 @@ export function Home({ navigation }) {
                   style={styles.largeAnimation}
                 />
                 <Text>Making a course plan</Text>
-              </View> : <View style={styles.searchingContainer}>
+              </View> : progress.type === "uploading" ? <Text>uploading...</Text>: <View style={styles.searchingContainer}>
                 <LottieView
                   source={errorAnimation}
                   autoPlay

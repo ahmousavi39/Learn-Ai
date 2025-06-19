@@ -11,10 +11,10 @@ app.use(express.json());
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 const multer = require('multer');
-const { execFile } = require('child_process'); 
-const fs = require('fs/promises'); 
-const path = require('path'); 
-const os = require('os'); 
+const { execFile } = require('child_process');
+const fs = require('fs/promises');
+const path = require('path');
+const os = require('os');
 const sharp = require('sharp');
 
 const clients = new Map(); // requestId -> ws
@@ -370,7 +370,13 @@ ${"```"}json
 // 🔸 STEP 3: Generate Full Course
 app.post('/generate-course', upload.array('files', 3), async (req, res) => {
   const { topic, level, time, language, requestId } = req.body;
-
+  sendProgress(requestId, {
+    type: 'uploading',
+    current: 0,
+    total: 0,
+    sectionTitle: "",
+    error: false
+  });
   const files = req.files || [];
   const compressedFiles = await Promise.all(
     files.map(file => compressFile(file))
