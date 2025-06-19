@@ -408,7 +408,7 @@ app.post('/generate-course', upload.array('files', 3), async (req, res) => {
   };
 
   try {
-    const coursePlan = await retryIfInvalid(() => getCoursePlan(topic, level, time, language, requestId, files),
+    const coursePlan = await retryIfInvalid(() => getCoursePlan(topic, level, time, language, files),
       (plan) => plan?.sections?.length >= 4 && plan?.sections !== undefined
     );
     console.log("planned -> generating");
