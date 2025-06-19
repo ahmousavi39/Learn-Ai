@@ -402,9 +402,9 @@ app.post('/generate-course', upload.array('files', 3), async (req, res) => {
     });
   }
   console.log("uploaded -> compressing");
-  const compressedFiles = await Promise.all(
-    files.map(file => compressFile(file))
-  );
+  // const compressedFiles = await Promise.all(
+  //   files.map(file => compressFile(file))
+  // );
   console.log("compressed -> planing");
   const retryIfInvalid = async (fn, isValid, maxRetries = 2) => {
     let result;
