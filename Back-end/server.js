@@ -218,7 +218,7 @@ async function generateGeminiResponse(prompt, files = []) {
 }
 
 // 🔸 STEP 1: Get Course Plan
-async function getCoursePlan(topic, level, time, language, files = []) {
+async function getCoursePlan(topic, level, time, language, requestId, files = []) {
   let finalResult;
   const prompt = `
 **Role:** Course Structure Designer for a mobile learning app.
@@ -263,6 +263,13 @@ ${"```"}json
 `;
 
   try {
+    sendProgress(requestId, {
+      type: 'planing',
+      current: 0,
+      total: 0,
+      sectionTitle: "",
+      error: false
+    });
     const raw = await generateGeminiResponse(prompt, files);
     const json = raw.replace(/```json|```/g, '').trim();
     finalResult = JSON.parse(json);
@@ -278,7 +285,7 @@ ${"```"}json
 }
 
 // 🔸 STEP 2: Generate Section Content
-async function generateSection(section, level, language, topic, files = []) {
+async function generateSection(section, level, language, topic, sectionCount, requestId, sectionNumber, files = []) {
   const bulletCount = section.bulletCount || 3;
   let finalResult;
   const prompt = `
@@ -328,6 +335,13 @@ ${"```"}json
 `;
 
   try {
+    sendProgress(requestId, {
+      type: 'progress',
+      current: sectionNumber + 1,
+      total: sectionCount,
+      sectionTitle: section.title,
+      error: false
+    });
     const raw = await generateGeminiResponse(prompt, files);
     const parsed = JSON.parse(raw.replace(/```json|```/g, '').trim());
     const contentWithIds = await Promise.all(parsed.content.map(async (item, index) => {
@@ -356,6 +370,13 @@ ${"```"}json
 
     finalResult = { ...section, ...parsed, content: contentWithIds, test: testWithIsDone };
   } catch (err) {
+    sendProgress(requestId, {
+      type: 'progress',
+      current: sectionNumber,
+      total: sectionCount,
+      sectionTitle: section.title,
+      error: false
+    });
     console.warn(`❌ Error generating "${section.title}": ${err.message}`);
   }
 
@@ -371,6 +392,15 @@ ${"```"}json
 app.post('/generate-course', upload.array('files', 3), async (req, res) => {
   const { topic, level, time, language, requestId } = req.body;
   const files = req.files || [];
+  if (files.length > 0) {
+    sendProgress(requestId, {
+      type: 'uploading',
+      current: 0,
+      total: 0,
+      sectionTitle: '',
+      error: false
+    });
+  }
   console.log("uploaded -> compressing");
   const compressedFiles = await Promise.all(
     files.map(file => compressFile(file))
@@ -387,28 +417,14 @@ app.post('/generate-course', upload.array('files', 3), async (req, res) => {
   };
 
   try {
-    sendProgress(requestId, {
-      type: 'planing',
-      current: 0,
-      total: 0,
-      sectionTitle: "",
-      error: false
-    });
-    const coursePlan = await retryIfInvalid(() => getCoursePlan(topic, level, time, language, compressedFiles),
+    const coursePlan = await retryIfInvalid(() => getCoursePlan(topic, level, time, language, requestId, compressedFiles),
       (plan) => plan?.sections?.length >= 4 && plan?.sections !== undefined
     );
-  console.log("planned -> generating");
+    console.log("planned -> generating");
     const sectionsData = [];
     for (const [i, section] of coursePlan.sections.entries()) {
-      sendProgress(requestId, {
-        type: 'progress',
-        current: i + 1,
-        total: coursePlan.sections.length,
-        sectionTitle: section.title,
-        error: false
-      });
       console.log(`🛠 Generating section ${i + 1}/${coursePlan.sections.length} — "${section.title}"`);
-      const generated = await retryIfInvalid(() => generateSection(section, level, language, topic, compressedFiles),
+      const generated = await retryIfInvalid(() => generateSection(section, level, language, topic, coursePlan.sections.length, requestId, i, compressedFiles),
         (gen) => gen?.content?.length > 0
       );
       sectionsData.push(generated);
