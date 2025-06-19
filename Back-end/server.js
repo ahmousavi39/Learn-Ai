@@ -371,10 +371,11 @@ ${"```"}json
 app.post('/generate-course', upload.array('files', 3), async (req, res) => {
   const { topic, level, time, language, requestId } = req.body;
   const files = req.files || [];
+  console.log("uploaded -> compressing");
   const compressedFiles = await Promise.all(
     files.map(file => compressFile(file))
   );
-
+  console.log("compressed -> planing");
   const retryIfInvalid = async (fn, isValid, maxRetries = 2) => {
     let result;
     for (let attempt = 0; attempt < maxRetries; attempt++) {
@@ -396,7 +397,7 @@ app.post('/generate-course', upload.array('files', 3), async (req, res) => {
     const coursePlan = await retryIfInvalid(() => getCoursePlan(topic, level, time, language, compressedFiles),
       (plan) => plan?.sections?.length >= 4 && plan?.sections !== undefined
     );
-
+  console.log("planned -> generating");
     const sectionsData = [];
     for (const [i, section] of coursePlan.sections.entries()) {
       sendProgress(requestId, {
