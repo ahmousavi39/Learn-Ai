@@ -13,6 +13,7 @@ import generatingAnimation from '../../../assets/generating.json';
 import searchingAnimation from '../../../assets/searching.json';
 import doneAnimation from '../../../assets/done.json';
 import errorAnimation from '../../../assets/error.json';
+import loadingAnimation from '../../../assets/loading.json';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
 
@@ -72,7 +73,7 @@ export function Home({ navigation }) {
         ws.current = null;
       }
 
-      ws.current = new WebSocket(LOCAL_WS_SERVER);
+      ws.current = new WebSocket(WS_SERVER);
 
       ws.current.onopen = () => {
         console.log('WebSocket connected');
@@ -200,8 +201,18 @@ export function Home({ navigation }) {
     };
     try {
       setLoading(true);
-      setProgress({ current: 0, total: 0, done: false, sectionTitle: "", error: false, type: "planing" });
-
+      if (selectedFiles.length > 0) {
+        setProgress({
+          type: 'uploading',
+          current: 0,
+          total: 0,
+          sectionTitle: "",
+          error: false,
+          done: false
+        });
+      } else {
+        setProgress({ current: 0, total: 0, done: false, sectionTitle: "", error: false, type: "planing" });
+      }
       // Generate and store requestId in ref
       requestId.current = uuidv4();
 
@@ -225,12 +236,10 @@ export function Home({ navigation }) {
       formData.append('language', language);
       formData.append('requestId', requestId.current);
 
-      const response = await fetchWithTimeout(`${LOCAL_HTTP_SERVER}/generate-course`, {
+      const response = await fetchWithTimeout(`${HTTP_SERVER}/generate-course`, {
         method: 'POST',
         body: formData,
       });
-
-      console.log(response)
 
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();
@@ -373,7 +382,15 @@ export function Home({ navigation }) {
                   style={styles.largeAnimation}
                 />
                 <Text>Making a course plan</Text>
-              </View> : progress.type === "uploading" ? <Text>uploading...</Text>: <View style={styles.searchingContainer}>
+              </View> : progress.type === "uploading" ? <View style={styles.generatingContainer}>
+                <LottieView
+                  source={loadingAnimation}
+                  autoPlay
+                  loop
+                  style={styles.largeAnimation}
+                />
+                <Text>Uploading the file{"[s]"}...</Text>
+              </View> : <View style={styles.searchingContainer}>
                 <LottieView
                   source={errorAnimation}
                   autoPlay

@@ -370,18 +370,10 @@ ${"```"}json
 // 🔸 STEP 3: Generate Full Course
 app.post('/generate-course', upload.array('files', 3), async (req, res) => {
   const { topic, level, time, language, requestId } = req.body;
-  sendProgress(requestId, {
-    type: 'uploading',
-    current: 0,
-    total: 0,
-    sectionTitle: "",
-    error: false
-  });
   const files = req.files || [];
   const compressedFiles = await Promise.all(
     files.map(file => compressFile(file))
   );
-  console.log(compressedFiles);
 
   const retryIfInvalid = async (fn, isValid, maxRetries = 2) => {
     let result;
