@@ -43,8 +43,7 @@ const upload = multer({
 wss.on('connection', (ws) => {
   ws.on('message', (msg) => {
     try {
-      const dataStr = msg.toString();
-      const data = JSON.parse(dataStr);
+      const data = JSON.parse(msg);
       if (data.type === 'register' && data.requestId) {
         clients.set(data.requestId, ws);
         console.log(`Client registered: ${data.requestId}`);
