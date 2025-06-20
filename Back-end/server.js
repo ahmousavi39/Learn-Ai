@@ -196,7 +196,7 @@ async function getImageLink(query) {
 // Gemini setup
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 // const MODEL = 'models/gemini-1.5-flash-latest'; 
-const MODEL = 'models/gemini-2.0-flash';
+const MODEL = 'models/gemini-1.5-flash';
 
 // Utility
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -303,7 +303,7 @@ async function generateSection({ section, level, language, topic, sectionCount, 
 **Role:** Mobile Course Content Generator.
 
 **Task:** Create a course section for a level ${level}/10 learner.
-${sources !== null ? "**IMPORTANT:** The content strictly base on the provided sourc! Use it as sources only: " + sources : ""}
+${sources !== null ? "**IMPORTANT:** The content strictly base on the provided source! Use it as sources only: " + sources : ""}
 
 **Section Details:**
 * **Title:** "${section.title}"
