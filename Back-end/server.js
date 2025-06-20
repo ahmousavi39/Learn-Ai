@@ -419,7 +419,7 @@ app.post('/generate-course', upload.array('files', 3), async (req, res) => {
     let sources = null;
     if (files.length > 0) {
       sources = await retryIfInvalid(() => getSummerizedFile({ files }),
-        (source) => source === null
+        (source) => source !== null
       );
     }
     sendProgress(requestId, { current: 0, total: 0, sectionTitle: "", type: "planing" });
