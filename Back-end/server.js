@@ -11,11 +11,11 @@ app.use(express.json());
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 const multer = require('multer');
-const { execFile } = require('child_process');
-const fs = require('fs/promises');
-const path = require('path');
-const os = require('os');
-const sharp = require('sharp');
+// const { execFile } = require('child_process');
+// const fs = require('fs/promises');
+// const path = require('path');
+// const os = require('os');
+// const sharp = require('sharp');
 
 const clients = new Map(); // requestId -> ws
 
@@ -48,7 +48,7 @@ wss.on('connection', (ws) => {
       const data = JSON.parse(msg);
       if (data.type === 'register' && data.requestId) {
         clients.set(data.requestId, ws);
-        console.log(`Client registered: ${data.requestId}`);
+        console.log(`Client registered: ${data.requestId + " | " + ws}`);
       }
     } catch (e) {
       console.error('Invalid message:', msg);
@@ -63,64 +63,64 @@ wss.on('connection', (ws) => {
 });
 
 
-async function compressFile(file) {
-  const type = file.mimetype;
-  const originalSize = file.buffer.length;
-  let compressedBuffer = file.buffer;
-  let newMimeType = file.mimetype;
+// async function compressFile(file) {
+//   const type = file.mimetype;
+//   const originalSize = file.buffer.length;
+//   let compressedBuffer = file.buffer;
+//   let newMimeType = file.mimetype;
 
-  try {
-    // 🔹 1. Compress Images (convert to webp for max compression)
-    if (type.startsWith('image/')) {
-      compressedBuffer = await sharp(file.buffer)
-        .resize({ width: 1000 }) // Adjust size to optimize further
-        .webp({ quality: 50 })   // Use WebP with lower quality
-        .toBuffer();
-      newMimeType = 'image/webp';
-    }
+//   try {
+//     // 🔹 1. Compress Images (convert to webp for max compression)
+//     if (type.startsWith('image/')) {
+//       compressedBuffer = await sharp(file.buffer)
+//         .resize({ width: 1000 }) // Adjust size to optimize further
+//         .webp({ quality: 50 })   // Use WebP with lower quality
+//         .toBuffer();
+//       newMimeType = 'image/webp';
+//     }
 
-    // 🔹 2. Compress PDFs using Ghostscript
-    else if (type === 'application/pdf') {
-      const inputPath = path.join(os.tmpdir(), `input-${Date.now()}.pdf`);
-      const outputPath = path.join(os.tmpdir(), `output-${Date.now()}.pdf`);
+//     // 🔹 2. Compress PDFs using Ghostscript
+//     else if (type === 'application/pdf') {
+//       const inputPath = path.join(os.tmpdir(), `input-${Date.now()}.pdf`);
+//       const outputPath = path.join(os.tmpdir(), `output-${Date.now()}.pdf`);
 
-      await fs.writeFile(inputPath, file.buffer);
+//       await fs.writeFile(inputPath, file.buffer);
 
-      await new Promise((resolve, reject) => {
-        execFile('gs', [
-          '-sDEVICE=pdfwrite',
-          '-dCompatibilityLevel=1.4',
-          '-dPDFSETTINGS=/screen',  // Use /ebook for slightly better quality
-          '-dNOPAUSE',
-          '-dQUIET',
-          '-dBATCH',
-          `-sOutputFile=${outputPath}`,
-          inputPath
-        ], (error) => {
-          if (error) return reject(error);
-          resolve();
-        });
-      });
+//       await new Promise((resolve, reject) => {
+//         execFile('gs', [
+//           '-sDEVICE=pdfwrite',
+//           '-dCompatibilityLevel=1.4',
+//           '-dPDFSETTINGS=/screen',  // Use /ebook for slightly better quality
+//           '-dNOPAUSE',
+//           '-dQUIET',
+//           '-dBATCH',
+//           `-sOutputFile=${outputPath}`,
+//           inputPath
+//         ], (error) => {
+//           if (error) return reject(error);
+//           resolve();
+//         });
+//       });
 
-      compressedBuffer = await fs.readFile(outputPath);
-    }
+//       compressedBuffer = await fs.readFile(outputPath);
+//     }
 
-    return {
-      ...file,
-      buffer: compressedBuffer,
-      mimetype: newMimeType,
-      originalSize,
-      compressedSize: compressedBuffer.length
-    };
-  } catch (err) {
-    console.warn(`⚠️ Compression failed for ${file.originalname}: ${err.message}`);
-    return {
-      ...file,
-      originalSize,
-      compressedSize: originalSize
-    };
-  }
-}
+//     return {
+//       ...file,
+//       buffer: compressedBuffer,
+//       mimetype: newMimeType,
+//       originalSize,
+//       compressedSize: compressedBuffer.length
+//     };
+//   } catch (err) {
+//     console.warn(`⚠️ Compression failed for ${file.originalname}: ${err.message}`);
+//     return {
+//       ...file,
+//       originalSize,
+//       compressedSize: originalSize
+//     };
+//   }
+// }
 
 
 function sendProgress(requestId, message) {
@@ -296,7 +296,7 @@ ${files.length > 0 ? "**IMPORTANT:** The content strictly base on the provided f
 
 **Content Generation Rules:**
 * Generate **exactly ${bulletCount} content items**.
-* Use the provided content titles: **${section.bulletTitles.map(title => title + " | ")}**.
+* Use the provided content titles: **${section.bulletTitles.map(title => title + ", ")}**.
 * Each content item must include:
     * Its given title.
     * **2 to 4 short paragraphs** explaining the concept, provided as strings within a "bulletpoints" array.
