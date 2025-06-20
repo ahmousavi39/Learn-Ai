@@ -207,7 +207,7 @@ export function Home({ navigation }) {
 
       // Connect WS after new requestId is ready
       connectWebSocket();
-      
+
       if (selectedFiles.length > 0) {
         setProgress({
           type: 'uploading',
@@ -224,24 +224,31 @@ export function Home({ navigation }) {
       const formData = new FormData();
 
       // Convert each file's uri to Blob
-      for (const file of selectedFiles) {
-        formData.append('files', {
-          uri: file.uri,
-          name: file.name || 'upload.jpg', // fallback if name missing
-          type: file.type || 'image/jpeg', // fallback if type missing
-        } as any);
-      }
+      // for (const file of selectedFiles) {
+      //   formData.append('files', {
+      //     uri: file.uri,
+      //     name: file.name || 'upload.jpg', // fallback if name missing
+      //     type: file.type || 'image/jpeg', // fallback if type missing
+      //   } as any);
+      // }
 
-      formData.append('topic', topic);
-      formData.append('level', level);
-      formData.append('time', readingTimeMin.toString());
-      formData.append('language', language);
-      formData.append('requestId', requestId.current);
+      // formData.append('topic', topic);
+      // formData.append('level', level);
+      // formData.append('time', readingTimeMin.toString());
+      // formData.append('language', language);
+      // formData.append('requestId', requestId.current);
+
+      // const response = await fetchWithTimeout(`${HTTP_SERVER}/generate-course`, {
+      //   method: 'POST',
+      //   body: formData,
+      // });
 
       const response = await fetchWithTimeout(`${HTTP_SERVER}/generate-course`, {
         method: 'POST',
-        body: formData,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ topic, level, time: readingTimeMin, language, requestId: requestId.current }),
       });
+
 
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();
