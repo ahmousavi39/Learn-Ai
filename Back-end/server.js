@@ -262,6 +262,7 @@ ${"```"}json
 }
 `;
 
+  console.log("actually generating");
   try {
     const raw = await generateGeminiResponse(prompt, files);
     const json = raw.replace(/```json|```/g, '').trim();
@@ -285,7 +286,7 @@ async function generateSection({section, level, language, topic, sectionCount, r
 **Role:** Mobile Course Content Generator.
 
 **Task:** Create a course section for a level ${level}/10 learner.
-${files.length > 0 ? "**IMPORTANT:** The content strictly base on the provided files (" + files.map(file => file.originalname + ", ") + ")! Use them as sources only" : ""}
+${files.length > 0 ? "**IMPORTANT:** The content strictly base on the provided files (" + files.map(file => file.originalname + " | ") + ")! Use them as sources only" : ""}
 
 **Section Details:**
 * **Title:** "${section.title}"
@@ -393,11 +394,10 @@ app.post('/generate-course', upload.array('files', 3), async (req, res) => {
     sectionTitle: "",
     error: false
   });
-  console.log(topic);
   // const compressedFiles = await Promise.all(
   //   files.map(file => compressFile(file))
   // );
-  // console.log("compressed -> planing");
+  console.log("uploaded -> should generate");
   const retryIfInvalid = async (fn, isValid, maxRetries = 2) => {
     let result;
     for (let attempt = 0; attempt < maxRetries; attempt++) {

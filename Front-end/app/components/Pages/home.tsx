@@ -217,7 +217,7 @@ export function Home({ navigation }) {
       requestId.current = uuidv4();
 
       // Connect WS after new requestId is ready
-      connectWebSocket();
+      // connectWebSocket();
 
       const formData = new FormData();
 
