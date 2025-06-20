@@ -344,7 +344,7 @@ ${"```"}json
   ]
 }
 `;
-
+console.log(prompt);
   try {
     sendProgress(requestId, {
       type: 'progress',
