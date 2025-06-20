@@ -201,6 +201,13 @@ export function Home({ navigation }) {
     };
     try {
       setLoading(true);
+
+      // Generate and store requestId in ref
+      requestId.current = uuidv4();
+
+      // Connect WS after new requestId is ready
+      connectWebSocket();
+      
       if (selectedFiles.length > 0) {
         setProgress({
           type: 'uploading',
@@ -213,11 +220,6 @@ export function Home({ navigation }) {
       } else {
         setProgress({ current: 0, total: 0, done: false, sectionTitle: "", error: false, type: "planing" });
       }
-      // Generate and store requestId in ref
-      requestId.current = uuidv4();
-
-      // Connect WS after new requestId is ready
-      connectWebSocket();
 
       const formData = new FormData();
 

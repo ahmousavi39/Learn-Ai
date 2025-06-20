@@ -217,14 +217,33 @@ async function generateGeminiResponse(prompt, files = []) {
   return (await result.response).text();
 }
 
+async function getSummerizedFile({ files = [] }) {
+  let finalResult;
+  const prompt = `
+**Role:** You are a very detailed file summerizer.
+
+**Task:** Summerize this files ${files.map(file => file.originalname + ", ")} very detailed without ignoring any of its contetnt
+
+**Output only the summery (NO Extra explanition)**
+`;
+  try {
+    const raw = await generateGeminiResponse(prompt, files);
+    finalResult = raw;
+  } catch (err) {
+    console.warn(`❌ Error generating the course plan: ${err.message}`);
+  }
+
+  return finalResult || null;
+}
+
 // 🔸 STEP 1: Get Course Plan
-async function getCoursePlan({ topic, level, time, language, files = [] }) {
+async function getCoursePlan({ topic, level, time, language, sources }) {
   let finalResult;
   const prompt = `
 **Role:** Course Structure Designer for a mobile learning app.
 
 **Task:** Design a course on "${topic}" for a learner at level ${level}/10. The learner has ${time} minutes total and prefers to learn in "${language}" language.
-${files.length > 0 ? "**IMPORTANT:** The targeted contents to teach should strictly base on the provided files (" + files.map(file => file.originalname + ", ") + ")! Use them as sources only" : ""}
+${sources !== null ? "**IMPORTANT:** The content strictly base on the provided content! Use it as sources only: " + sources : ""}
 
 **Course Structure Requirements:**
 * **Sections:** ${time <= 30 ? 4 : time / 10} sections
@@ -262,7 +281,7 @@ ${"```"}json
 }
 `;
   try {
-    const raw = await generateGeminiResponse(prompt, files);
+    const raw = await generateGeminiResponse(prompt);
     const json = raw.replace(/```json|```/g, '').trim();
     finalResult = JSON.parse(json);
   } catch (err) {
@@ -277,14 +296,14 @@ ${"```"}json
 }
 
 // 🔸 STEP 2: Generate Section Content
-async function generateSection({ section, level, language, topic, sectionCount, requestId, sectionNumber, files = [] }) {
+async function generateSection({ section, level, language, topic, sectionCount, requestId, sectionNumber, sources }) {
   const bulletCount = section.bulletCount || 3;
   let finalResult;
   const prompt = `
 **Role:** Mobile Course Content Generator.
 
 **Task:** Create a course section for a level ${level}/10 learner.
-${files.length > 0 ? "**IMPORTANT:** The content strictly base on the provided files (" + files.map(file => file.originalname + " | ") + ")! Use them as sources only" : ""}
+${sources !== null ? "**IMPORTANT:** The content strictly base on the provided sourc! Use it as sources only: " + sources : ""}
 
 **Section Details:**
 * **Title:** "${section.title}"
@@ -325,7 +344,6 @@ ${"```"}json
   ]
 }
 `;
-  console.log(prompt);
 
   try {
     sendProgress(requestId, {
@@ -335,7 +353,7 @@ ${"```"}json
       sectionTitle: section.title,
       error: false
     });
-    const raw = await generateGeminiResponse(prompt, files);
+    const raw = await generateGeminiResponse(prompt);
     const parsed = JSON.parse(raw.replace(/```json|```/g, '').trim());
     const contentWithIds = await Promise.all(parsed.content.map(async (item, index) => {
       const searchQuery = `${topic} ${item.title}`;
@@ -388,7 +406,6 @@ app.post('/generate-course', upload.array('files', 3), async (req, res) => {
   // const compressedFiles = await Promise.all(
   //   files.map(file => compressFile(file))
   // );
-  console.log("uploaded -> should generate");
   const retryIfInvalid = async (fn, isValid, maxRetries = 2) => {
     let result;
     for (let attempt = 0; attempt < maxRetries; attempt++) {
@@ -399,20 +416,20 @@ app.post('/generate-course', upload.array('files', 3), async (req, res) => {
     throw new Error("Validation failed after retries.");
   };
   try {
-    sendProgress(requestId, {
-      type: 'planing',
-      current: 0,
-      total: 0,
-      sectionTitle: "",
-      error: false
-    });
-    const coursePlan = await retryIfInvalid(() => getCoursePlan({ topic, level, time, language, files }),
+    let sources = null;
+    if (files.length > 0) {
+      sources = await retryIfInvalid(() => getSummerizedFile({ files }),
+        (source) => source === null
+      );
+    }
+    sendProgress(requestId, { current: 0, total: 0, sectionTitle: "", type: "planing" });
+    const coursePlan = await retryIfInvalid(() => getCoursePlan({ topic, level, time, language, sources }),
       (plan) => plan?.sections?.length >= 4 && plan?.sections !== undefined
     );
     const sectionsData = [];
     for (const [i, section] of coursePlan.sections.entries()) {
       console.log(`🛠 Generating section ${i + 1}/${coursePlan.sections.length} — "${section.title}"`);
-      const generated = await retryIfInvalid(() => generateSection({ section, level, language, topic, sectionCount: coursePlan.sections.length, requestId, sectionNumber: i, files }),
+      const generated = await retryIfInvalid(() => generateSection({ section, level, language, topic, sectionCount: coursePlan.sections.length, requestId, sectionNumber: i, sources }),
         (gen) => gen?.content?.length > 0
       );
       sectionsData.push(generated);
