@@ -195,8 +195,8 @@ async function getImageLink(query) {
 
 // Gemini setup
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const MODEL = 'models/gemini-1.5-flash-latest'; 
-// const MODEL = 'models/gemini-2.5-flash';
+// const MODEL = 'models/gemini-1.5-flash-latest'; 
+const MODEL = 'models/gemini-1.5-pro-latest';
 
 // Utility
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
