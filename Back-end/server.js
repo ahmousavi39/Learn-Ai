@@ -217,12 +217,12 @@ async function generateGeminiResponse(prompt, files = []) {
   return (await result.response).text();
 }
 
-async function getSummerizedFile({ files = [] }) {
+async function getSummerizedFile({ files = [] , language}) {
   let finalResult;
   const prompt = `
 **Role:** You are a very detailed file summerizer.
 
-**Task:** Summerize this files ${files.map(file => file.originalname + ", ")} very detailed without ignoring any of its contetnt
+**Task:** Summerize this files ${files.map(file => file.originalname + ", ")} very detailed without ignoring any of its content in "${language}" language.
 
 **Output only the summery (NO Extra explanition)**
 `;
@@ -418,7 +418,7 @@ app.post('/generate-course', upload.array('files', 3), async (req, res) => {
   try {
     let sources = null;
     if (files.length > 0) {
-      sources = await retryIfInvalid(() => getSummerizedFile({ files }),
+      sources = await retryIfInvalid(() => getSummerizedFile({ files, language }),
         (source) => source !== null
       );
     }
