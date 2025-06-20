@@ -130,7 +130,7 @@ async function getImageLink(query) {
 // Gemini setup
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 // const MODEL = 'models/gemini-1.5-flash-latest'; 
-const MODEL = 'models/gemini-1.5-pro-latest';
+const MODEL = 'models/gemini-2.0-flash';
 
 // Utility
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -337,9 +337,7 @@ console.log(prompt);
 app.post('/generate-course', upload.array('files', 3), async (req, res) => {
   const { topic, level, time, language, requestId } = req.body;
   const files = req.files || [];
-  // const compressedFiles = await Promise.all(
-  //   files.map(file => compressFile(file))
-  // );
+
   const retryIfInvalid = async (fn, isValid, maxRetries = 2) => {
     let result;
     for (let attempt = 0; attempt < maxRetries; attempt++) {
