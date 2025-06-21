@@ -447,9 +447,7 @@ export function Home({ navigation }) {
 
                 <Text style={styles.modalText}>Select Language:</Text>
                 <SelectList
-                  setSelected={(key) => data.map(lang => {
-                    if (lang.key === key) setLang(lang.value)
-                  })}
+                  setSelected={(key) => setLang(key)}
                   data={data}
                   defaultOption={data.find(lan => (lan.key == 'en'))}
                 />

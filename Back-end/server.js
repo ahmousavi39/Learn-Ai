@@ -214,7 +214,7 @@ async function getImageLink(query) {
  * @param {number} [timeoutMs=15000] - Timeout for each attempt in milliseconds.
  * @returns {Promise<string|null>} The image URL or null.
  */
-async function getImageWithRetry(query, retries = 3, timeoutMs = 15000) {
+async function getImageWithRetry(query, retries = 3, timeoutMs = 10000) {
     for (let attempt = 0; attempt <= retries; attempt++) {
         try {
             const image = await retryIfTimeout(getImageLink(query), timeoutMs);
@@ -458,7 +458,7 @@ app.post('/generate-course', upload.array('files', 3), async (req, res) => {
     const files = req.files || [];
 
     // Input validation
-    if (!topic || !level || !time || !language || !requestId) {
+    if (!topic && !files || !level || !time || !language || !requestId) {
         const errorMessage = 'Missing required course generation parameters: topic, level, time, language, or requestId.';
         console.error(`Client Error: ${errorMessage}`);
         sendProgress(requestId, { type: 'error', current: 0, total: 0, sectionTitle: errorMessage, error: true });
