@@ -167,26 +167,7 @@ const retryIfInvalid = async (fn, isValid, maxRetries = 2) => {
  * @param {string} query - The search query.
  * @returns {Promise<string|null>} The image URL or null if not found.
  */
-async function getImageLink(query) {
-    // Retry vqd acquisition if it fails or returns null
-    const vqd = await retryIfInvalid(
-        () => getVQDFromHTML(query),
-        (v) => v !== null,
-        3 // Max 3 retries for vqd acquisition
-    ).catch(err => {
-        console.warn(`Failed to get vqd for query "${query}" after retries: ${err.message}`);
-        return null;
-    });
-
-    if (!vqd) {
-        return null; // Cannot proceed without vqd
-    }
-
-    const url = `https://duckduckgo.com/i.js?o=json&q=${encodeURIComponent(query)}&l=us-en&vqd=${encodeURIComponent(vqd)}&p=1&f=size%3ALarge`;
-    const headers = {
-        "User-Agent": DUCKDUCKGO_USER_AGENT, // CORRECTED TYPO HERE
-    };
-
+async function getImageLink(query, url, headers) {
     try {
         const response = await axios.get(url, { headers, timeout: 10000 }); // Added timeout for the image search itself
         const results = response.data.results;
@@ -215,9 +196,28 @@ async function getImageLink(query) {
  * @returns {Promise<string|null>} The image URL or null.
  */
 async function getImageWithRetry(query, retries = 3, timeoutMs = 10000) {
+    // Retry vqd acquisition if it fails or returns null
+    const vqd = await retryIfInvalid(
+        () => getVQDFromHTML(query),
+        (v) => v !== null,
+        3 // Max 3 retries for vqd acquisition
+    ).catch(err => {
+        console.warn(`Failed to get vqd for query "${query}" after retries: ${err.message}`);
+        return null;
+    });
+
+    if (!vqd) {
+        return null; // Cannot proceed without vqd
+    }
+
+    const url = `https://duckduckgo.com/i.js?o=json&q=${encodeURIComponent(query)}&l=us-en&vqd=${encodeURIComponent(vqd)}&p=1&f=size%3ALarge`;
+    const headers = {
+        "User-Agent": DUCKDUCKGO_USER_AGENT, // CORRECTED TYPO HERE
+    };
+
     for (let attempt = 0; attempt <= retries; attempt++) {
         try {
-            const image = await retryIfTimeout(getImageLink(query), timeoutMs);
+            const image = await retryIfTimeout(getImageLink(query, url, headers), timeoutMs);
             if (image) return image;
         } catch (err) {
             console.log(`Attempt ${attempt + 1}/${retries + 1} for "${query}": No image found or operation timed out. Error: ${err.message}.`);

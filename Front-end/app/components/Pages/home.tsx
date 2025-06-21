@@ -193,8 +193,8 @@ export function Home({ navigation }) {
   };
 
   const generate = async (topic, level, readingTimeMin, language) => {
-    let timeoutTimeInMs = 24000;
-    if (selectedFiles.length > 0) timeoutTimeInMs = timeoutTimeInMs + (selectedFiles.length * 12000);
+    let timeoutTimeInMs = 240000;
+    if (selectedFiles.length > 0) timeoutTimeInMs = timeoutTimeInMs + (selectedFiles.length * 120000);
     const fetchWithTimeout = (url, options, timeout = timeoutTimeInMs ) => {
       const controller = new AbortController();
       const id = setTimeout(() => controller.abort(), timeout);
