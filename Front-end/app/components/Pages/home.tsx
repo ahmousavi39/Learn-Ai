@@ -64,7 +64,8 @@ export function Home({ navigation }) {
     { key: 'es', value: 'Español' },
     { key: 'fr', value: 'Français' },
     { key: 'ru', value: 'Русский' },
-    { key: 'fa', value: 'فارسی' }
+    { key: 'fa', value: 'فارسی' },
+    { key: 'ar', value: 'اَلْعَرَبِيَّةُ' }
   ];
 
   const connectWebSocket = (retry = true) => {
