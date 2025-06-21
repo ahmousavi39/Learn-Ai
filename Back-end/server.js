@@ -151,7 +151,7 @@ function retryIfTimeout(promise, ms) {
  * @param {number} [maxRetries=2] - The maximum number of retries.
  * @returns {Promise<any>} The valid result.
  */
-const retryIfInvalid = async (fn, isValid, maxRetries = 2) => {
+const retryIfInvalid = async (fn, isValid, maxRetries = 4) => {
   let result;
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     result = await fn();
