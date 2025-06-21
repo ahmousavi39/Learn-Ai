@@ -242,7 +242,7 @@ ${sources !== null ? "**IMPORTANT:** The content strictly base on the provided s
 **Section Details:**
 * **Title:** "${section.title}"
 * **Topic:** "${topic}"
-* **Language:** "${language}"
+* **Language:** Arabic
 * **Language Tone:**
     * Simple language for low levels.
     * Complex language for high levels.
