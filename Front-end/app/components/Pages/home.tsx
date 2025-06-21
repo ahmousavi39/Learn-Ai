@@ -16,6 +16,7 @@ import errorAnimation from '../../../assets/error.json';
 import loadingAnimation from '../../../assets/loading.json';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
+import { ScrollView } from 'react-native';
 
 export function Home({ navigation }) {
   const dispatch = useAppDispatch();
@@ -281,58 +282,59 @@ export function Home({ navigation }) {
   return (
     <SafeAreaProvider>
       <SafeAreaView style={modalVisible ? styles.containerDisabled : styles.container}>
-        {courses.map((course, index) => {
-          if (index % 2 === 0) {
-            return (
-              <View style={styles.row} key={index}>
-                {/* First button */}
-                <TouchableHighlight
-                  underlayColor={'transparent'}
-                  style={styles.touchableHighlight}
-                  onPress={() => openCourse(course.id)}
-                >
-                  <View style={styles.buttonContainer}>
-                    <View style={[styles.progressOverlay, { height: `${getCourseCompletion(course)}%` }]} />
-                    <View style={styles.buttonContent}>
-                      <Text style={styles.text}>{course.name}</Text>
-                      <Text style={styles.smallText}>{getCourseCompletion(course)}% Complete</Text>
-                    </View>
-                  </View>
-                </TouchableHighlight>
-
-                {/* Second button if exists */}
-                {courses[index + 1] && (
+        <ScrollView>
+          {courses.map((course, index) => {
+            if (index % 2 === 0) {
+              return (
+                <View style={styles.row} key={index}>
+                  {/* First button */}
                   <TouchableHighlight
                     underlayColor={'transparent'}
                     style={styles.touchableHighlight}
-                    onPress={() => openCourse(courses[index + 1].id)}
+                    onPress={() => openCourse(course.id)}
                   >
                     <View style={styles.buttonContainer}>
-                      <View style={[styles.progressOverlay, { height: `${getCourseCompletion(courses[index + 1])}%` }]} />
+                      <View style={[styles.progressOverlay, { height: `${getCourseCompletion(course)}%` }]} />
                       <View style={styles.buttonContent}>
-                        <Text style={styles.text}>{courses[index + 1].name}</Text>
-                        <Text style={styles.smallText}>{getCourseCompletion(courses[index + 1])}% Complete</Text>
+                        <Text style={styles.text}>{course.name}</Text>
+                        <Text style={styles.smallText}>{getCourseCompletion(course)}% Complete</Text>
                       </View>
                     </View>
                   </TouchableHighlight>
-                )}
-              </View>
-            );
-          }
-          return null;
-        })}
 
-        {/* Add button */}
-        <View style={styles.row}>
-          <TouchableHighlight underlayColor={'transparent'} style={styles.touchableHighlight} onPress={() => setModalVisible(true)}>
-            <View style={styles.buttonContainer}>
-              <View style={styles.buttonContent}>
-                <Text style={styles.text}>Add +</Text>
-              </View>
-            </View>
-          </TouchableHighlight>
-        </View>
+                  {/* Second button if exists */}
+                  {courses[index + 1] && (
+                    <TouchableHighlight
+                      underlayColor={'transparent'}
+                      style={styles.touchableHighlight}
+                      onPress={() => openCourse(courses[index + 1].id)}
+                    >
+                      <View style={styles.buttonContainer}>
+                        <View style={[styles.progressOverlay, { height: `${getCourseCompletion(courses[index + 1])}%` }]} />
+                        <View style={styles.buttonContent}>
+                          <Text style={styles.text}>{courses[index + 1].name}</Text>
+                          <Text style={styles.smallText}>{getCourseCompletion(courses[index + 1])}% Complete</Text>
+                        </View>
+                      </View>
+                    </TouchableHighlight>
+                  )}
+                </View>
+              );
+            }
+            return null;
+          })}
 
+          {/* Add button */}
+          <View style={styles.row}>
+            <TouchableHighlight underlayColor={'transparent'} style={styles.touchableHighlight} onPress={() => setModalVisible(true)}>
+              <View style={styles.buttonContainer}>
+                <View style={styles.buttonContent}>
+                  <Text style={styles.text}>Add +</Text>
+                </View>
+              </View>
+            </TouchableHighlight>
+          </View>
+        </ScrollView>
         {/* Modal */}
         <Modal
           animationType="slide"
@@ -444,7 +446,9 @@ export function Home({ navigation }) {
 
                 <Text style={styles.modalText}>Select Language:</Text>
                 <SelectList
-                  setSelected={(lan) => setLang(lan)}
+                  setSelected={(key) => data.map(lang => {
+                    if (lang.key === key) setLang(lang.value)
+                  })}
                   data={data}
                   defaultOption={data.find(lan => (lan.key == 'en'))}
                 />

@@ -356,13 +356,13 @@ app.post('/generate-course', upload.array('files', 3), async (req, res) => {
       );
     }
     sendProgress(requestId, { current: 0, total: 0, sectionTitle: "", type: "planing" });
-    const coursePlan = await retryIfInvalid(() => getCoursePlan({ topic, level, time, language: "Persian", sources }),
+    const coursePlan = await retryIfInvalid(() => getCoursePlan({ topic, level, time, language, sources }),
       (plan) => plan?.sections?.length >= 4 && plan?.sections !== undefined
     );
     const sectionsData = [];
     for (const [i, section] of coursePlan.sections.entries()) {
       console.log(`🛠 Generating section ${i + 1}/${coursePlan.sections.length} — "${section.title}"`);
-      const generated = await retryIfInvalid(() => generateSection({ section, level, language: "Persian", topic, sectionCount: coursePlan.sections.length, requestId, sectionNumber: i, sources }),
+      const generated = await retryIfInvalid(() => generateSection({ section, level, language, topic, sectionCount: coursePlan.sections.length, requestId, sectionNumber: i, sources }),
         (gen) => gen?.content?.length > 0
       );
       sectionsData.push(generated);
