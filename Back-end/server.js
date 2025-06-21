@@ -250,6 +250,7 @@ ${sources !== null ? "**IMPORTANT:** The content strictly base on the provided s
 
 **Content Generation Rules:**
 * Generate **exactly ${bulletCount} content items**.
+* Use the provided content titles: **${section.bulletTitles.map(title => title + ", ")}**.
 * Each content item must include:
     * Its given title.
     * **2 to 4 short paragraphs** explaining the concept, provided as strings within a "bulletpoints" array.
