@@ -139,7 +139,6 @@ async function getImageLink(query) {
   try {
     const response = await axios.get(url, { headers });
     const results = response.data.results;
-    console.log(results);
     for (const item of results) {
       if (item.image && await isImageUrl(item.image) && !item.image.includes("ytimg.com") && item.height <= (item.width * 2)) {
         return item.image;
