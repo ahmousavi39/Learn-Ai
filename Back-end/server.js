@@ -129,19 +129,19 @@ const retryIfInvalid = async (fn, isValid, maxRetries = 2) => {
 
 async function getImageLink(query) {
   const vqd = await getVQDFromHTML(query);
-  console.log(vqd);
   const url = `https://duckduckgo.com/i.js?o=json&q=${query}&l=us-en&vqd=${encodeURIComponent(vqd)}&p=1&f=size%3ALarge`;
   const headers = {
     "User-Agent":
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
       "(KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36",
   };
+  console.log(url);
   try {
     const response = await axios.get(url, { headers });
     const results = response.data.results;
+    console.log(results);
     for (const item of results) {
       if (item.image && await isImageUrl(item.image) && !item.image.includes("ytimg.com") && item.height <= (item.width * 2)) {
-    console.log(item.image);
         return item.image;
       }
     }
