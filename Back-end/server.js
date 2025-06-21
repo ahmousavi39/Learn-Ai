@@ -151,7 +151,7 @@ async function generateGeminiResponse(prompt, files = []) {
   return (await result.response).text();
 }
 
-async function getSummerizedFile({ files = [] , language}) {
+async function getSummerizedFile({ files = [], language }) {
   let finalResult;
   const prompt = `
 **Role:** You are a very detailed file summerizer.
@@ -279,7 +279,7 @@ ${"```"}json
   ]
 }
 `;
-console.log(prompt);
+  console.log(prompt);
   try {
     sendProgress(requestId, {
       type: 'progress',
@@ -292,13 +292,13 @@ console.log(prompt);
     console.log(raw);
     const parsed = JSON.parse(raw.replace(/```json|```/g, '').trim());
     const contentWithIds = await Promise.all(parsed.content.map(async (item, index) => {
-      const searchQuery = `${topic} ${item.title}`;
-      let imageUrl = null;
-      try {
-        imageUrl = await getImageLink(searchQuery);
-      } catch (e) {
-        console.warn(`⚠️ Failed to fetch image for "${searchQuery}": ${e.message}`);
-      }
+    // const searchQuery = `${topic} ${item.title}`;
+    let imageUrl = null;
+    // try {
+    //   imageUrl = await getImageLink(searchQuery);
+    // } catch (e) {
+    //   console.warn(`⚠️ Failed to fetch image for "${searchQuery}": ${e.message}`);
+    // }
 
       return {
         id: index,
@@ -316,6 +316,7 @@ console.log(prompt);
     }));
 
     finalResult = { ...section, ...parsed, content: contentWithIds, test: testWithIsDone };
+
   } catch (err) {
     sendProgress(requestId, {
       type: 'progress',
