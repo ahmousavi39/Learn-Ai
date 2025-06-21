@@ -196,7 +196,7 @@ async function getImageLink(query, url, headers) {
  * @param {number} [timeoutMs=15000] - Timeout for each attempt in milliseconds.
  * @returns {Promise<string|null>} The image URL or null.
  */
-async function getImageWithRetry(query, language, retries = 3, timeoutMs = 10000) {
+async function getImageWithRetry(query, language, retries = 3, timeoutMs = 5000) {
   // Retry vqd acquisition if it fails or returns null
   const vqd = await retryIfInvalid(
     () => getVQDFromHTML(query),
@@ -371,7 +371,7 @@ ${sourceInstruction}
 }
 
 // 🔸 STEP 2: Generate Section Content
-async function generateSection({ section, level, language, topic, sectionCount, requestId, sectionNumber, sources }) {
+async function generateSection({ section, level, language, topic, sources }) {
   const bulletCount = section.bulletCount || 3;
   let finalResult;
   const sourceInstruction = sources !== null ? `**IMPORTANT:** The content strictly base on the provided source! Use it as sources only: {${sources}}` : "";
@@ -424,13 +424,6 @@ ${"```"}json
 }
 `;
   try {
-    sendProgress(requestId, {
-      type: 'progress',
-      current: sectionNumber + 1,
-      total: sectionCount,
-      sectionTitle: section.title,
-      error: false
-    });
     const raw = await generateGeminiResponse(prompt);
     const parsed = JSON.parse(raw.replace(/```json|```/g, '').trim());
 
@@ -454,14 +447,6 @@ ${"```"}json
     finalResult = { ...section, ...parsed, content: contentWithIds, test: testWithIsDone };
 
   } catch (err) {
-    sendProgress(requestId, {
-      type: 'progress',
-      current: sectionNumber + 1, // Still increment to show progress even if this section failed
-      total: sectionCount,
-      sectionTitle: section.title,
-      error: true, // Indicate an error for this section
-      errorMessage: err.message
-    });
     console.warn(`❌ Error generating "${section.title}": ${err.message}`);
   }
 
@@ -482,14 +467,14 @@ app.post('/generate-course', upload.array('files', 3), async (req, res) => {
   if (!topic && !files || !level || !time || !language || !requestId) {
     const errorMessage = 'Missing required course generation parameters: topic, level, time, language, or requestId.';
     console.error(`Client Error: ${errorMessage}`);
-    sendProgress(requestId, { type: 'error', current: 0, total: 0, sectionTitle: errorMessage, error: true });
+    sendProgress(requestId, { type: 'ERROR', current: 0, total: 0, sectionTitle: errorMessage, error: true, done: false });
     return res.status(400).json({ error: errorMessage });
   }
 
   try {
     let sources = null;
     if (files.length > 0) {
-      sendProgress(requestId, { type: 'uploading', message: 'Summarizing provided files...' });
+      sendProgress(requestId, { type: 'PROCESSING', sectionTitle: 'Summarizing provided files...', current: 0, total: 0, error: false, done: false });
       sources = await retryIfInvalid(() => getSummerizedFile({ files, language }),
         (source) => source !== null
       );
@@ -498,7 +483,7 @@ app.post('/generate-course', upload.array('files', 3), async (req, res) => {
       }
     }
 
-    sendProgress(requestId, { current: 0, total: 0, sectionTitle: "Generating Course Plan", type: "planing" });
+    sendProgress(requestId, { done: false, error: false, current: 0, total: 0, sectionTitle: "Generating Course Plan", type: "PLANING" });
     const coursePlan = await retryIfInvalid(() => getCoursePlan({ topic, level, time, language, sources }),
       // Adjusted validation for course plan sections based on calculated count
       (plan) => plan?.sections?.length >= (time <= 30 ? 4 : Math.floor(time / 10)) && plan?.sections !== undefined
@@ -507,13 +492,21 @@ app.post('/generate-course', upload.array('files', 3), async (req, res) => {
     const sectionsData = [];
     for (const [i, section] of coursePlan.sections.entries()) {
       console.log(`🛠 Generating section ${i + 1}/${coursePlan.sections.length} — "${section.title}"`);
-      const generated = await retryIfInvalid(() => generateSection({ section, level, language, topic: coursePlan.title, sectionCount: coursePlan.sections.length, requestId, sectionNumber: i, sources }),
+      sendProgress(requestId, {
+        type: 'PROGRESS',
+        current: i + 1,
+        total: coursePlan.sections.length,
+        sectionTitle: section.title,
+        error: false,
+        done: false
+      });
+      const generated = await retryIfInvalid(() => generateSection({ section, level, language, topic: coursePlan.title, sources }),
         (gen) => gen?.content?.length > 0
       );
       sectionsData.push(generated);
     }
 
-    sendProgress(requestId, { type: 'done', done: true, error: false });
+    sendProgress(requestId, { done: true, error: false, current: coursePlan.sections.length, total: coursePlan.sections.length, sectionTitle: "Generating Course Plan", type: "DONE" });
 
     res.json({
       topic: coursePlan.title,
@@ -525,11 +518,12 @@ app.post('/generate-course', upload.array('files', 3), async (req, res) => {
   } catch (error) {
     console.error('Error during course generation:', error.message);
     sendProgress(requestId, {
-      type: 'error',
+      type: 'ERROR',
       current: 0,
       total: 0,
       sectionTitle: error.message,
-      error: true
+      error: true,
+      done: false
     });
     res.status(500).json({ error: error.message });
   }

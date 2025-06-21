@@ -14,6 +14,7 @@ import searchingAnimation from '../../../assets/searching.json';
 import doneAnimation from '../../../assets/done.json';
 import errorAnimation from '../../../assets/error.json';
 import loadingAnimation from '../../../assets/loading.json';
+import processingAnimation from '../../../assets/processing.json';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
 import { ScrollView } from 'react-native';
@@ -89,19 +90,14 @@ export function Home({ navigation }) {
 
       ws.current.onmessage = (event) => {
         const data = JSON.parse(event.data);
-        console.log(data);
-        if (data.type === 'progress') {
-          setProgress({
-            current: data.current,
-            total: data.total,
-            done: false,
-            sectionTitle: data.sectionTitle,
-            type: data.type,
-            error: false,
-          });
-        } else if (data.type === 'done') {
-          setProgress((p) => ({ ...p, done: true, type: "done" }));
-        }
+        setProgress({
+          current: data.current,
+          total: data.total,
+          done: data.done,
+          sectionTitle: data.sectionTitle,
+          type: data.type,
+          error: data.error,
+        });
       };
 
       ws.current.onerror = (error) => {
@@ -193,9 +189,22 @@ export function Home({ navigation }) {
   };
 
   const generate = async (topic, level, readingTimeMin, language) => {
+    if (selectedFiles.length > 0) {
+      setProgress({
+        type: 'UPLOADING',
+        current: 0,
+        total: 0,
+        sectionTitle: "Uploading Files",
+        error: false,
+        done: false
+      });
+    } else {
+      setProgress({ current: 0, total: 0, done: false, sectionTitle: "Planing the course", error: false, type: "PLANING" });
+    }
+
     let timeoutTimeInMs = 240000;
     if (selectedFiles.length > 0) timeoutTimeInMs = timeoutTimeInMs + (selectedFiles.length * 120000);
-    const fetchWithTimeout = (url, options, timeout = timeoutTimeInMs ) => {
+    const fetchWithTimeout = (url, options, timeout = timeoutTimeInMs) => {
       const controller = new AbortController();
       const id = setTimeout(() => controller.abort(), timeout);
       return fetch(url, {
@@ -211,19 +220,6 @@ export function Home({ navigation }) {
 
       // Connect WS after new requestId is ready
       connectWebSocket();
-
-      if (selectedFiles.length > 0) {
-        setProgress({
-          type: 'uploading',
-          current: 0,
-          total: 0,
-          sectionTitle: "",
-          error: false,
-          done: false
-        });
-      } else {
-        setProgress({ current: 0, total: 0, done: false, sectionTitle: "", error: false, type: "planing" });
-      }
 
       const formData = new FormData();
 
@@ -253,7 +249,7 @@ export function Home({ navigation }) {
 
       if (data.sections && Array.isArray(data.sections)) {
         dispatch(generateCourse({ name: data.topic, sections: data.sections, language: data.language, level }));
-        setProgress((p) => ({ ...p, done: true, type: "done" }));
+        setProgress((p) => ({ ...p, done: true, error: false, sectionTitle: "Generating Course Plan", type: "DONE" }));
         doneSound();
         setText('');
         setTimeout(() => {
@@ -264,7 +260,14 @@ export function Home({ navigation }) {
         throw new Error('Invalid sections data from server');
       }
     } catch (error) {
-      setProgress({ current: 0, total: 0, done: false, sectionTitle: "Could not generate course. Please try later!", type: 'error', error: true })
+      setProgress({
+        type: 'ERROR',
+        current: 0,
+        total: 0,
+        error: true,
+        done: false,
+        sectionTitle: "Could not generate course. Please try later!"
+      })
       errorSound();
       setTimeout(() => { setLoading(false); }, 5000)
     }
@@ -349,7 +352,7 @@ export function Home({ navigation }) {
           <View style={styles.centeredView}>
             <View style={styles.modalView}>
 
-              {loading ? (progress.type === "progress" ? <View style={styles.searchingContainer}>
+              {loading ? (progress.type === "PROGRESS" ? <View style={styles.searchingContainer}>
                 <LottieView
                   source={searchingAnimation}
                   autoPlay
@@ -366,7 +369,7 @@ export function Home({ navigation }) {
                 </View>
                 <Text>Generating {progress.current}/{progress.total} sections</Text>
                 <Text>({progress.sectionTitle})</Text>
-              </View> : progress.type === "done" ? <View style={styles.searchingContainer}>
+              </View> : progress.type === "DONE" ? <View style={styles.searchingContainer}>
                 <LottieView
                   source={doneAnimation}
                   autoPlay
@@ -382,7 +385,7 @@ export function Home({ navigation }) {
                   }]} />
                 </View>
                 <Text>Done!</Text>
-              </View> : progress.type === "planing" ? <View style={styles.generatingContainer}>
+              </View> : progress.type === "PLANING" ? <View style={styles.generatingContainer}>
                 <LottieView
                   source={generatingAnimation}
                   autoPlay
@@ -390,7 +393,7 @@ export function Home({ navigation }) {
                   style={styles.largeAnimation}
                 />
                 <Text>Making a course plan</Text>
-              </View> : progress.type === "uploading" ? <View style={styles.generatingContainer}>
+              </View> : progress.type === "UPLOADING" ? <View style={styles.generatingContainer}>
                 <LottieView
                   source={loadingAnimation}
                   autoPlay
@@ -398,6 +401,14 @@ export function Home({ navigation }) {
                   style={styles.largeAnimation}
                 />
                 <Text>Uploading the file{"[s]"}...</Text>
+              </View> : progress.type === "PROCESSING" ? <View style={styles.generatingContainer}>
+                <LottieView
+                  source={processingAnimation}
+                  autoPlay
+                  loop
+                  style={styles.largeAnimation}
+                />
+                <Text>Processing the file{"[s]"}...</Text>
               </View> : <View style={styles.searchingContainer}>
                 <LottieView
                   source={errorAnimation}
