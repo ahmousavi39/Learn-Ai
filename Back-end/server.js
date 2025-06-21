@@ -14,209 +14,289 @@ const multer = require('multer');
 
 const clients = new Map(); // requestId -> ws
 
-const storage = multer.memoryStorage();
+// --- Constants ---
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+const ALLOWED_MIMETYPES = [
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'image/jpeg',
+    'image/png',
+    'image/gif',
+    'image/webp'
+];
+const DUCKDUCKGO_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36";
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'models/gemini-1.5-flash-latest'; // Using a default as 'models/gemini-2.0-flash' might not be a valid fixed model name.
 
+// --- Multer Configuration ---
+const storage = multer.memoryStorage();
 const upload = multer({
-  storage,
-  limits: { fileSize: 10 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
-    const allowed = [
-      'application/pdf',
-      'application/msword',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'image/jpeg',
-      'image/png',
-      'image/gif',
-      'image/webp'
-    ];
-    if (allowed.includes(file.mimetype)) {
-      cb(null, true);
-    } else {
-      cb(new Error('Only PDF, Word (.doc/.docx), and images are allowed'));
+    storage,
+    limits: { fileSize: MAX_FILE_SIZE },
+    fileFilter: (req, file, cb) => {
+        if (ALLOWED_MIMETYPES.includes(file.mimetype)) {
+            cb(null, true);
+        } else {
+            cb(new Error('Only PDF, Word (.doc/.docx), and images are allowed'));
+        }
     }
-  }
 });
 
+// --- WebSocket Server ---
 wss.on('connection', (ws) => {
-  ws.on('message', (msg) => {
-    try {
-      const data = JSON.parse(msg);
-      if (data.type === 'register' && data.requestId) {
-        clients.set(data.requestId, ws);
-        console.log(`Client registered: ${data.requestId + " | " + ws}`);
-      }
-    } catch (e) {
-      console.error('Invalid message:', msg);
-    }
+    ws.on('message', (msg) => {
+        try {
+            const data = JSON.parse(msg);
+            if (data.type === 'register' && data.requestId) {
+                clients.set(data.requestId, ws);
+                console.log(`Client registered: ${data.requestId}`);
+            }
+        } catch (e) {
+            console.error('Invalid WebSocket message:', msg, e);
+        }
+    });
 
     ws.on('close', () => {
-      for (const [id, clientWs] of clients) {
-        if (clientWs === ws) clients.delete(id);
-      }
+        for (const [id, clientWs] of clients.entries()) {
+            if (clientWs === ws) {
+                clients.delete(id);
+                console.log(`Client unregistered: ${id}`);
+                break;
+            }
+        }
     });
-  });
 });
 
+/**
+ * Sends a progress update to a specific client via WebSocket.
+ * @param {string} requestId - The ID of the client to send the message to.
+ * @param {object} message - The message payload.
+ */
 function sendProgress(requestId, message) {
-  const ws = clients.get(requestId);
-  if (ws && ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify(message));
-  }
-}
-
-async function getVQDFromHTML(query) {
-  const url = `https://duckduckgo.com/?q=${query}&iar=images&t=h_`;
-  const headers = {
-    "User-Agent":
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
-      "(KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36",
-  };
-
-  try {
-    const response = await axios.get(url, { headers });
-    const html = response.data;
-
-    // Extract vqd from the JavaScript variable in the HTML
-    const match = html.match(/vqd="([^"]+)"/);
-    if (match) {
-      return match[1];
-    } else {
-      throw new Error("vqd not found in HTML");
+    const ws = clients.get(requestId);
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify(message));
     }
-  } catch (error) {
-    console.error("Failed to get vqd:", error);
-  }
 }
 
+// --- DuckDuckGo Image Search Utilities ---
+
+/**
+ * Fetches the vqd parameter from DuckDuckGo's image search HTML.
+ * @param {string} query - The search query.
+ * @returns {Promise<string|null>} The vqd string or null if not found.
+ */
+async function getVQDFromHTML(query) {
+    const url = `https://duckduckgo.com/?q=${encodeURIComponent(query)}&iar=images&t=h_`;
+    try {
+        const response = await axios.get(url, { headers: { "User-Agent": DUCKDUCKGO_USER_AGENT } });
+        const html = response.data;
+        // Extract vqd from the JavaScript variable in the HTML
+        const match = html.match(/vqd="([^"]+)"/);
+        return match ? match[1] : null;
+    } catch (error) {
+        console.error("Failed to get vqd:", error.message);
+        return null;
+    }
+}
+
+/**
+ * Checks if a given URL points to an image by making a HEAD request.
+ * @param {string} url - The URL to check.
+ * @returns {Promise<boolean>} True if the URL is an image, false otherwise.
+ */
 async function isImageUrl(url) {
-  try {
-    const response = await axios.get(url, {
-      method: 'HEAD', // Use HEAD to avoid downloading the full image
-      validateStatus: () => true, // Don't throw on HTTP errors
+    try {
+        const response = await axios.head(url, {
+            validateStatus: () => true, // Don't throw on HTTP errors (e.g., 404, 500)
+            timeout: 5000 // Added a timeout for image HEAD requests
+        });
+        const contentType = response.headers['content-type'];
+        return contentType && contentType.startsWith('image/');
+    } catch (error) {
+        // console.warn(`Failed to validate image URL ${url}: ${error.message}`);
+        return false;
+    }
+}
+
+/**
+ * Retries a promise with a timeout.
+ * @param {Promise<any>} promise - The promise to execute.
+ * @param {number} ms - The timeout duration in milliseconds.
+ * @returns {Promise<any>} The resolved promise result or a timeout error.
+ */
+function retryIfTimeout(promise, ms) {
+    return new Promise((resolve, reject) => {
+        const timeoutId = setTimeout(() => reject(new Error(`Operation timed out after ${ms}ms`)), ms);
+        promise
+            .then((res) => {
+                clearTimeout(timeoutId);
+                resolve(res);
+            })
+            .catch((err) => {
+                clearTimeout(timeoutId);
+                reject(err);
+            });
+    });
+}
+
+/**
+ * Retries a function until its result is valid or max retries are reached.
+ * Includes exponential backoff for delays.
+ * @param {Function} fn - The function to execute.
+ * @param {Function} isValid - A function that validates the result of `fn`.
+ * @param {number} [maxRetries=2] - The maximum number of retries.
+ * @returns {Promise<any>} The valid result.
+ */
+const retryIfInvalid = async (fn, isValid, maxRetries = 2) => {
+    let result;
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+        result = await fn();
+        if (isValid(result)) return result;
+        // Exponential backoff
+        await delay(Math.pow(2, attempt) * 1000); // 1s, 2s, 4s, ...
+    }
+    throw new Error(`Validation failed after ${maxRetries} retries.`);
+};
+
+/**
+ * Fetches an image link from DuckDuckGo based on a query.
+ * Includes a robust vqd acquisition.
+ * @param {string} query - The search query.
+ * @returns {Promise<string|null>} The image URL or null if not found.
+ */
+async function getImageLink(query) {
+    // Retry vqd acquisition if it fails or returns null
+    const vqd = await retryIfInvalid(
+        () => getVQDFromHTML(query),
+        (v) => v !== null,
+        3 // Max 3 retries for vqd acquisition
+    ).catch(err => {
+        console.warn(`Failed to get vqd for query "${query}" after retries: ${err.message}`);
+        return null;
     });
 
-    const contentType = response.headers['content-type'];
-    return contentType && contentType.startsWith('image/');
-  } catch (error) {
-    return false;
-  }
-}
-
-function retryIfTimeout(promise, ms) {
-  return new Promise((resolve, reject) => {
-    const timeoutId = setTimeout(() => reject(new Error("Timeout")), ms);
-    promise
-      .then((res) => {
-        clearTimeout(timeoutId);
-        resolve(res);
-      })
-      .catch((err) => {
-        clearTimeout(timeoutId);
-        reject(err);
-      });
-  });
-};
-
-const retryIfInvalid = async (fn, isValid, maxRetries = 2) => {
-  let result;
-  for (let attempt = 0; attempt < maxRetries; attempt++) {
-    result = await fn();
-    if (isValid(result)) return result;
-    await delay(2000);
-  }
-  throw new Error("Validation failed after retries.");
-};
-
-async function getImageLink(query) {
-  const vqd = await getVQDFromHTML(query);
-  const url = `https://duckduckgo.com/i.js?o=json&q=${query}&l=us-en&vqd=${encodeURIComponent(vqd)}&p=1&f=size%3ALarge`;
-  const headers = {
-    "User-Agent":
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
-      "(KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36",
-  };
-  console.log(url);
-  try {
-    const response = await axios.get(url, { headers });
-    const results = response.data.results;
-    for (const item of results) {
-      if (item.image && await isImageUrl(item.image) && !item.image.includes("ytimg.com") && item.height <= (item.width * 2)) {
-        return item.image;
-      }
+    if (!vqd) {
+        return null; // Cannot proceed without vqd
     }
-    return null;
-  } catch (error) {
-    console.error('Error fetching or checking images:', error.message);
-    return null;
-  }
-}
 
-async function getImageWithRetry(query, retries = 1, timeoutMs = 10000) {
-  for (let attempt = 0; attempt <= retries; attempt++) {
+    const url = `https://duckduckgo.com/i.js?o=json&q=${encodeURIComponent(query)}&l=us-en&vqd=${encodeURIComponent(vqd)}&p=1&f=size%3ALarge`;
+    const headers = {
+        "User-Agent": DUCKDUCKGO_USER-AGENT,
+    };
+
     try {
-      const image = await retryIfTimeout(getImageLink(query), timeoutMs);
-      return image;
-    } catch (err) {
-      console.log(query + " No image found!")
+        const response = await axios.get(url, { headers, timeout: 10000 }); // Added timeout for the image search itself
+        const results = response.data.results;
+
+        for (const item of results) {
+            if (item.image && !item.image.includes("ytimg.com") && item.height <= (item.width * 2)) {
+                // Check if it's a valid image URL sequentially for robustness
+                if (await isImageUrl(item.image)) {
+                    return item.image;
+                }
+            }
+        }
+        return null;
+    } catch (error) {
+        console.error(`Error fetching or checking images for query "${query}": ${error.message}`);
+        return null;
     }
-  }
-  return null;
 }
 
-// Gemini setup
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-// const MODEL = 'models/gemini-1.5-flash-latest'; 
-const MODEL = 'models/gemini-2.0-flash';
+/**
+ * Attempts to get an image with multiple retries and a timeout for each attempt.
+ * Implements exponential backoff between retries.
+ * @param {string} query - The search query.
+ * @param {number} [retries=3] - Number of retries.
+ * @param {number} [timeoutMs=15000] - Timeout for each attempt in milliseconds.
+ * @returns {Promise<string|null>} The image URL or null.
+ */
+async function getImageWithRetry(query, retries = 3, timeoutMs = 15000) {
+    for (let attempt = 0; attempt <= retries; attempt++) {
+        try {
+            const image = await retryIfTimeout(getImageLink(query), timeoutMs);
+            if (image) return image;
+        } catch (err) {
+            console.log(`Attempt ${attempt + 1}/${retries + 1} for "${query}": No image found or operation timed out. Error: ${err.message}.`);
+            if (attempt < retries) {
+                await delay(Math.pow(2, attempt) * 1000); // Exponential backoff: 1s, 2s, 4s...
+            }
+        }
+    }
+    console.warn(`❌ Failed to get image after ${retries + 1} attempts for query: "${query}"`);
+    return null;
+}
 
-// Utility
+// --- Gemini setup ---
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const MODEL = GEMINI_MODEL;
+
+// --- Utility ---
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// 🔹 Gemini prompt call wrapper
+/**
+ * Wrapper for Gemini API calls.
+ * @param {string} prompt - The text prompt for Gemini.
+ * @param {Array<object>} [files=[]] - Array of file objects with buffer and mimetype.
+ * @returns {Promise<string>} The generated text response.
+ */
 async function generateGeminiResponse(prompt, files = []) {
-  const model = genAI.getGenerativeModel({ model: MODEL });
-  const parts = [
-    { text: prompt },
-    ...files.map(file => ({
-      inlineData: {
-        data: file.buffer.toString('base64'),
-        mimeType: file.mimetype
-      }
-    }))
-  ];
-  const result = await model.generateContent({ contents: [{ role: 'user', parts }] });
-  return (await result.response).text();
+    const model = genAI.getGenerativeModel({ model: MODEL });
+    const parts = [
+        { text: prompt },
+        ...files.map(file => ({
+            inlineData: {
+                data: file.buffer.toString('base64'),
+                mimeType: file.mimetype
+            }
+        }))
+    ];
+    const result = await model.generateContent({ contents: [{ role: 'user', parts }] });
+    return (await result.response).text();
 }
 
+/**
+ * Summarizes provided files using Gemini.
+ * @param {object} params
+ * @param {Array<object>} params.files - Array of file objects.
+ * @param {string} params.language - The desired language for the summary.
+ * @returns {Promise<string|null>} The summarized content or null on error.
+ */
 async function getSummerizedFile({ files = [], language }) {
-  let finalResult;
-  const prompt = `
-**Role:** You are a very detailed file summerizer.
+    let finalResult;
+    // Joining file originalnames with a comma and space for better readability in the prompt
+    const fileNames = files.map(file => file.originalname).join(', ');
+    const prompt = `
+**Role:** You are a very detailed file summarizer.
 
-**Task:** Summerize this files ${files.map(file => file.originalname + ", ")} very detailed without ignoring any of its content in "${language}" language.
+**Task:** Summarize these files ${fileNames} very detailed without ignoring any of its content in "${language}" language.
 
-**Output only the summery (NO Extra explanition)**
+**Output only the summary (NO Extra explanation)**
 `;
-  try {
-    const raw = await generateGeminiResponse(prompt, files);
-    finalResult = raw;
-  } catch (err) {
-    console.warn(`❌ Error generating the course plan: ${err.message}`);
-  }
+    try {
+        finalResult = await generateGeminiResponse(prompt, files);
+    } catch (err) {
+        console.warn(`❌ Error generating the file summary: ${err.message}`);
+    }
 
-  return finalResult || null;
+    return finalResult || null;
 }
 
 // 🔸 STEP 1: Get Course Plan
 async function getCoursePlan({ topic, level, time, language, sources }) {
-  let finalResult;
-  const prompt = `
+    let finalResult;
+    const sectionsCount = time <= 30 ? 4 : Math.floor(time / 10);
+    const sourceInstruction = sources ? `**IMPORTANT:** The content strictly base on the provided content! Use it as sources only: ${sources}` : "";
+
+    const prompt = `
 **Role:** Course Structure Designer for a mobile learning app.
 
 **Task:** Design a course on "${topic}" for a learner at level ${level}/10. The learner has ${time} minutes total and prefers to learn in "${language}" language.
-${sources !== null ? "**IMPORTANT:** The content strictly base on the provided content! Use it as sources only: " + sources : ""}
+${sourceInstruction}
 
 **Course Structure Requirements:**
-* **Sections:** ${time <= 30 ? 4 : time / 10} sections
+* **Sections:** ${sectionsCount} sections
 * **Language Tone:**
     * Simple language for low levels.
     * Complex language for high levels.
@@ -229,51 +309,55 @@ ${sources !== null ? "**IMPORTANT:** The content strictly base on the provided c
 * **Time Allocation:** Smartly allocate available time across sections based on complexity.
 
 **Each Section Must Include (JSON Fields):**
-* ${"`"}"title"${"`"}: A short, clear section title.
-* ${"`"}"complexity"${"`"}: 1 (easy) to 5 (hard).
-* ${"`"}"availableTime"${"`"}: Time allocated in minutes.
-* ${"`"}"bulletCount"${"`"}: Number of content blocks.
-* ${"`"}"bulletTitles"${"`"}: Titles of content blocks (array of strings).
+* \`"title"\`: A short, clear section title.
+* \`"complexity"\`: 1 (easy) to 5 (hard).
+* \`"availableTime"\`: Time allocated in minutes.
+* \`"bulletCount"\`: Number of content blocks.
+* \`"bulletTitles"\`: Titles of content blocks (array of strings).
 
 **Output Format (Strict JSON Object Only):**
-${"```"}json
+\`\`\`json
 {
-  "title": "a one word title which explains the topic ONLY",
-  "sections": [
-    {
-      "title": "Section Title",
-      "complexity": 1-5,
-      "availableTime": minutes,
-      "bulletCount": number,
-      "bulletTitles": ["first bulletTitle", "second bulletTitle"]
-    }
-  ]
+    "title": "a one word title which explains the topic ONLY",
+    "sections": [
+        {
+            "title": "Section Title",
+            "complexity": 1-5,
+            "availableTime": minutes,
+            "bulletCount": number,
+            "bulletTitles": ["first bulletTitle", "second bulletTitle"]
+        }
+    ]
 }
+\`\`\`
 `;
-  try {
-    const raw = await generateGeminiResponse(prompt);
-    const json = raw.replace(/```json|```/g, '').trim();
-    finalResult = JSON.parse(json);
-  } catch (err) {
-    console.warn(`❌ Error generating the course plan: ${err.message}`);
-  }
+    try {
+        const raw = await generateGeminiResponse(prompt);
+        const json = raw.replace(/```json|```/g, '').trim();
+        finalResult = JSON.parse(json);
+    } catch (err) {
+        console.warn(`❌ Error generating the course plan: ${err.message}`);
+    }
 
-  return finalResult || {
-    error: 'Failed to generate valid JSON.',
-    content: [],
-    test: []
-  };
+    return finalResult || {
+        error: 'Failed to generate valid JSON.',
+        content: [],
+        test: []
+    };
 }
 
 // 🔸 STEP 2: Generate Section Content
 async function generateSection({ section, level, language, topic, sectionCount, requestId, sectionNumber, sources }) {
-  const bulletCount = section.bulletCount || 3;
-  let finalResult;
-  const prompt = `
+    const bulletCount = section.bulletCount || 3;
+    let finalResult;
+    const sourceInstruction = sources !== null ? `**IMPORTANT:** The content strictly base on the provided source! Use it as sources only: {${sources}}` : "";
+    const bulletTitlesFormatted = Array.isArray(section.bulletTitles) ? section.bulletTitles.map(title => `"${title}"`).join(', ') : '';
+
+    const prompt = `
 **Role:** Mobile Course Content Generator.
 
 **Task:** Create a course section for a level ${level}/10 learner.
-${sources !== null ? "**IMPORTANT:** The content strictly base on the provided source! Use it as sources only: {" + sources + "}" : ""}
+${sourceInstruction}
 
 **Section Details:**
 * **Title:** "${section.title}"
@@ -284,7 +368,7 @@ ${sources !== null ? "**IMPORTANT:** The content strictly base on the provided s
     * Complex language for high levels.
 **Content Generation Rules:**
 * Generate **exactly ${bulletCount} content items**.
-* Use the provided content titles: **${section.bulletTitles.map(title => title + ", ")}**.
+* Use the provided content titles: **${bulletTitlesFormatted}**.
 * Each content item must include:
     * Its given title.
     * **2 to 4 short paragraphs** explaining the concept, provided as strings within a "bulletpoints" array.
@@ -297,127 +381,144 @@ ${sources !== null ? "**IMPORTANT:** The content strictly base on the provided s
 * All questions and answers must be in "${language}".
 
 **Output Format (Strict JSON Object Only):**
-${"```"}json
+\`\`\`json
 {
-  "title": "Section Title",
-  "content": [
-    {
-      "title": "The title given",
-      "bulletpoints": ["Para1", "Para2", "..."]
-    }
-  ],
-  "test": [
-    {
-      "question": "Question?",
-      "answer": "Correct",
-      "options": ["Correct", "Wrong", "Wrong", "Wrong"]
-    }
-  ]
+    "title": "Section Title",
+    "content": [
+        {
+            "title": "The title given",
+            "bulletpoints": ["Para1", "Para2", "..."]
+        }
+    ],
+    "test": [
+        {
+            "question": "Question?",
+            "answer": "Correct",
+            "options": ["Correct", "Wrong", "Wrong", "Wrong"]
+        }
+    ]
 }
+\`\`\`
 `;
-  try {
-    sendProgress(requestId, {
-      type: 'progress',
-      current: sectionNumber + 1,
-      total: sectionCount,
-      sectionTitle: section.title,
-      error: false
-    });
-    const raw = await generateGeminiResponse(prompt);
-    const parsed = JSON.parse(raw.replace(/```json|```/g, '').trim());
-    const contentWithIds = await Promise.all(parsed.content.map(async (item, index) => {
-      const searchQuery = `${topic} ${item.title}`;
-      let imageUrl = await getImageWithRetry(searchQuery);
-      return {
-        id: index,
-        isDone: false,
-        ...item,
-        image: imageUrl
-      };
+    try {
+        sendProgress(requestId, {
+            type: 'progress',
+            current: sectionNumber + 1,
+            total: sectionCount,
+            sectionTitle: section.title,
+            error: false
+        });
+        const raw = await generateGeminiResponse(prompt);
+        const parsed = JSON.parse(raw.replace(/```json|```/g, '').trim());
 
-    }));
+        const contentWithIds = await Promise.all(parsed.content.map(async (item, index) => {
+            const searchQuery = `${topic} ${item.title}`;
+            let imageUrl = await getImageWithRetry(searchQuery); // This now uses the more robust retry logic
+            return {
+                id: index,
+                isDone: false,
+                ...item,
+                image: imageUrl
+            };
+        }));
 
-    const testWithIsDone = (parsed.test || []).map((item, index) => ({
-      id: index,
-      isDone: false,
-      ...item
-    }));
+        const testWithIsDone = (parsed.test || []).map((item, index) => ({
+            id: index,
+            isDone: false,
+            ...item
+        }));
 
-    finalResult = { ...section, ...parsed, content: contentWithIds, test: testWithIsDone };
+        finalResult = { ...section, ...parsed, content: contentWithIds, test: testWithIsDone };
 
-  } catch (err) {
-    sendProgress(requestId, {
-      type: 'progress',
-      current: sectionNumber,
-      total: sectionCount,
-      sectionTitle: section.title,
-      error: false
-    });
-    console.warn(`❌ Error generating "${section.title}": ${err.message}`);
-  }
+    } catch (err) {
+        sendProgress(requestId, {
+            type: 'progress',
+            current: sectionNumber + 1, // Still increment to show progress even if this section failed
+            total: sectionCount,
+            sectionTitle: section.title,
+            error: true, // Indicate an error for this section
+            errorMessage: err.message
+        });
+        console.warn(`❌ Error generating "${section.title}": ${err.message}`);
+    }
 
-  return finalResult || {
-    ...section,
-    error: 'Failed to generate valid JSON.',
-    content: [],
-    test: []
-  };
+    return finalResult || {
+        ...section,
+        error: 'Failed to generate valid JSON or content.',
+        content: [],
+        test: []
+    };
 }
 
 // 🔸 STEP 3: Generate Full Course
 app.post('/generate-course', upload.array('files', 3), async (req, res) => {
-  const { topic, level, time, language, requestId } = req.body;
-  const files = req.files || [];
-  try {
-    let sources = null;
-    if (files.length > 0) {
-      sources = await retryIfInvalid(() => getSummerizedFile({ files, language }),
-        (source) => source !== null
-      );
-    }
-    sendProgress(requestId, { current: 0, total: 0, sectionTitle: "", type: "planing" });
-    const coursePlan = await retryIfInvalid(() => getCoursePlan({ topic, level, time, language, sources }),
-      (plan) => plan?.sections?.length >= 4 && plan?.sections !== undefined
-    );
-    const sectionsData = [];
-    for (const [i, section] of coursePlan.sections.entries()) {
-      console.log(`🛠 Generating section ${i + 1}/${coursePlan.sections.length} — "${section.title}"`);
-      const generated = await retryIfInvalid(() => generateSection({ section, level, language, topic, sectionCount: coursePlan.sections.length, requestId, sectionNumber: i, sources }),
-        (gen) => gen?.content?.length > 0
-      );
-      sectionsData.push(generated);
+    const { topic, level, time, language, requestId } = req.body;
+    const files = req.files || [];
+
+    // Input validation
+    if (!topic || !level || !time || !language || !requestId) {
+        const errorMessage = 'Missing required course generation parameters: topic, level, time, language, or requestId.';
+        console.error(`Client Error: ${errorMessage}`);
+        sendProgress(requestId, { type: 'error', current: 0, total: 0, sectionTitle: errorMessage, error: true });
+        return res.status(400).json({ error: errorMessage });
     }
 
-    sendProgress(requestId, { type: 'done', done: true, error: false });
+    try {
+        let sources = null;
+        if (files.length > 0) {
+            sendProgress(requestId, { type: 'status', message: 'Summarizing provided files...' });
+            sources = await retryIfInvalid(() => getSummerizedFile({ files, language }),
+                (source) => source !== null
+            );
+            if (!sources) {
+                throw new Error('Failed to summarize files after multiple attempts.');
+            }
+        }
 
-    res.json({
-      topic: coursePlan.title,
-      level,
-      language,
-      sections: sectionsData
-    });
+        sendProgress(requestId, { current: 0, total: 0, sectionTitle: "Generating Course Plan", type: "planing" });
+        const coursePlan = await retryIfInvalid(() => getCoursePlan({ topic, level, time, language, sources }),
+            (plan) => plan?.sections?.length >= (time <= 30 ? 4 : Math.floor(time / 10)) && plan?.sections !== undefined
+        );
 
-  } catch (error) {
-    sendProgress(requestId, {
-      type: 'error',
-      current: 0,
-      total: 0,
-      sectionTitle: error.message,
-      error: true
-    });
-    console.error(error.message);
-    res.status(500).json({ error: error.message });
-  }
+        const sectionsData = [];
+        for (const [i, section] of coursePlan.sections.entries()) {
+            console.log(`🛠 Generating section ${i + 1}/${coursePlan.sections.length} — "${section.title}"`);
+            const generated = await retryIfInvalid(() => generateSection({ section, level, language, topic, sectionCount: coursePlan.sections.length, requestId, sectionNumber: i, sources }),
+                (gen) => gen?.content?.length > 0
+            );
+            sectionsData.push(generated);
+        }
+
+        sendProgress(requestId, { type: 'done', done: true, error: false });
+
+        res.json({
+            topic: coursePlan.title,
+            level,
+            language,
+            sections: sectionsData
+        });
+
+    } catch (error) {
+        console.error('Error during course generation:', error.message);
+        sendProgress(requestId, {
+            type: 'error',
+            current: 0,
+            total: 0,
+            sectionTitle: error.message,
+            error: true
+        });
+        res.status(500).json({ error: error.message });
+    }
 });
 
 app.post('/regenerate-lesson', async (req, res) => {
-  const { language, level, bulletpoints } = req.body;
+    const { language, level, bulletpoints } = req.body;
 
-  if (!language || !level || !Array.isArray(bulletpoints)) {
-    return res.status(400).json({ error: 'Missing required fields: language, level, or bulletpoints' });
-  }
+    if (!language || !level || !Array.isArray(bulletpoints) || bulletpoints.length === 0) {
+        return res.status(400).json({ error: 'Missing required fields: language, level, or bulletpoints must be a non-empty array.' });
+    }
 
-  const prompt = `
+    const prompt = `
 **Role:** Educational Mobile Content Rewriting Engine.
 
 **Task:** Rewrite the following bulletpoints.
@@ -428,22 +529,27 @@ app.post('/regenerate-lesson', async (req, res) => {
 * Ensure the rewritten content uses **mobile-friendly, clear language**.
 
 **Input Bulletpoints (JSON array of strings):**
-${"```"}json
+\`\`\`json
 ${JSON.stringify(bulletpoints, null, 2)}
+\`\`\`
 `;
 
-  try {
-    const raw = await generateGeminiResponse(prompt);
-    const parsed = JSON.parse(raw.replace(/```json|```/g, '').trim());
-    res.json({ newBulletpoints: parsed });
-  } catch (err) {
-    console.error('❌ Error during regeneration:', err.message)
-    res.status(500).json({ error: 'Failed to regenerate bulletpoints' });
-  }
+    try {
+        const raw = await generateGeminiResponse(prompt);
+        const parsed = JSON.parse(raw.replace(/```json|```/g, '').trim());
+
+        // Basic validation for the regenerated content
+        if (!Array.isArray(parsed)) {
+            throw new Error("Regenerated content is not a valid JSON array.");
+        }
+        res.json({ newBulletpoints: parsed });
+    } catch (err) {
+        console.error('❌ Error during regeneration:', err.message);
+        res.status(500).json({ error: 'Failed to regenerate bulletpoints.' });
+    }
 });
 
 
 // Start server
 const PORT = process.env.PORT || 4000;
 server.listen(PORT, () => console.log(`🚀 Server running on http://localhost:${PORT}`));
-
