@@ -152,13 +152,13 @@ async function getImageLink(query) {
   }
 }
 
-async function getImageWithRetry(query, retries = 1, timeoutMs = 5000) {
+async function getImageWithRetry(query, retries = 1, timeoutMs = 10000) {
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
       const image = await retryIfTimeout(getImageLink(query), timeoutMs);
       return image;
     } catch (err) {
-      if (attempt === retries) throw err;
+      console.log(query + " No image found!")
     }
   }
   return null;
