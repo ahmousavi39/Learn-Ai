@@ -222,7 +222,7 @@ async function getImageWithRetry(query, language, retries = 3, timeoutMs = 10000
       const enQuery = await translate(query, { from: language, to: "en" }).then(res => {
         return res.text;
       });
-      if (retries > 0) {
+      if (attempt > 0) {
         const vqd = await retryIfInvalid(
           () => getVQDFromHTML(enQuery),
           (v) => v !== null,
@@ -507,7 +507,7 @@ app.post('/generate-course', upload.array('files', 3), async (req, res) => {
     const sectionsData = [];
     for (const [i, section] of coursePlan.sections.entries()) {
       console.log(`🛠 Generating section ${i + 1}/${coursePlan.sections.length} — "${section.title}"`);
-      const generated = await retryIfInvalid(() => generateSection({ section, level, language, topic, sectionCount: coursePlan.sections.length, requestId, sectionNumber: i, sources }),
+      const generated = await retryIfInvalid(() => generateSection({ section, level, language, topic: coursePlan.title, sectionCount: coursePlan.sections.length, requestId, sectionNumber: i, sources }),
         (gen) => gen?.content?.length > 0
       );
       sectionsData.push(generated);
