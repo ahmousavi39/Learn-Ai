@@ -193,7 +193,9 @@ export function Home({ navigation }) {
   };
 
   const generate = async (topic, level, readingTimeMin, language) => {
-    const fetchWithTimeout = (url, options, timeout = 180000) => {
+    let timeoutTimeInMs = 24000;
+    if (selectedFiles.length > 0) timeoutTimeInMs = timeoutTimeInMs + (selectedFiles.length * 12000);
+    const fetchWithTimeout = (url, options, timeout = timeoutTimeInMs ) => {
       const controller = new AbortController();
       const id = setTimeout(() => controller.abort(), timeout);
       return fetch(url, {
@@ -447,7 +449,7 @@ export function Home({ navigation }) {
 
                 <Text style={styles.modalText}>Select Language:</Text>
                 <SelectList
-                  setSelected={(key) => setLang(key)}
+                  setSelected={(lan) => setLang(lan)}
                   data={data}
                   defaultOption={data.find(lan => (lan.key == 'en'))}
                 />

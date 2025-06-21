@@ -268,7 +268,7 @@ async function generateGeminiResponse(prompt, files = []) {
 async function getSummerizedFile({ files = [], language }) {
     let finalResult;
     // Joining file originalnames with a comma and space for better readability in the prompt
-    const fileNames = files.map(file => file.originalname).join(', ');
+    const fileNames = files?.map(file => file.originalname).join(', ');
     const prompt = `
 **Role:** You are a very detailed file summarizer.
 
@@ -468,7 +468,7 @@ app.post('/generate-course', upload.array('files', 3), async (req, res) => {
     try {
         let sources = null;
         if (files.length > 0) {
-            sendProgress(requestId, { type: 'status', message: 'Summarizing provided files...' });
+            sendProgress(requestId, { type: 'uploading', message: 'Summarizing provided files...' });
             sources = await retryIfInvalid(() => getSummerizedFile({ files, language }),
                 (source) => source !== null
             );
