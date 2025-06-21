@@ -26,7 +26,9 @@ const ALLOWED_MIMETYPES = [
     'image/webp'
 ];
 const DUCKDUCKGO_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36";
-const GEMINI_MODEL = process.env.GEMINI_MODEL || 'models/gemini-1.5-flash-latest'; // Using a default as 'models/gemini-2.0-flash' might not be a valid fixed model name.
+// It's generally safer to load the model name directly from the environment or use a stable, well-documented default.
+// 'models/gemini-2.0-flash' might not be a globally available fixed model name; 'gemini-1.5-flash-latest' is more common for flash.
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'models/gemini-1.5-flash-latest'; 
 
 // --- Multer Configuration ---
 const storage = multer.memoryStorage();
@@ -114,7 +116,7 @@ async function isImageUrl(url) {
         const contentType = response.headers['content-type'];
         return contentType && contentType.startsWith('image/');
     } catch (error) {
-        // console.warn(`Failed to validate image URL ${url}: ${error.message}`);
+        // console.warn(`Failed to validate image URL ${url}: ${error.message}`); // Keep this commented unless deep debugging
         return false;
     }
 }
@@ -182,7 +184,7 @@ async function getImageLink(query) {
 
     const url = `https://duckduckgo.com/i.js?o=json&q=${encodeURIComponent(query)}&l=us-en&vqd=${encodeURIComponent(vqd)}&p=1&f=size%3ALarge`;
     const headers = {
-        "User-Agent": DUCKDUCKGO_USER-AGENT,
+        "User-Agent": DUCKDUCKGO_USER_AGENT, // CORRECTED TYPO HERE
     };
 
     try {
@@ -477,6 +479,7 @@ app.post('/generate-course', upload.array('files', 3), async (req, res) => {
 
         sendProgress(requestId, { current: 0, total: 0, sectionTitle: "Generating Course Plan", type: "planing" });
         const coursePlan = await retryIfInvalid(() => getCoursePlan({ topic, level, time, language, sources }),
+            // Adjusted validation for course plan sections based on calculated count
             (plan) => plan?.sections?.length >= (time <= 30 ? 4 : Math.floor(time / 10)) && plan?.sections !== undefined
         );
 
