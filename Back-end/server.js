@@ -405,24 +405,23 @@ ${sourceInstruction}
 * All questions and answers must be in "${language}".
 
 **Output Format (Strict JSON Object Only):**
-\`\`\`json
+${"```"}json
 {
-    "title": "Section Title",
-    "content": [
-        {
-            "title": "The title given",
-            "bulletpoints": ["Para1", "Para2", "..."]
-        }
-    ],
-    "test": [
-        {
-            "question": "Question?",
-            "answer": "Correct",
-            "options": ["Correct", "Wrong", "Wrong", "Wrong"]
-        }
-    ]
+  "title": "Section Title",
+  "content": [
+    {
+      "title": "The title given",
+      "bulletpoints": ["Para1", "Para2", "..."]
+    }
+  ],
+  "test": [
+    {
+      "question": "Question?",
+      "answer": "Correct",
+      "options": ["Correct", "Wrong", "Wrong", "Wrong"]
+    }
+  ]
 }
-\`\`\`
 `;
   try {
     sendProgress(requestId, {
