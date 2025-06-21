@@ -129,19 +129,19 @@ const retryIfInvalid = async (fn, isValid, maxRetries = 2) => {
 
 async function getImageLink(query) {
   const vqd = await getVQDFromHTML(query);
-  const url = `https://duckduckgo.com/i.js?o=json&q=${encodeURIComponent(query)}&l=us-en&vqd=${encodeURIComponent(vqd)}&p=1&f=size%3ALarge`;
+  console.log(vqd);
+  const url = `https://duckduckgo.com/i.js?o=json&q=${query}&l=us-en&vqd=${encodeURIComponent(vqd)}&p=1&f=size%3ALarge`;
   const headers = {
     "User-Agent":
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
       "(KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36",
   };
-
   try {
     const response = await axios.get(url, { headers });
     const results = response.data.results;
-
     for (const item of results) {
       if (item.image && await isImageUrl(item.image) && !item.image.includes("ytimg.com") && item.height <= (item.width * 2)) {
+    console.log(item.image);
         return item.image;
       }
     }
@@ -167,7 +167,7 @@ async function getImageWithRetry(query, retries = 1, timeoutMs = 10000) {
 // Gemini setup
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 // const MODEL = 'models/gemini-1.5-flash-latest'; 
-const MODEL = 'models/gemini-2.5-flash';
+const MODEL = 'models/gemini-2.0-flash';
 
 // Utility
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
