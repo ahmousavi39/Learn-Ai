@@ -129,8 +129,8 @@ async function getImageLink(query) {
 
 // Gemini setup
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const MODEL = 'models/gemini-1.5-flash-latest'; 
-// const MODEL = 'models/gemini-2.5-flash';
+// const MODEL = 'models/gemini-1.5-flash-latest'; 
+const MODEL = 'models/gemini-2.5-flash';
 
 // Utility
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -289,6 +289,7 @@ console.log(prompt);
       error: false
     });
     const raw = await generateGeminiResponse(prompt);
+    console.log(raw);
     const parsed = JSON.parse(raw.replace(/```json|```/g, '').trim());
     const contentWithIds = await Promise.all(parsed.content.map(async (item, index) => {
       const searchQuery = `${topic} ${item.title}`;
