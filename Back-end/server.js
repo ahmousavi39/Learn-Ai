@@ -246,10 +246,10 @@ ${sources !== null ? "**IMPORTANT:** The content strictly base on the provided s
 * **Language Tone:**
     * Simple language for low levels.
     * Complex language for high levels.
-* **Duration:** ${section.availableTime} minutes (target ${section.availableTime * 50} words total, assuming 50 words/min reading).
 
 **Content Generation Rules:**
 * Generate **exactly ${bulletCount} content items**.
+* Use the provided content titles: **${section.bulletTitles.map(title => title + ", ")}**.
 * Each content item must include:
     * Its given title.
     * **2 to 4 short paragraphs** explaining the concept, provided as strings within a "bulletpoints" array.
