@@ -237,7 +237,7 @@ async function generateSection({ section, level, language, topic, sectionCount, 
 **Role:** Mobile Course Content Generator.
 
 **Task:** Create a course section for a level ${level}/10 learner.
-${sources !== null ? "**IMPORTANT:** The content strictly base on the provided source! Use it as sources only: " + sources : ""}
+${sources !== null ? "**IMPORTANT:** The content strictly base on the provided source! Use it as sources only: {" + sources + "}" : ""}
 
 **Section Details:**
 * **Title:** "${section.title}"
@@ -246,7 +246,6 @@ ${sources !== null ? "**IMPORTANT:** The content strictly base on the provided s
 * **Language Tone:**
     * Simple language for low levels.
     * Complex language for high levels.
-
 **Content Generation Rules:**
 * Generate **exactly ${bulletCount} content items**.
 * Use the provided content titles: **${section.bulletTitles.map(title => title + ", ")}**.
@@ -357,13 +356,13 @@ app.post('/generate-course', upload.array('files', 3), async (req, res) => {
       );
     }
     sendProgress(requestId, { current: 0, total: 0, sectionTitle: "", type: "planing" });
-    const coursePlan = await retryIfInvalid(() => getCoursePlan({ topic, level, time, language, sources }),
+    const coursePlan = await retryIfInvalid(() => getCoursePlan({ topic, level, time, language: "Arabic", sources }),
       (plan) => plan?.sections?.length >= 4 && plan?.sections !== undefined
     );
     const sectionsData = [];
     for (const [i, section] of coursePlan.sections.entries()) {
       console.log(`🛠 Generating section ${i + 1}/${coursePlan.sections.length} — "${section.title}"`);
-      const generated = await retryIfInvalid(() => generateSection({ section, level, language, topic, sectionCount: coursePlan.sections.length, requestId, sectionNumber: i, sources }),
+      const generated = await retryIfInvalid(() => generateSection({ section, level, language: "Arabic", topic, sectionCount: coursePlan.sections.length, requestId, sectionNumber: i, sources }),
         (gen) => gen?.content?.length > 0
       );
       sectionsData.push(generated);
