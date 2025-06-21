@@ -102,6 +102,31 @@ async function isImageUrl(url) {
   }
 }
 
+function retryIfTimeout(promise, ms) {
+  return new Promise((resolve, reject) => {
+    const timeoutId = setTimeout(() => reject(new Error("Timeout")), ms);
+    promise
+      .then((res) => {
+        clearTimeout(timeoutId);
+        resolve(res);
+      })
+      .catch((err) => {
+        clearTimeout(timeoutId);
+        reject(err);
+      });
+  });
+};
+
+const retryIfInvalid = async (fn, isValid, maxRetries = 2) => {
+  let result;
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    result = await fn();
+    if (isValid(result)) return result;
+    await delay(2000);
+  }
+  throw new Error("Validation failed after retries.");
+};
+
 async function getImageLink(query) {
   const vqd = await getVQDFromHTML(query);
   const url = `https://duckduckgo.com/i.js?o=json&q=${encodeURIComponent(query)}&l=us-en&vqd=${encodeURIComponent(vqd)}&p=1&f=size%3ALarge`;
@@ -125,6 +150,18 @@ async function getImageLink(query) {
     console.error('Error fetching or checking images:', error.message);
     return null;
   }
+}
+
+async function getImageWithRetry(query, retries = 1, timeoutMs = 5000) {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const image = await retryIfTimeout(getImageLink(query), timeoutMs);
+      return image;
+    } catch (err) {
+      if (attempt === retries) throw err;
+    }
+  }
+  return null;
 }
 
 // Gemini setup
@@ -279,7 +316,6 @@ ${"```"}json
   ]
 }
 `;
-  console.log(prompt);
   try {
     sendProgress(requestId, {
       type: 'progress',
@@ -289,17 +325,10 @@ ${"```"}json
       error: false
     });
     const raw = await generateGeminiResponse(prompt);
-    console.log(raw);
     const parsed = JSON.parse(raw.replace(/```json|```/g, '').trim());
     const contentWithIds = await Promise.all(parsed.content.map(async (item, index) => {
-    // const searchQuery = `${topic} ${item.title}`;
-    let imageUrl = null;
-    // try {
-    //   imageUrl = await getImageLink(searchQuery);
-    // } catch (e) {
-    //   console.warn(`⚠️ Failed to fetch image for "${searchQuery}": ${e.message}`);
-    // }
-
+      const searchQuery = `${topic} ${item.title}`;
+      let imageUrl = await getImageWithRetry(searchQuery);
       return {
         id: index,
         isDone: false,
@@ -340,16 +369,6 @@ ${"```"}json
 app.post('/generate-course', upload.array('files', 3), async (req, res) => {
   const { topic, level, time, language, requestId } = req.body;
   const files = req.files || [];
-
-  const retryIfInvalid = async (fn, isValid, maxRetries = 2) => {
-    let result;
-    for (let attempt = 0; attempt < maxRetries; attempt++) {
-      result = await fn();
-      if (isValid(result)) return result;
-      await delay(2000);
-    }
-    throw new Error("Validation failed after retries.");
-  };
   try {
     let sources = null;
     if (files.length > 0) {
