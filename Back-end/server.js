@@ -96,7 +96,7 @@ async function getVQDFromHTML(query) {
 
     // Extract vqd from the JavaScript variable in the HTML
     const match = html.match(/vqd="([^"]+)"/);
-    console.log(match[1]);
+    console.log(response.data);
     if (match) {
       return match[1];
     } else {
