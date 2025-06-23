@@ -82,28 +82,32 @@ function sendProgress(requestId, message) {
   }
 }
 
+// --- DuckDuckGo Image Search Utilities ---
+
+/**
+ * Fetches the vqd parameter from DuckDuckGo's image search HTML.
+ * @param {string} query - The search query.
+ * @returns {Promise<string|null>} The vqd string or null if not found.
+ */
 async function getVQDFromHTML(query) {
   const url = `https://duckduckgo.com/?q=${encodeURIComponent(query)}`;
-  const headers = {
-    "User-Agent":
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
-      "(KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36",
-  };
-
   try {
-    const response = await axios.get(url, { headers });
+    const response = await axios.get(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Connection': 'keep-alive'
+      }
+    });
     const html = response.data;
-
     // Extract vqd from the JavaScript variable in the HTML
     const match = html.match(/vqd="([^"]+)"/);
-    console.log(response.data);
-    if (match) {
-      return match[1];
-    } else {
-      throw new Error("vqd not found in HTML");
-    }
+    return match ? match[1] : null;
   } catch (error) {
-    console.error("Failed to get vqd:", error);
+    console.error("Failed to get vqd:", error.message);
+    return null;
   }
 }
 
@@ -217,7 +221,11 @@ async function getImageWithRetry(query, language, retries = 3, timeoutMs = 10000
 
   const url = `https://duckduckgo.com/i.js?o=json&q=${encodeURIComponent(query)}&l=us-en&vqd=${encodeURIComponent(vqd)}&p=1&f=size%3ALarge`;
   const headers = {
-    "User-Agent": DUCKDUCKGO_USER_AGENT, // CORRECTED TYPO HERE
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+    'Accept-Encoding': 'gzip, deflate, br',
+    'Accept-Language': 'en-US,en;q=0.9',
+    'Connection': 'keep-alive'
   };
 
   for (let attempt = 0; attempt <= retries; attempt++) {
