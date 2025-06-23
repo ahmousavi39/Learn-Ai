@@ -83,7 +83,7 @@ function sendProgress(requestId, message) {
 }
 
 async function getVQDFromHTML(query) {
-  const url = `https://duckduckgo.com/?q=${encodeURIComponent(query)}&iar=images&t=h_`;
+  const url = `https://duckduckgo.com/?q=${encodeURIComponent(query)}`;
   const headers = {
     "User-Agent":
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
