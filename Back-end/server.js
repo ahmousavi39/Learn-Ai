@@ -200,7 +200,7 @@ async function getImageLink(query, url, headers) {
  * @param {number} [timeoutMs=15000] - Timeout for each attempt in milliseconds.
  * @returns {Promise<string|null>} The image URL or null.
  */
-async function getImageWithRetry(query, language, retries = 3, timeoutMs = 5000) {
+async function getImageWithRetry(query, language, retries = 3, timeoutMs = 10000) {
   // Retry vqd acquisition if it fails or returns null
   const vqd = await retryIfInvalid(
     () => getVQDFromHTML(query),
