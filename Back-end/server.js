@@ -82,24 +82,28 @@ function sendProgress(requestId, message) {
   }
 }
 
-// --- DuckDuckGo Image Search Utilities ---
-
-/**
- * Fetches the vqd parameter from DuckDuckGo's image search HTML.
- * @param {string} query - The search query.
- * @returns {Promise<string|null>} The vqd string or null if not found.
- */
 async function getVQDFromHTML(query) {
   const url = `https://duckduckgo.com/?q=${encodeURIComponent(query)}&iar=images&t=h_`;
+  const headers = {
+    "User-Agent":
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
+      "(KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36",
+  };
+
   try {
-    const response = await axios.get(url, { headers: { "User-Agent": DUCKDUCKGO_USER_AGENT } });
+    const response = await axios.get(url, { headers });
     const html = response.data;
+
     // Extract vqd from the JavaScript variable in the HTML
     const match = html.match(/vqd="([^"]+)"/);
-    return match ? match[1] : null;
+    console.log(match[1]);
+    if (match) {
+      return match[1];
+    } else {
+      throw new Error("vqd not found in HTML");
+    }
   } catch (error) {
-    console.error("Failed to get vqd:", error.message);
-    return null;
+    console.error("Failed to get vqd:", error);
   }
 }
 
@@ -112,7 +116,7 @@ async function isImageUrl(url) {
   try {
     const response = await axios.head(url, {
       validateStatus: () => true, // Don't throw on HTTP errors (e.g., 404, 500)
-      timeout: 5000 // Added a timeout for image HEAD requests
+      timeout: 2500 // Added a timeout for image HEAD requests
     });
     const contentType = response.headers['content-type'];
     return contentType && contentType.startsWith('image/');

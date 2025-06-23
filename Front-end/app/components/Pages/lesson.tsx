@@ -20,8 +20,22 @@ import { MaterialIcons } from '@expo/vector-icons';
 export function Lesson({ route, navigation }) {
   const dispatch = useAppDispatch();
   const courses = useAppSelector(selectCourses);
-  const [content, setContent] = useState({ title: '', bulletpoints: [], image: '', id: 0, isDone: false });
-  const [loading, setLoading] = useState(false);
+  type ContentState = {
+    title: string;
+    bulletpoints: string[];
+    image: string;
+    imageUri?: any | null;
+    id: number;
+    isDone: boolean;
+  };
+  const [content, setContent] = useState<ContentState>({
+    title: '',
+    bulletpoints: [],
+    image: '',
+    imageUri: null,
+    id: 0,
+    isDone: false
+  }); const [loading, setLoading] = useState(false);
   const [imageHeight, setImageHeight] = useState(220); // dynamic height
   let level = "4/10";
   const HTTP_SERVER = "https://learn-ai-w8ke.onrender.com";
@@ -37,9 +51,22 @@ export function Lesson({ route, navigation }) {
       if (section) {
         const newContent = section.content[contentIndex];
         setContent(newContent);
-
+        console.log(newContent);
         // Dynamically calculate image height
-        if (newContent.image) {
+        if (newContent.imageUri) {
+          Image.getSize(
+            newContent.imageUri,
+            (width, height) => {
+              const scaleFactor = (screenWidth - 20) / width;
+              const newHeight = height * scaleFactor;
+              setImageHeight(newHeight);
+            },
+            (error) => {
+              console.warn('Failed to get image size:', error);
+              setImageHeight(220); // fallback height
+            }
+          );
+        } else if (newContent.image) {
           Image.getSize(
             newContent.image,
             (width, height) => {
@@ -139,7 +166,7 @@ export function Lesson({ route, navigation }) {
           <ScrollView>
             {content.image ? (
               <Image
-                source={{ uri: content.image }}
+                source={{ uri: content.imageUri ? content.imageUri : content.image }}
                 style={{
                   width: screenWidth - 20,
                   height: imageHeight,
@@ -198,7 +225,7 @@ const styles = StyleSheet.create({
   },
   disabledContainer: {
     paddingVertical: 10,
-        justifyContent: 'space-between',
+    justifyContent: 'space-between',
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },

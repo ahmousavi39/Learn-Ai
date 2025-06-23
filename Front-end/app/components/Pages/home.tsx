@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Alert, Button, Modal, StyleSheet, Text, TextInput, TouchableHighlight, View, Animated } from 'react-native';
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 import { useAppDispatch, useAppSelector } from '../../hook';
-import { loadData, selectCourses, selectCoursesList, openLocation, generateCourse } from '../../../features/item/itemSlice';
+import { loadData, selectCourses, openLocation, generateCourse, addSectionImageUri } from '../../../features/item/itemSlice';
 import MultiSlider from '@ptomasroos/react-native-multi-slider';
 import { SelectList } from 'react-native-dropdown-select-list';
 import 'react-native-get-random-values';
@@ -18,6 +18,7 @@ import processingAnimation from '../../../assets/processing.json';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
 import { ScrollView } from 'react-native';
+import { downloadAndSaveImage } from '../../services/fileManager';
 
 export function Home({ navigation }) {
   const dispatch = useAppDispatch();
@@ -248,14 +249,44 @@ export function Home({ navigation }) {
       const data = await response.json();
 
       if (data.sections && Array.isArray(data.sections)) {
-        dispatch(generateCourse({ name: data.topic, sections: data.sections, language: data.language, level }));
+        const course = { name: data.topic, sections: data.sections, language: data.language, level };
+        dispatch(generateCourse(course));
         setProgress((p) => ({ ...p, done: true, error: false, sectionTitle: "Generating Course Plan", type: "DONE" }));
         doneSound();
         setText('');
-        setTimeout(() => {
+        await setTimeout(() => {
           setModalVisible(false);
           setLoading(false);
         }, 2000)
+
+        let courseId = null;
+        courses.map(course => {
+          if (course.name === data.course.name && course.sections.length === data.course.sections.length && course.language === data.course.language && course.level === data.course.level) courseId = course.id;
+        });
+
+        if (courseId) {
+          data.sections.map((section, sectionIndex) => {
+            let imageUris = [];
+            for (let contentIndex = 0; contentIndex < data.sections.content.length; contentIndex++) {
+              const format = (section.content[contentIndex].image.match(/\.(\w+)(\?.*)?$/))?.[1]?.toLowerCase();
+              const name = `${section.content[contentIndex].id}.${format}`;
+              const path = `${topic}/${sectionIndex}`;
+
+              downloadAndSaveImage(section.content[contentIndex].image, path, name).then(res => {
+                imageUris.push(res);
+                console.log(res);
+              });
+            };
+            if (section.content.length === imageUris.length) {
+              dispatch(addSectionImageUri({ courseId, sectionIndex, imageUris }));
+            } else {
+              console.log("Not every content got an imageUri")
+            }
+          })
+        } else {
+          console.log("No course found to add imageUri");
+        }
+
       } else {
         throw new Error('Invalid sections data from server');
       }
@@ -406,7 +437,7 @@ export function Home({ navigation }) {
                   source={processingAnimation}
                   autoPlay
                   loop
-                  style={styles.largeAnimation}
+                  style={styles.xtraLargeAnimation}
                 />
                 <Text>Processing the file{"[s]"}...</Text>
               </View> : <View style={styles.searchingContainer}>

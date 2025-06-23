@@ -1,6 +1,5 @@
 import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { getAllKeys, getItem, putItem, removeItem } from '../../app/services/AsyncStorage';
-import * as backupData from '../../data.json';
+import { getAllKeys, getItem, mergeItem, putItem, removeItem } from '../../app/services/AsyncStorage';
 import type { RootState } from '../../app/store'
 
 
@@ -11,6 +10,7 @@ interface SectionObjectState {
         id: number,
         bulletpoints: string[];
         image: string;
+        imageUri?: any | null;
         isDone: boolean;
     }[];
     test: {
@@ -59,6 +59,7 @@ export const itemSlice = createSlice({
     initialState,
     reducers: {
         generateCourse: (state, action: PayloadAction<{ name: string, sections: SectionObjectState[], language: string, level: string }>) => {
+            state.isLoading = true;
             let id = 0;
             if (state.coursesList.length > 0) {
                 id = state.coursesList.slice(-1)[0].id + 1;
@@ -74,6 +75,21 @@ export const itemSlice = createSlice({
             }
             pushData();
             state.isLoading = false;
+        },
+        addSectionImageUri: (state, action: PayloadAction<{courseId: number, sectionIndex: number, imageUris: any[]}>) => {
+            const mergeData = async (coursesData) => {
+                await mergeItem('courses', coursesData);
+            }
+            state.courses.map((course, courseIndex) => {
+                if (course.id === action.payload.courseId) {
+                    let coursesData = state.courses;
+                    coursesData[courseIndex].sections[action.payload.sectionIndex].content.map((content, contentIndex) => {
+                        coursesData[courseIndex].sections[action.payload.sectionIndex].content[contentIndex].imageUri = action.payload.imageUris[contentIndex];
+                    })
+                    state.courses = coursesData;
+                    mergeData(coursesData);
+                }
+            })
         },
         updateData: (state) => {
             const pushData = async () => {
@@ -140,7 +156,7 @@ export const itemSlice = createSlice({
     },
 });
 
-export const { generateCourse, updateData, resetData, testDone, lessonDone, openLocation, regenerateLesson } = itemSlice.actions;
+export const { generateCourse, updateData, resetData, testDone, lessonDone, openLocation, regenerateLesson, addSectionImageUri } = itemSlice.actions;
 
 export const selectIsItemLoading = (state: RootState) => state.item.isLoading;
 export const selectCourses = (state: RootState) => state.item.courses;
