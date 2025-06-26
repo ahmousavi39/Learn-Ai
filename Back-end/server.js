@@ -150,24 +150,24 @@ function sendProgress(requestId, message) {
 //   });
 // }
 
-// /**
-//  * Retries a function until its result is valid or max retries are reached.
-//  * Includes exponential backoff for delays.
-//  * @param {Function} fn - The function to execute.
-//  * @param {Function} isValid - A function that validates the result of `fn`.
-//  * @param {number} [maxRetries=2] - The maximum number of retries.
-//  * @returns {Promise<any>} The valid result.
-//  */
-// const retryIfInvalid = async (fn, isValid, maxRetries = 4) => {
-//   let result;
-//   for (let attempt = 0; attempt < maxRetries; attempt++) {
-//     result = await fn();
-//     if (isValid(result)) return result;
-//     // Exponential backoff
-//     await delay(Math.pow(2, attempt) * 1000); // 1s, 2s, 4s, ...
-//   }
-//   throw new Error(`Validation failed after ${maxRetries} retries.`);
-// };
+/**
+ * Retries a function until its result is valid or max retries are reached.
+ * Includes exponential backoff for delays.
+ * @param {Function} fn - The function to execute.
+ * @param {Function} isValid - A function that validates the result of `fn`.
+ * @param {number} [maxRetries=2] - The maximum number of retries.
+ * @returns {Promise<any>} The valid result.
+ */
+const retryIfInvalid = async (fn, isValid, maxRetries = 4) => {
+  let result;
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    result = await fn();
+    if (isValid(result)) return result;
+    // Exponential backoff
+    await delay(Math.pow(2, attempt) * 1000); // 1s, 2s, 4s, ...
+  }
+  throw new Error(`Validation failed after ${maxRetries} retries.`);
+};
 
 // /**
 //  * Fetches an image link from DuckDuckGo based on a query.
