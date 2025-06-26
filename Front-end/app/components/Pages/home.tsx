@@ -19,6 +19,8 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
 import { ScrollView } from 'react-native';
 import { downloadAndSaveImage } from '../../services/fileManager';
+import { translate } from 'google-translate-api-x';
+import axios from 'axios';
 
 export function Home({ navigation }) {
   const dispatch = useAppDispatch();
@@ -38,6 +40,7 @@ export function Home({ navigation }) {
   const LOCAL_HTTP_SERVER = "http://192.168.2.107:4000"
   const WS_SERVER = "wss://learn-ai-w8ke.onrender.com";
   const LOCAL_WS_SERVER = "ws://192.168.2.107:4000";
+  const DUCKDUCKGO_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36";
 
   const progressPercentage = ((progress.current - 1) / (progress.total - 1)) * 100;
   const widthAnim = new Animated.Value(progressPercentage);
@@ -126,6 +129,191 @@ export function Home({ navigation }) {
     dispatch(loadData());
   }, []);
 
+  // --- DuckDuckGo Image Search Utilities ---
+
+  const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  /**
+   * Fetches the vqd parameter from DuckDuckGo's image search HTML.
+   * @param {string} query - The search query.
+   * @returns {Promise<string|null>} The vqd string or null if not found.
+   */
+  async function getVQDFromHTML(query) {
+    const url = `https://duckduckgo.com/?q=${encodeURIComponent(query)}`;
+    try {
+      const response = await axios.get(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'Accept-Encoding': 'gzip, deflate, br',
+          'Accept-Language': 'en-US,en;q=0.9',
+          'Connection': 'keep-alive'
+        }
+      });
+      const html = response.data;
+      // Extract vqd from the JavaScript variable in the HTML
+      const match = html.match(/vqd="([^"]+)"/);
+      return match ? match[1] : null;
+    } catch (error) {
+      console.error("Failed to get vqd:", error.message);
+      return null;
+    }
+  }
+
+  /**
+   * Checks if a given URL points to an image by making a HEAD request.
+   * @param {string} url - The URL to check.
+   * @returns {Promise<boolean>} True if the URL is an image, false otherwise.
+   */
+  async function isImageUrl(url) {
+    try {
+      const response = await axios.head(url, {
+        validateStatus: () => true, // Don't throw on HTTP errors (e.g., 404, 500)
+        timeout: 2500 // Added a timeout for image HEAD requests
+      });
+      const contentType = response.headers['content-type'];
+      return contentType && contentType.startsWith('image/');
+    } catch (error) {
+      // console.warn(`Failed to validate image URL ${url}: ${error.message}`); // Keep this commented unless deep debugging
+      return false;
+    }
+  }
+
+  /**
+   * Retries a promise with a timeout.
+   * @param {Promise<any>} promise - The promise to execute.
+   * @param {number} ms - The timeout duration in milliseconds.
+   * @returns {Promise<any>} The resolved promise result or a timeout error.
+   */
+  function retryIfTimeout(promise, ms) {
+    return new Promise((resolve, reject) => {
+      const timeoutId = setTimeout(() => reject(new Error(`Operation timed out after ${ms}ms`)), ms);
+      promise
+        .then((res) => {
+          clearTimeout(timeoutId);
+          resolve(res);
+        })
+        .catch((err) => {
+          clearTimeout(timeoutId);
+          reject(err);
+        });
+    });
+  }
+
+  /**
+   * Retries a function until its result is valid or max retries are reached.
+   * Includes exponential backoff for delays.
+   * @param {Function} fn - The function to execute.
+   * @param {Function} isValid - A function that validates the result of `fn`.
+   * @param {number} [maxRetries=2] - The maximum number of retries.
+   * @returns {Promise<any>} The valid result.
+   */
+  const retryIfInvalid = async (fn, isValid, maxRetries = 4) => {
+    let result;
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      result = await fn();
+      if (isValid(result)) return result;
+      // Exponential backoff
+      await delay(Math.pow(2, attempt) * 1000); // 1s, 2s, 4s, ...
+    }
+    throw new Error(`Validation failed after ${maxRetries} retries.`);
+  };
+
+  /**
+   * Fetches an image link from DuckDuckGo based on a query.
+   * Includes a robust vqd acquisition.
+   * @param {string} query - The search query.
+   * @returns {Promise<string|null>} The image URL or null if not found.
+   */
+  async function getImageLink(query, url, headers) {
+    try {
+      const response = await axios.get(url, { headers, timeout: 10000 }); // Added timeout for the image search itself
+      const results = response.data.results;
+
+      for (const item of results) {
+        if (item.image && !item.image.includes("ytimg.com") && item.height <= (item.width * 2)) {
+          // Check if it's a valid image URL sequentially for robustness
+          if (await isImageUrl(item.image)) {
+            return item.image;
+          }
+        }
+      }
+      return null;
+    } catch (error) {
+      console.error(`Error fetching or checking images for query "${query}": ${error.message}`);
+      return null;
+    }
+  }
+
+  /**
+   * Attempts to get an image with multiple retries and a timeout for each attempt.
+   * Implements exponential backoff between retries.
+   * @param {string} query - The search query.
+   * @param {number} [retries=3] - Number of retries.
+   * @param {number} [timeoutMs=15000] - Timeout for each attempt in milliseconds.
+   * @returns {Promise<string|null>} The image URL or null.
+   */
+  async function getImageWithRetry(query, language, retries = 3, timeoutMs = 10000) {
+    // Retry vqd acquisition if it fails or returns null
+    const vqd = await retryIfInvalid(
+      () => getVQDFromHTML(query),
+      (v) => v !== null,
+      3 // Max 3 retries for vqd acquisition
+    ).catch(err => {
+      console.warn(`Failed to get vqd for query "${query}" after retries: ${err.message}`);
+      return null;
+    });
+
+    if (!vqd) {
+      return null; // Cannot proceed without vqd
+    }
+
+    const url = `https://duckduckgo.com/i.js?o=json&q=${encodeURIComponent(query)}&l=us-en&vqd=${encodeURIComponent(vqd)}&p=1&f=size%3ALarge`;
+    const headers = {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      'Accept-Encoding': 'gzip, deflate, br',
+      'Accept-Language': 'en-US,en;q=0.9',
+      'Connection': 'keep-alive'
+    };
+
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        let image;
+        const enQuery = await translate(query, { from: language, to: "en" }).then(res => {
+          return res.text;
+        });
+        if (attempt > 0) {
+          const vqd = await retryIfInvalid(
+            () => getVQDFromHTML(enQuery),
+            (v) => v !== null,
+            3 // Max 3 retries for vqd acquisition
+          ).catch(err => {
+            console.warn(`Failed to get vqd for query "${query}" after retries: ${err.message}`);
+            return null;
+          });
+          const url = `https://duckduckgo.com/i.js?o=json&q=${encodeURIComponent(enQuery)}&l=us-en&vqd=${encodeURIComponent(vqd)}&p=1&f=size%3ALarge`;
+          const headers = {
+            "User-Agent": DUCKDUCKGO_USER_AGENT, // CORRECTED TYPO HERE
+          };
+
+          image = await retryIfTimeout(getImageLink(enQuery, url, headers), timeoutMs);
+        } else {
+          image = await retryIfTimeout(getImageLink(query, url, headers), timeoutMs);
+        }
+        if (image) return image;
+      } catch (err) {
+        console.log(`Attempt ${attempt + 1}/${retries + 1} for "${query}": No image found or operation timed out. Error: ${err.message}.`);
+        if (attempt < retries) {
+          await delay(Math.pow(2, attempt) * 1000); // Exponential backoff: 1s, 2s, 4s...
+        }
+      }
+    }
+    console.warn(`❌ Failed to get image after ${retries + 1} attempts for query: "${query}"`);
+    return null;
+  }
+
+
   const pickFiles = async () => {
     try {
       const result = await DocumentPicker.getDocumentAsync({ multiple: true });
@@ -189,6 +377,44 @@ export function Home({ navigation }) {
     return Math.round((done / total) * 100);
   };
 
+  const onDownloadImages = ({ courseId, targetCourse }) => {
+    if (courseId) {
+      targetCourse.sections.map((section, sectionIndex) => {
+        let imageUris = [];
+        for (let contentIndex = 0; contentIndex < targetCourse.sections.content.length; contentIndex++) {
+          const format = (section.content[contentIndex].image.match(/\.(\w+)(\?.*)?$/))?.[1]?.toLowerCase();
+          const name = `${section.content[contentIndex].id}.${format}`;
+          const path = `${targetCourse.topic}/${sectionIndex}`;
+
+          downloadAndSaveImage(section.content[contentIndex].image, path, name).then(res => {
+            imageUris.push(res);
+            console.log(res);
+          });
+        };
+        if (section.content.length === imageUris.length) {
+          dispatch(addSectionImageUri({ courseId, sectionIndex, imageUris }));
+        } else {
+          console.log("Not every content got an imageUri")
+        }
+      })
+    } else {
+      console.log("No course found to add imageUri");
+    }
+  };
+
+const onFindImages = async({targetCourse}) => {
+  let courseWithImageUris = targetCourse;
+   setProgress((p) => ({ ...p, done: false, error: false, sectionTitle: "Finding the right Images", type: "IMAGE" }));
+      courseWithImageUris.sections.map((section, sectionIndex) => {
+        section.content.map(async (lesson, lessonIndex) => {
+          const searchQuery = `${courseWithImageUris.topic} ${lesson.title}`;
+          let imageUrl = await getImageWithRetry(searchQuery, courseWithImageUris.language);
+          courseWithImageUris.sections[sectionIndex].content[lessonIndex].imageUrl = imageUrl;
+        })
+      })
+    return courseWithImageUris
+}
+
   const generate = async (topic, level, readingTimeMin, language) => {
     if (selectedFiles.length > 0) {
       setProgress({
@@ -246,11 +472,11 @@ export function Home({ navigation }) {
 
 
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-      const data = await response.json();
+      const generatedCourse = await response.json();
+      const courseWithImageUrls = await onFindImages({targetCourse: generatedCourse});
 
-      if (data.sections && Array.isArray(data.sections)) {
-        const course = { name: data.topic, sections: data.sections, language: data.language, level };
-        dispatch(generateCourse(course));
+      if (courseWithImageUrls.sections && Array.isArray(courseWithImageUrls.sections)) {
+        dispatch(generateCourse({ name: courseWithImageUrls.topic, sections: courseWithImageUrls.sections, language: courseWithImageUrls.language, level }));
         setProgress((p) => ({ ...p, done: true, error: false, sectionTitle: "Generating Course Plan", type: "DONE" }));
         doneSound();
         setText('');
@@ -259,34 +485,12 @@ export function Home({ navigation }) {
           setLoading(false);
         }, 2000)
 
+        // Download and save Images
         let courseId = null;
         courses.map(course => {
-          if (course.name === data.course.name && course.sections.length === data.course.sections.length && course.language === data.course.language && course.level === data.course.level) courseId = course.id;
+          if (course.name === courseWithImageUrls.course.name && course.sections.length === courseWithImageUrls.course.sections.length && course.language === courseWithImageUrls.course.language && course.level === courseWithImageUrls.course.level) courseId = course.id;
         });
-
-        if (courseId) {
-          data.sections.map((section, sectionIndex) => {
-            let imageUris = [];
-            for (let contentIndex = 0; contentIndex < data.sections.content.length; contentIndex++) {
-              const format = (section.content[contentIndex].image.match(/\.(\w+)(\?.*)?$/))?.[1]?.toLowerCase();
-              const name = `${section.content[contentIndex].id}.${format}`;
-              const path = `${topic}/${sectionIndex}`;
-
-              downloadAndSaveImage(section.content[contentIndex].image, path, name).then(res => {
-                imageUris.push(res);
-                console.log(res);
-              });
-            };
-            if (section.content.length === imageUris.length) {
-              dispatch(addSectionImageUri({ courseId, sectionIndex, imageUris }));
-            } else {
-              console.log("Not every content got an imageUri")
-            }
-          })
-        } else {
-          console.log("No course found to add imageUri");
-        }
-
+        onDownloadImages({ courseId, targetCourse: courseWithImageUrls });
       } else {
         throw new Error('Invalid sections data from server');
       }
@@ -440,16 +644,26 @@ export function Home({ navigation }) {
                   style={styles.xtraLargeAnimation}
                 />
                 <Text>Processing the file{"[s]"}...</Text>
-              </View> : <View style={styles.searchingContainer}>
-                <LottieView
-                  source={errorAnimation}
-                  autoPlay
-                  loop={false}
-                  style={styles.smallAnimation}
-                />
-                <Text>Opps! something went worng...</Text>
-                <Text>Please try later</Text>
-              </View>) : ""}
+              </View> : progress.type === "IMAGE" ?
+                <View style={styles.generatingContainer}>
+                  <LottieView
+                    source={processingAnimation}
+                    autoPlay
+                    loop
+                    style={styles.xtraLargeAnimation}
+                  />
+                  <Text>Finding the right Images</Text>
+                </View>
+                : <View style={styles.searchingContainer}>
+                  <LottieView
+                    source={errorAnimation}
+                    autoPlay
+                    loop={false}
+                    style={styles.smallAnimation}
+                  />
+                  <Text>Opps! something went worng...</Text>
+                  <Text>Please try later</Text>
+                </View>) : ""}
 
               {!loading && <>
                 <Text style={styles.modalText}>I want to learn </Text>

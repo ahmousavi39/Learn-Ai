@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-const axios = require("axios");
+// const axios = require("axios");
 const WebSocket = require('ws');
 const http = require('http');
 const app = express();
@@ -11,7 +11,7 @@ app.use(express.json());
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 const multer = require('multer');
-const translate = require('google-translate-api-x');
+// const translate = require('google-translate-api-x');
 
 const clients = new Map(); // requestId -> ws
 
@@ -26,7 +26,7 @@ const ALLOWED_MIMETYPES = [
   'image/gif',
   'image/webp'
 ];
-const DUCKDUCKGO_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36";
+// const DUCKDUCKGO_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36";
 // It's generally safer to load the model name directly from the environment or use a stable, well-documented default.
 // 'models/gemini-2.0-flash' might not be a globally available fixed model name; 'gemini-1.5-flash-latest' is more common for flash.
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'models/gemini-1.5-flash-latest';
@@ -83,193 +83,192 @@ function sendProgress(requestId, message) {
 }
 
 // --- DuckDuckGo Image Search Utilities ---
+// /**
+//  * Fetches the vqd parameter from DuckDuckGo's image search HTML.
+//  * @param {string} query - The search query.
+//  * @returns {Promise<string|null>} The vqd string or null if not found.
+//  */
+// async function getVQDFromHTML(query) {
+//   const url = `https://duckduckgo.com/?q=${encodeURIComponent(query)}`;
+//   try {
+//     const response = await axios.get(url, {
+//       headers: {
+//         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
+//         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+//         'Accept-Encoding': 'gzip, deflate, br',
+//         'Accept-Language': 'en-US,en;q=0.9',
+//         'Connection': 'keep-alive'
+//       }
+//     });
+//     const html = response.data;
+//     // Extract vqd from the JavaScript variable in the HTML
+//     const match = html.match(/vqd="([^"]+)"/);
+//     return match ? match[1] : null;
+//   } catch (error) {
+//     console.error("Failed to get vqd:", error.message);
+//     return null;
+//   }
+// }
 
-/**
- * Fetches the vqd parameter from DuckDuckGo's image search HTML.
- * @param {string} query - The search query.
- * @returns {Promise<string|null>} The vqd string or null if not found.
- */
-async function getVQDFromHTML(query) {
-  const url = `https://duckduckgo.com/?q=${encodeURIComponent(query)}`;
-  try {
-    const response = await axios.get(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Encoding': 'gzip, deflate, br',
-        'Accept-Language': 'en-US,en;q=0.9',
-        'Connection': 'keep-alive'
-      }
-    });
-    const html = response.data;
-    // Extract vqd from the JavaScript variable in the HTML
-    const match = html.match(/vqd="([^"]+)"/);
-    return match ? match[1] : null;
-  } catch (error) {
-    console.error("Failed to get vqd:", error.message);
-    return null;
-  }
-}
+// /**
+//  * Checks if a given URL points to an image by making a HEAD request.
+//  * @param {string} url - The URL to check.
+//  * @returns {Promise<boolean>} True if the URL is an image, false otherwise.
+//  */
+// async function isImageUrl(url) {
+//   try {
+//     const response = await axios.head(url, {
+//       validateStatus: () => true, // Don't throw on HTTP errors (e.g., 404, 500)
+//       timeout: 2500 // Added a timeout for image HEAD requests
+//     });
+//     const contentType = response.headers['content-type'];
+//     return contentType && contentType.startsWith('image/');
+//   } catch (error) {
+//     // console.warn(`Failed to validate image URL ${url}: ${error.message}`); // Keep this commented unless deep debugging
+//     return false;
+//   }
+// }
 
-/**
- * Checks if a given URL points to an image by making a HEAD request.
- * @param {string} url - The URL to check.
- * @returns {Promise<boolean>} True if the URL is an image, false otherwise.
- */
-async function isImageUrl(url) {
-  try {
-    const response = await axios.head(url, {
-      validateStatus: () => true, // Don't throw on HTTP errors (e.g., 404, 500)
-      timeout: 2500 // Added a timeout for image HEAD requests
-    });
-    const contentType = response.headers['content-type'];
-    return contentType && contentType.startsWith('image/');
-  } catch (error) {
-    // console.warn(`Failed to validate image URL ${url}: ${error.message}`); // Keep this commented unless deep debugging
-    return false;
-  }
-}
+// /**
+//  * Retries a promise with a timeout.
+//  * @param {Promise<any>} promise - The promise to execute.
+//  * @param {number} ms - The timeout duration in milliseconds.
+//  * @returns {Promise<any>} The resolved promise result or a timeout error.
+//  */
+// function retryIfTimeout(promise, ms) {
+//   return new Promise((resolve, reject) => {
+//     const timeoutId = setTimeout(() => reject(new Error(`Operation timed out after ${ms}ms`)), ms);
+//     promise
+//       .then((res) => {
+//         clearTimeout(timeoutId);
+//         resolve(res);
+//       })
+//       .catch((err) => {
+//         clearTimeout(timeoutId);
+//         reject(err);
+//       });
+//   });
+// }
 
-/**
- * Retries a promise with a timeout.
- * @param {Promise<any>} promise - The promise to execute.
- * @param {number} ms - The timeout duration in milliseconds.
- * @returns {Promise<any>} The resolved promise result or a timeout error.
- */
-function retryIfTimeout(promise, ms) {
-  return new Promise((resolve, reject) => {
-    const timeoutId = setTimeout(() => reject(new Error(`Operation timed out after ${ms}ms`)), ms);
-    promise
-      .then((res) => {
-        clearTimeout(timeoutId);
-        resolve(res);
-      })
-      .catch((err) => {
-        clearTimeout(timeoutId);
-        reject(err);
-      });
-  });
-}
+// /**
+//  * Retries a function until its result is valid or max retries are reached.
+//  * Includes exponential backoff for delays.
+//  * @param {Function} fn - The function to execute.
+//  * @param {Function} isValid - A function that validates the result of `fn`.
+//  * @param {number} [maxRetries=2] - The maximum number of retries.
+//  * @returns {Promise<any>} The valid result.
+//  */
+// const retryIfInvalid = async (fn, isValid, maxRetries = 4) => {
+//   let result;
+//   for (let attempt = 0; attempt < maxRetries; attempt++) {
+//     result = await fn();
+//     if (isValid(result)) return result;
+//     // Exponential backoff
+//     await delay(Math.pow(2, attempt) * 1000); // 1s, 2s, 4s, ...
+//   }
+//   throw new Error(`Validation failed after ${maxRetries} retries.`);
+// };
 
-/**
- * Retries a function until its result is valid or max retries are reached.
- * Includes exponential backoff for delays.
- * @param {Function} fn - The function to execute.
- * @param {Function} isValid - A function that validates the result of `fn`.
- * @param {number} [maxRetries=2] - The maximum number of retries.
- * @returns {Promise<any>} The valid result.
- */
-const retryIfInvalid = async (fn, isValid, maxRetries = 4) => {
-  let result;
-  for (let attempt = 0; attempt < maxRetries; attempt++) {
-    result = await fn();
-    if (isValid(result)) return result;
-    // Exponential backoff
-    await delay(Math.pow(2, attempt) * 1000); // 1s, 2s, 4s, ...
-  }
-  throw new Error(`Validation failed after ${maxRetries} retries.`);
-};
+// /**
+//  * Fetches an image link from DuckDuckGo based on a query.
+//  * Includes a robust vqd acquisition.
+//  * @param {string} query - The search query.
+//  * @returns {Promise<string|null>} The image URL or null if not found.
+//  */
+// async function getImageLink(query, url, headers) {
+//   try {
+//     const response = await axios.get(url, { headers, timeout: 10000 }); // Added timeout for the image search itself
+//     const results = response.data.results;
 
-/**
- * Fetches an image link from DuckDuckGo based on a query.
- * Includes a robust vqd acquisition.
- * @param {string} query - The search query.
- * @returns {Promise<string|null>} The image URL or null if not found.
- */
-async function getImageLink(query, url, headers) {
-  try {
-    const response = await axios.get(url, { headers, timeout: 10000 }); // Added timeout for the image search itself
-    const results = response.data.results;
+//     for (const item of results) {
+//       if (item.image && !item.image.includes("ytimg.com") && item.height <= (item.width * 2)) {
+//         // Check if it's a valid image URL sequentially for robustness
+//         if (await isImageUrl(item.image)) {
+//           return item.image;
+//         }
+//       }
+//     }
+//     return null;
+//   } catch (error) {
+//     console.error(`Error fetching or checking images for query "${query}": ${error.message}`);
+//     return null;
+//   }
+// }
 
-    for (const item of results) {
-      if (item.image && !item.image.includes("ytimg.com") && item.height <= (item.width * 2)) {
-        // Check if it's a valid image URL sequentially for robustness
-        if (await isImageUrl(item.image)) {
-          return item.image;
-        }
-      }
-    }
-    return null;
-  } catch (error) {
-    console.error(`Error fetching or checking images for query "${query}": ${error.message}`);
-    return null;
-  }
-}
+// /**
+//  * Attempts to get an image with multiple retries and a timeout for each attempt.
+//  * Implements exponential backoff between retries.
+//  * @param {string} query - The search query.
+//  * @param {number} [retries=3] - Number of retries.
+//  * @param {number} [timeoutMs=15000] - Timeout for each attempt in milliseconds.
+//  * @returns {Promise<string|null>} The image URL or null.
+//  */
+// async function getImageWithRetry(query, language, retries = 3, timeoutMs = 10000) {
+//   // Retry vqd acquisition if it fails or returns null
+//   const vqd = await retryIfInvalid(
+//     () => getVQDFromHTML(query),
+//     (v) => v !== null,
+//     3 // Max 3 retries for vqd acquisition
+//   ).catch(err => {
+//     console.warn(`Failed to get vqd for query "${query}" after retries: ${err.message}`);
+//     return null;
+//   });
 
-/**
- * Attempts to get an image with multiple retries and a timeout for each attempt.
- * Implements exponential backoff between retries.
- * @param {string} query - The search query.
- * @param {number} [retries=3] - Number of retries.
- * @param {number} [timeoutMs=15000] - Timeout for each attempt in milliseconds.
- * @returns {Promise<string|null>} The image URL or null.
- */
-async function getImageWithRetry(query, language, retries = 3, timeoutMs = 10000) {
-  // Retry vqd acquisition if it fails or returns null
-  const vqd = await retryIfInvalid(
-    () => getVQDFromHTML(query),
-    (v) => v !== null,
-    3 // Max 3 retries for vqd acquisition
-  ).catch(err => {
-    console.warn(`Failed to get vqd for query "${query}" after retries: ${err.message}`);
-    return null;
-  });
+//   if (!vqd) {
+//     return null; // Cannot proceed without vqd
+//   }
 
-  if (!vqd) {
-    return null; // Cannot proceed without vqd
-  }
+//   const url = `https://duckduckgo.com/i.js?o=json&q=${encodeURIComponent(query)}&l=us-en&vqd=${encodeURIComponent(vqd)}&p=1&f=size%3ALarge`;
+//   const headers = {
+//     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
+//     'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+//     'Accept-Encoding': 'gzip, deflate, br',
+//     'Accept-Language': 'en-US,en;q=0.9',
+//     'Connection': 'keep-alive'
+//   };
 
-  const url = `https://duckduckgo.com/i.js?o=json&q=${encodeURIComponent(query)}&l=us-en&vqd=${encodeURIComponent(vqd)}&p=1&f=size%3ALarge`;
-  const headers = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
-    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-    'Accept-Encoding': 'gzip, deflate, br',
-    'Accept-Language': 'en-US,en;q=0.9',
-    'Connection': 'keep-alive'
-  };
+//   for (let attempt = 0; attempt <= retries; attempt++) {
+//     try {
+//       let image;
+//       const enQuery = await translate(query, { from: language, to: "en" }).then(res => {
+//         return res.text;
+//       });
+//       if (attempt > 0) {
+//         const vqd = await retryIfInvalid(
+//           () => getVQDFromHTML(enQuery),
+//           (v) => v !== null,
+//           3 // Max 3 retries for vqd acquisition
+//         ).catch(err => {
+//           console.warn(`Failed to get vqd for query "${query}" after retries: ${err.message}`);
+//           return null;
+//         });
+//         const url = `https://duckduckgo.com/i.js?o=json&q=${encodeURIComponent(enQuery)}&l=us-en&vqd=${encodeURIComponent(vqd)}&p=1&f=size%3ALarge`;
+//         const headers = {
+//           "User-Agent": DUCKDUCKGO_USER_AGENT, // CORRECTED TYPO HERE
+//         };
 
-  for (let attempt = 0; attempt <= retries; attempt++) {
-    try {
-      let image;
-      const enQuery = await translate(query, { from: language, to: "en" }).then(res => {
-        return res.text;
-      });
-      if (attempt > 0) {
-        const vqd = await retryIfInvalid(
-          () => getVQDFromHTML(enQuery),
-          (v) => v !== null,
-          3 // Max 3 retries for vqd acquisition
-        ).catch(err => {
-          console.warn(`Failed to get vqd for query "${query}" after retries: ${err.message}`);
-          return null;
-        });
-        const url = `https://duckduckgo.com/i.js?o=json&q=${encodeURIComponent(enQuery)}&l=us-en&vqd=${encodeURIComponent(vqd)}&p=1&f=size%3ALarge`;
-        const headers = {
-          "User-Agent": DUCKDUCKGO_USER_AGENT, // CORRECTED TYPO HERE
-        };
-
-        image = await retryIfTimeout(getImageLink(enQuery, url, headers), timeoutMs);
-      } else {
-        image = await retryIfTimeout(getImageLink(query, url, headers), timeoutMs);
-      }
-      if (image) return image;
-    } catch (err) {
-      console.log(`Attempt ${attempt + 1}/${retries + 1} for "${query}": No image found or operation timed out. Error: ${err.message}.`);
-      if (attempt < retries) {
-        await delay(Math.pow(2, attempt) * 1000); // Exponential backoff: 1s, 2s, 4s...
-      }
-    }
-  }
-  console.warn(`❌ Failed to get image after ${retries + 1} attempts for query: "${query}"`);
-  return null;
-}
+//         image = await retryIfTimeout(getImageLink(enQuery, url, headers), timeoutMs);
+//       } else {
+//         image = await retryIfTimeout(getImageLink(query, url, headers), timeoutMs);
+//       }
+//       if (image) return image;
+//     } catch (err) {
+//       console.log(`Attempt ${attempt + 1}/${retries + 1} for "${query}": No image found or operation timed out. Error: ${err.message}.`);
+//       if (attempt < retries) {
+//         await delay(Math.pow(2, attempt) * 1000); // Exponential backoff: 1s, 2s, 4s...
+//       }
+//     }
+//   }
+//   console.warn(`❌ Failed to get image after ${retries + 1} attempts for query: "${query}"`);
+//   return null;
+// }
 
 // --- Gemini setup ---
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const MODEL = GEMINI_MODEL;
 
 // --- Utility ---
-const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+// const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
  * Wrapper for Gemini API calls.
@@ -440,13 +439,13 @@ ${"```"}json
     const parsed = JSON.parse(raw.replace(/```json|```/g, '').trim());
 
     const contentWithIds = await Promise.all(parsed.content.map(async (item, index) => {
-      const searchQuery = `${topic} ${item.title}`;
-      let imageUrl = await getImageWithRetry(searchQuery, language); // This now uses the more robust retry logic
+      // const searchQuery = `${topic} ${item.title}`;
+      // let imageUrl = await getImageWithRetry(searchQuery, language); // This now uses the more robust retry logic
       return {
         id: index,
         isDone: false,
         ...item,
-        image: imageUrl
+        // image: imageUrl
       };
     }));
 
