@@ -23,7 +23,7 @@ export function Lesson({ route, navigation }) {
   type ContentState = {
     title: string;
     bulletpoints: string[];
-    image: string;
+    imageUrl: string;
     imageUri?: any | null;
     id: number;
     isDone: boolean;
@@ -31,7 +31,7 @@ export function Lesson({ route, navigation }) {
   const [content, setContent] = useState<ContentState>({
     title: '',
     bulletpoints: [],
-    image: '',
+    imageUrl: '',
     imageUri: null,
     id: 0,
     isDone: false
@@ -51,24 +51,10 @@ export function Lesson({ route, navigation }) {
       if (section) {
         const newContent = section.content[contentIndex];
         setContent(newContent);
-        console.log(newContent);
         // Dynamically calculate image height
         if (newContent.imageUri) {
           Image.getSize(
             newContent.imageUri,
-            (width, height) => {
-              const scaleFactor = (screenWidth - 20) / width;
-              const newHeight = height * scaleFactor;
-              setImageHeight(newHeight);
-            },
-            (error) => {
-              console.warn('Failed to get image size:', error);
-              setImageHeight(220); // fallback height
-            }
-          );
-        } else if (newContent.image) {
-          Image.getSize(
-            newContent.image,
             (width, height) => {
               const scaleFactor = (screenWidth - 20) / width;
               const newHeight = height * scaleFactor;
@@ -164,9 +150,9 @@ export function Lesson({ route, navigation }) {
         <View style={!loading ? styles.container : styles.disabledContainer}>
           {loading && <View style={styles.centeredView}><ActivityIndicator size="large" color="#0000ff" /></View>}
           <ScrollView>
-            {content.image ? (
+            {content.imageUrl ? (
               <Image
-                source={{ uri: content.imageUri ? content.imageUri : content.image }}
+                source={{ uri: content.imageUri ? content.imageUri : content.imageUrl }}
                 style={{
                   width: screenWidth - 20,
                   height: imageHeight,

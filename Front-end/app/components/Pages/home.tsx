@@ -2,7 +2,9 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Alert, Button, Modal, StyleSheet, Text, TextInput, TouchableHighlight, View, Animated } from 'react-native';
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 import { useAppDispatch, useAppSelector } from '../../hook';
-import { loadData, selectCourses, openLocation, generateCourse, addSectionImageUri } from '../../../features/item/itemSlice';
+import { loadData, selectCourses, openLocation, generateCourse, 
+  // addSectionImageUri 
+} from '../../../features/item/itemSlice';
 import MultiSlider from '@ptomasroos/react-native-multi-slider';
 import { SelectList } from 'react-native-dropdown-select-list';
 import 'react-native-get-random-values';
@@ -143,11 +145,7 @@ export function Home({ navigation }) {
     try {
       const response = await axios.get(url, {
         headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-          'Accept-Encoding': 'gzip, deflate, br',
-          'Accept-Language': 'en-US,en;q=0.9',
-          'Connection': 'keep-alive'
+          'User-Agent': DUCKDUCKGO_USER_AGENT
         }
       });
       const html = response.data;
@@ -270,34 +268,27 @@ export function Home({ navigation }) {
 
     const url = `https://duckduckgo.com/i.js?o=json&q=${encodeURIComponent(query)}&l=us-en&vqd=${encodeURIComponent(vqd)}&p=1&f=size%3ALarge`;
     const headers = {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
-      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-      'Accept-Encoding': 'gzip, deflate, br',
-      'Accept-Language': 'en-US,en;q=0.9',
-      'Connection': 'keep-alive'
+      'User-Agent': DUCKDUCKGO_USER_AGENT
     };
 
     for (let attempt = 0; attempt <= retries; attempt++) {
       try {
         let image;
-        const enQuery = await translate(query, { from: language, to: "en" }).then(res => {
+        const queryEn = await translate(query, { from: language, to: "en" }).then(res => {
           return res.text;
         });
         if (attempt > 0) {
           const vqd = await retryIfInvalid(
-            () => getVQDFromHTML(enQuery),
+            () => getVQDFromHTML(queryEn),
             (v) => v !== null,
             3 // Max 3 retries for vqd acquisition
           ).catch(err => {
             console.warn(`Failed to get vqd for query "${query}" after retries: ${err.message}`);
             return null;
           });
-          const url = `https://duckduckgo.com/i.js?o=json&q=${encodeURIComponent(enQuery)}&l=us-en&vqd=${encodeURIComponent(vqd)}&p=1&f=size%3ALarge`;
-          const headers = {
-            "User-Agent": DUCKDUCKGO_USER_AGENT, // CORRECTED TYPO HERE
-          };
+          const urlEn = `https://duckduckgo.com/i.js?o=json&q=${encodeURIComponent(queryEn)}&l=us-en&vqd=${encodeURIComponent(vqd)}&p=1&f=size%3ALarge`;
 
-          image = await retryIfTimeout(getImageLink(enQuery, url, headers), timeoutMs);
+          image = await retryIfTimeout(getImageLink(queryEn, urlEn, headers), timeoutMs);
         } else {
           image = await retryIfTimeout(getImageLink(query, url, headers), timeoutMs);
         }
@@ -377,60 +368,77 @@ export function Home({ navigation }) {
     return Math.round((done / total) * 100);
   };
 
-  const onDownloadImages = ({ courseId, targetCourse }) => {
-    if (courseId) {
-      targetCourse.sections.map((section, sectionIndex) => {
-        let imageUris = [];
-        for (let contentIndex = 0; contentIndex < targetCourse.sections.content.length; contentIndex++) {
-          const format = (section.content[contentIndex].image.match(/\.(\w+)(\?.*)?$/))?.[1]?.toLowerCase();
-          const name = `${section.content[contentIndex].id}.${format}`;
-          const path = `${targetCourse.topic}/${sectionIndex}`;
+  // const onDownloadImages = async ({ courseId, targetCourse }) => {
+  //   if (!courseId) {
+  //     console.log("No course found to add imageUri");
+  //     return;
+  //   }
 
-          downloadAndSaveImage(section.content[contentIndex].image, path, name).then(res => {
-            imageUris.push(res);
-            console.log(res);
-          });
-        };
-        if (section.content.length === imageUris.length) {
-          dispatch(addSectionImageUri({ courseId, sectionIndex, imageUris }));
-        } else {
-          console.log("Not every content got an imageUri")
-        }
-      })
-    } else {
-      console.log("No course found to add imageUri");
+  //   for (let sectionIndex = 0; sectionIndex < targetCourse.sections.length; sectionIndex++) {
+  //     const section = targetCourse.sections[sectionIndex];
+  //     const imageDownloadPromises = section.content.map(async (content) => {
+  //       const format = content.image?.match(/\.(\w+)(\?.*)?$/)?.[1]?.toLowerCase() || 'jpg';
+  //       const name = `${content.id}.${format}`;
+  //       const path = `${targetCourse.topic}/${sectionIndex}`;
+
+  //       try {
+  //         return await downloadAndSaveImage(content.image, path, name);
+  //       } catch (err) {
+  //         console.error(`Failed to download image for content ID ${content.id}:`, err);
+  //         return null; // fallback if error occurs
+  //       }
+  //     });
+
+  //     const imageUris = await Promise.all(imageDownloadPromises);
+
+  //     const validImageUris = imageUris.filter(Boolean); // Remove failed/null downloads
+
+  //     if (validImageUris.length === section.content.length) {
+  //       dispatch(addSectionImageUri({ courseId, sectionIndex, imageUris: validImageUris }));
+  //     } else {
+  //       console.warn(`Section ${sectionIndex} - Not every content got an imageUri`);
+  //     }
+  //   }
+  // };
+
+  const onFindImages = async ({ targetCourse }) => {
+    const courseWithImageUris = JSON.parse(JSON.stringify(targetCourse)); // Deep clone
+    const { sections, topic, language } = courseWithImageUris;
+
+    for (let sectionIndex = 0; sectionIndex < sections.length; sectionIndex++) {
+      const section = sections[sectionIndex];
+
+      const contentPromises = section.content.map(async (lesson, lessonIndex) => {
+        const searchQuery = `${topic} ${lesson.title}`;
+        const imageUrl = await getImageWithRetry(searchQuery, language);
+        const format = imageUrl.match(/\.(\w+)(\?.*)?$/)?.[1]?.toLowerCase() || 'jpg';
+        const name = `${lesson.id}.${format}`;
+        const path = `${topic}/${sectionIndex}`;
+        const imageUri = await downloadAndSaveImage(imageUrl, path, name);
+        courseWithImageUris.sections[sectionIndex].content[lessonIndex].imageUrl = imageUrl;
+        courseWithImageUris.sections[sectionIndex].content[lessonIndex].imageUri = imageUri;
+      });
+      await Promise.all(contentPromises);
     }
+      console.log(courseWithImageUris.sections[0].content[0]);
+
+    return courseWithImageUris;
   };
 
-const onFindImages = async({targetCourse}) => {
-  let courseWithImageUris = targetCourse;
-   setProgress((p) => ({ ...p, done: false, error: false, sectionTitle: "Finding the right Images", type: "IMAGE" }));
-      courseWithImageUris.sections.map((section, sectionIndex) => {
-        section.content.map(async (lesson, lessonIndex) => {
-          const searchQuery = `${courseWithImageUris.topic} ${lesson.title}`;
-          let imageUrl = await getImageWithRetry(searchQuery, courseWithImageUris.language);
-          courseWithImageUris.sections[sectionIndex].content[lessonIndex].imageUrl = imageUrl;
-        })
-      })
-    return courseWithImageUris
-}
-
   const generate = async (topic, level, readingTimeMin, language) => {
-    if (selectedFiles.length > 0) {
-      setProgress({
-        type: 'UPLOADING',
-        current: 0,
-        total: 0,
-        sectionTitle: "Uploading Files",
-        error: false,
-        done: false
-      });
-    } else {
-      setProgress({ current: 0, total: 0, done: false, sectionTitle: "Planing the course", error: false, type: "PLANING" });
-    }
+    const hasFiles = selectedFiles.length > 0;
 
-    let timeoutTimeInMs = 240000;
-    if (selectedFiles.length > 0) timeoutTimeInMs = timeoutTimeInMs + (selectedFiles.length * 120000);
+    setProgress({
+      type: hasFiles ? 'UPLOADING' : 'PLANING',
+      current: 0,
+      total: 0,
+      sectionTitle: hasFiles ? 'Uploading Files' : 'Planing the course',
+      error: false,
+      done: false
+    });
+
+    const timeoutTimeInMs = 240000 + (hasFiles ? selectedFiles.length * 120000 : 0);
+
     const fetchWithTimeout = (url, options, timeout = timeoutTimeInMs) => {
       const controller = new AbortController();
       const id = setTimeout(() => controller.abort(), timeout);
@@ -439,25 +447,23 @@ const onFindImages = async({targetCourse}) => {
         signal: controller.signal,
       }).finally(() => clearTimeout(id));
     };
+
+    const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
     try {
       setLoading(true);
-
-      // Generate and store requestId in ref
       requestId.current = uuidv4();
-
-      // Connect WS after new requestId is ready
       connectWebSocket();
 
       const formData = new FormData();
 
-      // Convert each file's uri to Blob
-      for (const file of selectedFiles) {
+      selectedFiles.forEach(file => {
         formData.append('files', {
           uri: file.uri,
-          name: file.name || 'upload.jpg', // fallback if name missing
-          type: file.type || 'image/jpeg', // fallback if type missing
+          name: file.name || 'upload.jpg',
+          type: file.type || 'image/jpeg',
         } as any);
-      }
+      });
 
       formData.append('topic', topic);
       formData.append('level', level);
@@ -470,27 +476,42 @@ const onFindImages = async({targetCourse}) => {
         body: formData,
       });
 
-
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
       const generatedCourse = await response.json();
-      const courseWithImageUrls = await onFindImages({targetCourse: generatedCourse});
+
+      setProgress(prev => ({
+        ...prev,
+        done: false,
+        error: false,
+        sectionTitle: "Finding the right Images",
+        type: "IMAGE"
+      }));
+
+      const courseWithImageUrls = await onFindImages({ targetCourse: generatedCourse });
 
       if (courseWithImageUrls.sections && Array.isArray(courseWithImageUrls.sections)) {
-        dispatch(generateCourse({ name: courseWithImageUrls.topic, sections: courseWithImageUrls.sections, language: courseWithImageUrls.language, level }));
-        setProgress((p) => ({ ...p, done: true, error: false, sectionTitle: "Generating Course Plan", type: "DONE" }));
+        dispatch(generateCourse({
+          name: courseWithImageUrls.topic,
+          sections: courseWithImageUrls.sections,
+          language: courseWithImageUrls.language,
+          level: courseWithImageUrls.level
+        }));
+
+        setProgress(prev => ({
+          ...prev,
+          done: true,
+          error: false,
+          sectionTitle: "Generating Course Plan",
+          type: "DONE"
+        }));
+
         doneSound();
         setText('');
-        await setTimeout(() => {
-          setModalVisible(false);
-          setLoading(false);
-        }, 2000)
+        await sleep(2000);
 
-        // Download and save Images
-        let courseId = null;
-        courses.map(course => {
-          if (course.name === courseWithImageUrls.course.name && course.sections.length === courseWithImageUrls.course.sections.length && course.language === courseWithImageUrls.course.language && course.level === courseWithImageUrls.course.level) courseId = course.id;
-        });
-        onDownloadImages({ courseId, targetCourse: courseWithImageUrls });
+        setModalVisible(false);
+        setLoading(false);
       } else {
         throw new Error('Invalid sections data from server');
       }
@@ -502,11 +523,13 @@ const onFindImages = async({targetCourse}) => {
         error: true,
         done: false,
         sectionTitle: "Could not generate course. Please try later!"
-      })
+      });
       errorSound();
-      setTimeout(() => { setLoading(false); }, 5000)
+      await sleep(5000);
+      setLoading(false);
     }
   };
+
 
   const openCourse = (id) => {
     courses.map(course => {
