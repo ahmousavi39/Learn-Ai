@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, Button, Modal, StyleSheet, Text, TextInput, TouchableHighlight, View, Animated } from 'react-native';
+import { Alert, Button, Modal, StyleSheet, Text, TextInput, TouchableHighlight, View, Animated, TouchableOpacity } from 'react-native';
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 import { useAppDispatch, useAppSelector } from '../../hook';
-import { loadData, selectCourses, openLocation, generateCourse, 
+import {
+  loadData, selectCourses, openLocation, generateCourse,
   // addSectionImageUri 
 } from '../../../features/item/itemSlice';
 import MultiSlider from '@ptomasroos/react-native-multi-slider';
@@ -24,6 +25,34 @@ import { downloadAndSaveImage } from '../../services/fileManager';
 import { translate } from 'google-translate-api-x';
 import axios from 'axios';
 
+
+const CustomCheckbox = ({ value, onValueChange }) => {
+  return (
+    <TouchableOpacity
+      onPress={() => onValueChange(!value)}
+      style={{
+        height: 24,
+        width: 24,
+        borderRadius: 4,
+        borderWidth: 2,
+        borderColor: '#555',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      {value && (
+        <View
+          style={{
+            width: 12,
+            height: 12,
+            backgroundColor: '#555',
+          }}
+        />
+      )}
+    </TouchableOpacity>
+  );
+};
+
 export function Home({ navigation }) {
   const dispatch = useAppDispatch();
   const courses = useAppSelector(selectCourses);
@@ -37,6 +66,7 @@ export function Home({ navigation }) {
   const [progress, setProgress] = useState({ current: 0, total: 0, done: false, sectionTitle: "", error: false, type: "" })
   const ws = useRef(null);
   const [selectedFiles, setSelectedFiles] = useState([]);
+  const [downloadImage, setDownloadImage] = useState(false);
 
   const HTTP_SERVER = "https://learn-ai-w8ke.onrender.com";
   const LOCAL_HTTP_SERVER = "http://192.168.2.107:4000"
@@ -348,6 +378,10 @@ export function Home({ navigation }) {
     }
   };
 
+  const handleRemoveFile = (uri) => {
+    setSelectedFiles(prev => prev.filter(file => file.uri !== uri));
+  };
+
   const getCourseCompletion = (course) => {
     let total = 0;
     let done = 0;
@@ -411,16 +445,17 @@ export function Home({ navigation }) {
       const contentPromises = section.content.map(async (lesson, lessonIndex) => {
         const searchQuery = `${topic} ${lesson.title}`;
         const imageUrl = await getImageWithRetry(searchQuery, language);
-        const format = imageUrl.match(/\.(\w+)(\?.*)?$/)?.[1]?.toLowerCase() || 'jpg';
-        const name = `${lesson.id}.${format}`;
-        const path = `${topic}/${sectionIndex}`;
-        const imageUri = await downloadAndSaveImage(imageUrl, path, name);
         courseWithImageUris.sections[sectionIndex].content[lessonIndex].imageUrl = imageUrl;
-        courseWithImageUris.sections[sectionIndex].content[lessonIndex].imageUri = imageUri;
+        if (downloadImage) {
+          const format = imageUrl.match(/\.(\w+)(\?.*)?$/)?.[1]?.toLowerCase() || 'jpg';
+          const name = `${lesson.id}.${format}`;
+          const path = `${topic}/${sectionIndex}`;
+          const imageUri = await downloadAndSaveImage(imageUrl, path, name);
+          courseWithImageUris.sections[sectionIndex].content[lessonIndex].imageUri = imageUri;
+        }
       });
       await Promise.all(contentPromises);
     }
-      console.log(courseWithImageUris.sections[0].content[0]);
 
     return courseWithImageUris;
   };
@@ -675,7 +710,7 @@ export function Home({ navigation }) {
                     loop
                     style={styles.xtraLargeAnimation}
                   />
-                  <Text>Finding the right Images</Text>
+                  <Text>Finding the right Images...</Text>
                 </View>
                 : <View style={styles.searchingContainer}>
                   <LottieView
@@ -697,7 +732,7 @@ export function Home({ navigation }) {
                   value={text}
                 />
 
-                <Text style={styles.modalText}>Select Level: {levelOneToTen}</Text>
+                <Text style={styles.modalTextLessMargin}>Select Level: {levelOneToTen}</Text>
                 <MultiSlider
                   values={[levelOneToTen]}
                   onValuesChange={(values) => setLevelOneToTen(values[0])}
@@ -711,7 +746,7 @@ export function Home({ navigation }) {
                   markerStyle={{ height: 20, width: "100%", backgroundColor: '#fc4848' }}
                 />
 
-                <Text style={styles.modalText}>Time to Learn (min): {time}</Text>
+                <Text style={styles.modalTextLessMargin}>Time to Learn (min): {time}</Text>
                 <MultiSlider
                   values={[time]}
                   onValuesChange={(values) => setTime(values[0])}
@@ -737,8 +772,30 @@ export function Home({ navigation }) {
                 <Button title="Pick Files" onPress={pickFiles} />
 
                 {selectedFiles.map((file, index) => (
-                  <Text key={index} style={{ fontSize: 12, color: 'gray' }}>{file.name}</Text>
+                  <View
+                    key={file.uri}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      marginTop: 10,
+                      padding: 8,
+                      borderWidth: 1,
+                      borderColor: '#ccc',
+                      borderRadius: 6,
+                      justifyContent: 'space-between',
+                    }}
+                  >
+                    <Text style={{ flex: 1, fontSize: 12, color: 'gray' }} numberOfLines={1}>{file.name}</Text>
+                    <TouchableOpacity onPress={() => handleRemoveFile(file.uri)}>
+                      <Text style={{ color: 'red', marginLeft: 12 }}>Remove</Text>
+                    </TouchableOpacity>
+                  </View>
                 ))}
+
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 10 }}>
+                  <CustomCheckbox value={downloadImage} onValueChange={setDownloadImage} />
+                  <Text style={{ marginLeft: 8 }}>Download images</Text>
+                </View>
 
                 <View style={styles.buttonContainerModal}>
                   <TouchableHighlight underlayColor={'transparent'} onPress={() => setModalVisible(false)}>
@@ -838,7 +895,7 @@ const styles = StyleSheet.create({
     borderColor: '#ccc',
     borderWidth: 0.5,
     paddingHorizontal: 8,
-    marginBottom: 10,
+    marginBottom: 20,
     width: '100%',
     color: "black"
   },
@@ -861,6 +918,10 @@ const styles = StyleSheet.create({
   },
   modalText: {
     marginBottom: 15,
+    textAlign: 'left',
+  },
+  modalTextLessMargin: {
+    marginBottom: 5,
     textAlign: 'left',
   },
   buttonContainerModal: {

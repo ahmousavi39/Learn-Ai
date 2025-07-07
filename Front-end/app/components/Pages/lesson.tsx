@@ -196,7 +196,7 @@ export function Lesson({ route, navigation }) {
             <Pressable style={styles.backButton} onPress={language === "fa" ? goToNext : goToPrevious}>
               <MaterialIcons name="navigate-before" size={36} color="#3730a3" />
             </Pressable>
-          </View>
+            </View>
         </View>
       </SafeAreaView>
     </SafeAreaProvider >
@@ -293,9 +293,7 @@ const styles = StyleSheet.create({
   },
   footer: {
     width: "100%",
-    height: 90,
-    backgroundColor: "white",
-    position: 'absolute',
+    height: 50,
     bottom: 0
   },
   textContainer: {
