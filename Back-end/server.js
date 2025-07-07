@@ -29,7 +29,7 @@ const ALLOWED_MIMETYPES = [
 // const DUCKDUCKGO_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36";
 // It's generally safer to load the model name directly from the environment or use a stable, well-documented default.
 // 'models/gemini-2.0-flash' might not be a globally available fixed model name; 'gemini-1.5-flash-latest' is more common for flash.
-const GEMINI_MODEL = process.env.GEMINI_MODEL || 'models/gemini-1.5-flash-latest';
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'models/gemini-2.0-flash-latest';
 
 // --- Multer Configuration ---
 const storage = multer.memoryStorage();
