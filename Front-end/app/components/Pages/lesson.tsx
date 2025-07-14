@@ -1,3 +1,4 @@
+// Lesson.js - Modifications
 import React, { useEffect, useState } from 'react';
 import { selectCourses, lessonDone, openLocation, regenerateLesson } from '../../../features/item/itemSlice';
 import { useAppDispatch, useAppSelector } from '../../hook';
@@ -12,7 +13,7 @@ import {
   Text,
   View,
   Dimensions,
-  Pressable,
+  Pressable, // Import Pressable
   ActivityIndicator
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -36,7 +37,8 @@ export function Lesson({ route, navigation }) {
     imageUri: null,
     id: 0,
     isDone: false
-  }); const [loading, setLoading] = useState(false);
+  });
+  const [loading, setLoading] = useState(false);
   const [imageHeight, setImageHeight] = useState(220); // dynamic height
   let level = "4/10";
   const HTTP_SERVER = "https://learn-ai-w8ke.onrender.com";
@@ -148,6 +150,14 @@ export function Lesson({ route, navigation }) {
     }
   };
 
+  // Function to handle image press
+  const handleImagePress = () => {
+    const imageUrl = content.imageUri || content.imageUrl;
+    if (imageUrl) {
+      navigation.navigate('ImageViewer', { imageUrl });
+    }
+  };
+
   return (
     <SafeAreaProvider>
       <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }}>
@@ -155,20 +165,20 @@ export function Lesson({ route, navigation }) {
           {loading && <View style={styles.centeredView}><ActivityIndicator size="large" color={theme.secondary} /></View>}
           <ScrollView>
             {content.imageUrl ? (
-              <Image
-                source={{ uri: content.imageUri ? content.imageUri : content.imageUrl }}
-                style={{
-                  width: screenWidth - 20,
-                  height: imageHeight,
-                  borderRadius: 14,
-                  marginBottom: 28,
-                  alignSelf: 'center',
-                }}
-                resizeMode="cover" // or "contain" depending on your goal
-              />
-
+              <Pressable onPress={handleImagePress}>
+                <Image
+                  source={{ uri: content.imageUri ? content.imageUri : content.imageUrl }}
+                  style={{
+                    width: screenWidth - 20,
+                    height: imageHeight,
+                    borderRadius: 14,
+                    marginBottom: 28,
+                    alignSelf: 'center',
+                  }}
+                  resizeMode="cover"
+                />
+              </Pressable>
             ) : null}
-
             <View style={styles.textContainer}>
               <Text style={["ar", "fa", "he", "iw", "ur", "ps", "sd", "yi"].includes(language) ? [styles.title, styles.persianText] : styles.title}>{content.title}</Text>
               <View style={styles.textBlock}>

@@ -1,6 +1,6 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { Course, Home, RightHeaderHome, Settings, LeftHeader } from '../../app/components';
+import { Course, Home, RightHeaderHome, Settings, LeftHeader, ImageViewer } from '../../app/components';
 import { Lesson } from '../../app/components/Pages/lesson';
 import { QuestionRender } from '../../app/components/questionRender';
 import { useTheme } from '../../app/theme';
@@ -60,6 +60,7 @@ export default function MyStack() {
                     headerStyle: { backgroundColor: theme.headerBackground }
                 }}
             />
+            <Stack.Screen name="ImageViewer" component={ImageViewer} />
         </Stack.Navigator>
     );
 }

@@ -13,5 +13,6 @@ export default function App() {
           <MyStack />
         </NavigationContainer>
       </ThemeProvider>
-    </Provider>)
+    </Provider>
+  )
 }
