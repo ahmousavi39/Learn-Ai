@@ -3,8 +3,7 @@ import { Alert, Button, Modal, StyleSheet, Text, TextInput, TouchableHighlight, 
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 import { useAppDispatch, useAppSelector } from '../../hook';
 import {
-  loadData, selectCourses, openLocation, generateCourse,
-  // addSectionImageUri 
+  loadData, selectCourses, openLocation, generateCourse
 } from '../../../features/item/itemSlice';
 import MultiSlider from '@ptomasroos/react-native-multi-slider';
 import { SelectList } from 'react-native-dropdown-select-list';
@@ -24,7 +23,11 @@ import { ScrollView } from 'react-native';
 import { downloadAndSaveImage } from '../../services/fileManager';
 import { translate } from 'google-translate-api-x';
 import axios from 'axios';
-
+import { setLanguage, selectLanguage, selectModeSetting } from '../../../features/settings/settingsSlice';
+import { loadSettings } from '../../../features/settings/settingsSlice';
+import { useTheme } from '../../theme';
+import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
+import { faMagnifyingGlass, faXmark } from '@fortawesome/free-solid-svg-icons';
 
 const CustomCheckbox = ({ value, onValueChange }) => {
   return (
@@ -60,13 +63,17 @@ export function Home({ navigation }) {
   const [text, setText] = useState('');
   const [levelOneToTen, setLevelOneToTen] = useState(4);
   const [time, setTime] = useState(10);
-  const [lang, setLang] = useState('en');
   const [loading, setLoading] = useState(false);
   const requestId = useRef(null);
   const [progress, setProgress] = useState({ current: 0, total: 0, done: false, sectionTitle: "", error: false, type: "" })
   const ws = useRef(null);
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [downloadImage, setDownloadImage] = useState(false);
+  const { theme } = useTheme();
+  const styles = getStyles(theme);
+  const selectedLanguage = useAppSelector(selectLanguage);
+  const selectedMode = useAppSelector(selectModeSetting);
+  const { mode, setMode } = useTheme();
 
   const HTTP_SERVER = "https://learn-ai-w8ke.onrender.com";
   const LOCAL_HTTP_SERVER = "http://192.168.2.107:4000"
@@ -87,6 +94,12 @@ export function Home({ navigation }) {
     await sound.playAsync();
   }
 
+  useEffect(() => {
+    dispatch(loadData());
+    dispatch(loadSettings());
+    setMode(selectedMode);
+  }, [selectedMode]);
+
   React.useEffect(() => {
     Animated.timing(widthAnim, {
       toValue: progressPercentage,
@@ -96,14 +109,104 @@ export function Home({ navigation }) {
   }, [progress.current, progress.total]);
 
   const data = [
-    { key: 'en', value: 'English' },
-    { key: 'de', value: 'Deutsch' },
-    { key: 'es', value: 'Español' },
-    { key: 'fr', value: 'Français' },
-    { key: 'ru', value: 'Русский' },
-    { key: 'fa', value: 'فارسی' },
-    { key: 'ar', value: 'اَلْعَرَبِيَّةُ' }
+    { key: "en", value: "English" },
+    { key: "zh", value: "中文" },
+    { key: "hi", value: "हिन्दी" },
+    { key: "es", value: "Español" },
+    { key: "ar", value: "العربية" },
+    { key: "fr", value: "Français" },
+    { key: "bn", value: "বাংলা" },
+    { key: "pt", value: "Português" },
+    { key: "ru", value: "Русский" },
+    { key: "ur", value: "اردو" },
+    { key: "id", value: "Bahasa Indonesia" },
+    { key: "de", value: "Deutsch" },
+    { key: "ja", value: "日本語" },
+    { key: "sw", value: "Kiswahili" },
+    { key: "ta", value: "தமிழ்" },
+    { key: "tr", value: "Türkçe" },
+    { key: "mr", value: "मराठी" },
+    { key: "te", value: "తెలుగు" },
+    { key: "fa", value: "فارسی" },
+    { key: "pl", value: "Polski" },
+    { key: "uk", value: "Українська" },
+    { key: "vi", value: "Tiếng Việt" },
+    { key: "nl", value: "Nederlands" },
+    { key: "el", value: "Ελληνικά" },
+    { key: "sv", value: "Svenska" },
+    { key: "ko", value: "한국어" },
+    { key: "it", value: "Italiano" },
+    { key: "th", value: "ไทย" },
+    { key: "gu", value: "ગુજરાતી" },
+    { key: "kn", value: "ಕನ್ನಡ" },
+    { key: "my", value: "မြန်မာစာ" },
+    { key: "ro", value: "Română" },
+    { key: "pa", value: "ਪੰਜਾਬੀ" },
+    { key: "ml", value: "മലയാളം" },
+    { key: "or", value: "ଓଡ଼ିଆ" },
+    { key: "az", value: "Azərbaycanca" },
+    { key: "ha", value: "Hausa" },
+    { key: "ne", value: "नेपाली" },
+    { key: "si", value: "සිංහල" },
+    { key: "he", value: "עברית" },
+    { key: "ceb", value: "Cebuano" },
+    { key: "hu", value: "Magyar" },
+    { key: "cs", value: "Čeština" },
+    { key: "yo", value: "Yorùbá" },
+    { key: "zu", value: "isiZulu" },
+    { key: "sn", value: "ChiShona" },
+    { key: "so", value: "Soomaali" },
+    { key: "xh", value: "isiXhosa" },
+    { key: "jv", value: "Basa Jawa" },
+    { key: "am", value: "አማርኛ" },
+    { key: "km", value: "ភាសាខ្មែរ" },
+    { key: "lo", value: "ລາວ" },
+    { key: "la", value: "Latina" },
+    { key: "eu", value: "Euskara" },
+    { key: "gl", value: "Galego" },
+    { key: "is", value: "Íslenska" },
+    { key: "ga", value: "Gaeilge" },
+    { key: "mt", value: "Malti" },
+    { key: "sl", value: "Slovenščina" },
+    { key: "sk", value: "Slovenčina" },
+    { key: "et", value: "Eesti" },
+    { key: "lv", value: "Latviešu" },
+    { key: "lt", value: "Lietuvių" },
+    { key: "mk", value: "Македонски" },
+    { key: "ka", value: "ქართული" },
+    { key: "hy", value: "Հայերեն" },
+    { key: "sq", value: "Shqip" },
+    { key: "be", value: "Беларуская" },
+    { key: "bs", value: "Bosanski" },
+    { key: "hr", value: "Hrvatski" },
+    { key: "sr", value: "Српски" },
+    { key: "tg", value: "Тоҷикӣ" },
+    { key: "ky", value: "Кыргызча" },
+    { key: "kk", value: "Қазақ тілі" },
+    { key: "uz", value: "Oʻzbekcha" },
+    { key: "ps", value: "پښتو" },
+    { key: "sd", value: "سنڌي" },
+    { key: "sm", value: "Gagana Sāmoa" },
+    { key: "mi", value: "Māori" },
+    { key: "co", value: "Corsu" },
+    { key: "haw", value: "ʻŌlelo Hawaiʻi" },
+    { key: "gd", value: "Gàidhlig" },
+    { key: "st", value: "Sesotho" },
+    { key: "ny", value: "Chichewa" },
+    { key: "su", value: "Basa Sunda" },
+    { key: "mn", value: "Монгол" },
+    { key: "eo", value: "Esperanto" },
+    { key: "hmn", value: "Hmong" },
+    { key: "tl", value: "Filipino" },
+    { key: "fy", value: "Frysk" },
+    { key: "yi", value: "ייִדיש" },
+    { key: "ig", value: "Asụsụ Igbo" },
+    { key: "af", value: "Afrikaans" },
+    { key: "lb", value: "Lëtzebuergesch" },
+    { key: "cy", value: "Cymraeg" },
+    { key: "jw", value: "Basa Jawa" }
   ];
+
 
   const connectWebSocket = (retry = true) => {
     try {
@@ -155,11 +258,6 @@ export function Home({ navigation }) {
       }
     }
   };
-
-
-  useEffect(() => {
-    dispatch(loadData());
-  }, []);
 
   // --- DuckDuckGo Image Search Utilities ---
 
@@ -595,8 +693,8 @@ export function Home({ navigation }) {
                     <View style={styles.buttonContainer}>
                       <View style={[styles.progressOverlay, { height: `${getCourseCompletion(course)}%` }]} />
                       <View style={styles.buttonContent}>
-                        <Text style={styles.text}>{course.name}</Text>
-                        <Text style={styles.smallText}>{getCourseCompletion(course)}% Complete</Text>
+                        <Text style={styles.cardText}>{course.name}</Text>
+                        <Text style={styles.cardSmallText}>{getCourseCompletion(course)}% Complete</Text>
                       </View>
                     </View>
                   </TouchableHighlight>
@@ -611,8 +709,8 @@ export function Home({ navigation }) {
                       <View style={styles.buttonContainer}>
                         <View style={[styles.progressOverlay, { height: `${getCourseCompletion(courses[index + 1])}%` }]} />
                         <View style={styles.buttonContent}>
-                          <Text style={styles.text}>{courses[index + 1].name}</Text>
-                          <Text style={styles.smallText}>{getCourseCompletion(courses[index + 1])}% Complete</Text>
+                          <Text style={styles.cardText}>{courses[index + 1].name}</Text>
+                          <Text style={styles.cardSmallText}>{getCourseCompletion(courses[index + 1])}% Complete</Text>
                         </View>
                       </View>
                     </TouchableHighlight>
@@ -628,7 +726,7 @@ export function Home({ navigation }) {
             <TouchableHighlight underlayColor={'transparent'} style={styles.touchableHighlight} onPress={() => setModalVisible(true)}>
               <View style={styles.buttonContainer}>
                 <View style={styles.buttonContent}>
-                  <Text style={styles.text}>Add +</Text>
+                  <Text style={styles.cardText}>Add +</Text>
                 </View>
               </View>
             </TouchableHighlight>
@@ -660,8 +758,8 @@ export function Home({ navigation }) {
                     })
                   }]} />
                 </View>
-                <Text>Generating {progress.current}/{progress.total} sections</Text>
-                <Text>({progress.sectionTitle})</Text>
+                <Text style={styles.modalTextLessMargin}>Generating {progress.current}/{progress.total} sections</Text>
+                <Text style={styles.modalText}>({progress.sectionTitle})</Text>
               </View> : progress.type === "DONE" ? <View style={styles.searchingContainer}>
                 <LottieView
                   source={doneAnimation}
@@ -677,7 +775,7 @@ export function Home({ navigation }) {
                     })
                   }]} />
                 </View>
-                <Text>Done!</Text>
+                <Text style={styles.modalText}>Done!</Text>
               </View> : progress.type === "PLANING" ? <View style={styles.generatingContainer}>
                 <LottieView
                   source={generatingAnimation}
@@ -685,7 +783,7 @@ export function Home({ navigation }) {
                   loop
                   style={styles.largeAnimation}
                 />
-                <Text>Making a course plan</Text>
+                <Text style={styles.modalText}>Making a course plan</Text>
               </View> : progress.type === "UPLOADING" ? <View style={styles.generatingContainer}>
                 <LottieView
                   source={loadingAnimation}
@@ -730,6 +828,7 @@ export function Home({ navigation }) {
                   placeholder="Music Production ..."
                   onChangeText={(value) => setText(value)}
                   value={text}
+                  placeholderTextColor={theme.inputText}
                 />
 
                 <Text style={styles.modalTextLessMargin}>Select Level: {levelOneToTen}</Text>
@@ -740,10 +839,10 @@ export function Home({ navigation }) {
                   max={10}
                   step={1}
                   sliderLength={280}
-                  selectedStyle={{ backgroundColor: '#fc4848' }}
-                  unselectedStyle={{ backgroundColor: '#ccc' }}
+                  selectedStyle={{ backgroundColor: theme.secondary }}
+                  unselectedStyle={{ backgroundColor: theme.progressWrapper }}
                   trackStyle={{ height: 4 }}
-                  markerStyle={{ height: 20, width: "100%", backgroundColor: '#fc4848' }}
+                  markerStyle={{ height: 20, width: "100%", backgroundColor: theme.secondary }}
                 />
 
                 <Text style={styles.modalTextLessMargin}>Time to Learn (min): {time}</Text>
@@ -754,36 +853,38 @@ export function Home({ navigation }) {
                   max={120}
                   step={10}
                   sliderLength={280}
-                  selectedStyle={{ backgroundColor: '#fc4848' }}
-                  unselectedStyle={{ backgroundColor: '#ccc' }}
+                  selectedStyle={{ backgroundColor: theme.secondary }}
+                  unselectedStyle={{ backgroundColor: theme.progressWrapper }}
                   trackStyle={{ height: 4 }}
-                  markerStyle={{ height: 20, width: "100%", backgroundColor: '#fc4848' }}
+                  markerStyle={{ height: 20, width: "100%", backgroundColor: theme.secondary }}
                 />
 
 
                 <Text style={styles.modalText}>Select Language:</Text>
                 <SelectList
-                  setSelected={(lan) => setLang(lan)}
+                  setSelected={(lang) => {
+                    dispatch(setLanguage({ key: lang }));
+                  }}
                   data={data}
-                  defaultOption={data.find(lan => (lan.key == 'en'))}
+                  boxStyles={styles.input}
+                  dropdownStyles={styles.dropdown}
+                  inputStyles={styles.selectionText}
+                  dropdownTextStyles={styles.selectionText}
+                  searchPlaceholder=''
+                  searchicon={<FontAwesomeIcon icon={faMagnifyingGlass} style={styles.selectionIcon} />}
+                  closeicon={<FontAwesomeIcon icon={faXmark} style={styles.selectionIcon} />}
+                  defaultOption={data.find(lang => lang.key == selectedLanguage?.key)}
                 />
 
+                <View style={styles.pickFile}>
+                  <Button title="Pick Files" onPress={pickFiles} />
+                </View>
                 <Text style={styles.modalText}>Upload Files (max 3 - txt only):</Text>
-                <Button title="Pick Files" onPress={pickFiles} />
 
                 {selectedFiles.map((file, index) => (
                   <View
                     key={file.uri}
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      marginTop: 10,
-                      padding: 8,
-                      borderWidth: 1,
-                      borderColor: '#ccc',
-                      borderRadius: 6,
-                      justifyContent: 'space-between',
-                    }}
+                    style={styles.filesContainer}
                   >
                     <Text style={{ flex: 1, fontSize: 12, color: 'gray' }} numberOfLines={1}>{file.name}</Text>
                     <TouchableOpacity onPress={() => handleRemoveFile(file.uri)}>
@@ -794,16 +895,16 @@ export function Home({ navigation }) {
 
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 10 }}>
                   <CustomCheckbox value={downloadImage} onValueChange={setDownloadImage} />
-                  <Text style={{ marginLeft: 8 }}>Download images</Text>
+                  <Text style={[{ marginLeft: 8, paddingBottom: 10 }, styles.modalTextLessMargin]}>Download images</Text>
                 </View>
 
                 <View style={styles.buttonContainerModal}>
                   <TouchableHighlight underlayColor={'transparent'} onPress={() => setModalVisible(false)}>
                     <View style={styles.cancel}>
-                      <Text style={styles.cancelText}>Abbrechen</Text>
+                      <Text style={styles.cancelText}>Cancel</Text>
                     </View>
                   </TouchableHighlight>
-                  <TouchableHighlight underlayColor={'transparent'} onPress={() => generate(text, levelOneToTen, time, lang)}>
+                  <TouchableHighlight underlayColor={'transparent'} onPress={() => generate(text, levelOneToTen, time, selectedLanguage?.key)}>
                     <View style={styles.generate}>
                       <Text style={styles.generateText}>Generate</Text>
                     </View>
@@ -818,149 +919,194 @@ export function Home({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 10,
-  },
-  generatingContainer: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 10,
-    margin: 'auto'
-  },
-  searchingContainer: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 10,
-  },
-  containerDisabled: {
-    flex: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 10,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-  },
-  touchableHighlight: {
-    alignItems: 'center',
-    padding: 10,
-    margin: 5,
-    width: '50%',
-  },
-  buttonContainer: {
-    position: 'relative',
-    backgroundColor: '#fc4848e0',
-    borderRadius: 10,
-    width: '100%',
-    height: 150,
-    overflow: 'hidden',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  progressOverlay: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'green',
-    zIndex: 0,
-  },
-  buttonContent: {
-    zIndex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    width: '100%',
-    height: '100%',
-    paddingTop: 55,
-    paddingBottom: 55,
+function getStyles(theme) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      justifyContent: 'center',
+      paddingHorizontal: 10,
+      backgroundColor: theme.background
+    },
+    generatingContainer: {
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingHorizontal: 10,
+      margin: 'auto'
+    },
+    searchingContainer: {
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingHorizontal: 10,
+    },
+    containerDisabled: {
+      flex: 1,
+      justifyContent: 'center',
+      paddingHorizontal: 10,
+      backgroundColor: theme.disBackground,
+            filter: "brightness(50%)"
+    },
+    row: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+    },
+    touchableHighlight: {
+      alignItems: 'center',
+      padding: 10,
+      margin: 5,
+      width: '50%',
+    },
+    buttonContainer: {
+      position: 'relative',
+      backgroundColor: theme.card,
+      borderRadius: 10,
+      width: '100%',
+      height: 150,
+      overflow: 'hidden',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    progressOverlay: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: theme.progress,
+      zIndex: 0,
+    },
+    buttonContent: {
+      zIndex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      width: '100%',
+      height: '100%',
+      paddingTop: 55,
+      paddingBottom: 55,
 
-  },
-  text: {
-    color: 'white',
-    textAlign: 'center',
-    fontSize: 20
+    },
+    cardText: {
+      color: theme.cardText,
+      textAlign: 'center',
+      fontSize: 20
 
-  },
-  smallText: {
-    color: 'white',
-    textAlign: 'center',
-    fontSize: 10
-  },
-  input: {
-    height: 40,
-    borderColor: '#ccc',
-    borderWidth: 0.5,
-    paddingHorizontal: 8,
-    marginBottom: 20,
-    width: '100%',
-    color: "black"
-  },
-  centeredView: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center'
-  },
-  modalView: {
-    margin: 15,
-    backgroundColor: 'white',
-    borderRadius: 20,
-    padding: 15,
-    shadowColor: '#000',
-    width: '90%',
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    minHeight: 200,
-    minWidth: 200
-  },
-  modalText: {
-    marginBottom: 15,
-    textAlign: 'left',
-  },
-  modalTextLessMargin: {
-    marginBottom: 5,
-    textAlign: 'left',
-  },
-  buttonContainerModal: {
-    flexDirection: 'row',
-    marginLeft: 'auto',
-    marginTop: 10,
-  },
-  cancel: {
-    padding: 10,
-    width: '100%',
-  },
-  cancelText: {
-    color: 'black',
-    opacity: 0.7,
-  },
-  generate: {
-    padding: 10,
-    width: '100%',
-  },
-  generateText: {
-    color: 'blue',
-  },
-  slider: {
-    width: '100%',
-    height: 40,
-  },
-  wrapper: {
-    height: 20,
-    width: '100%',
-    backgroundColor: '#eee',
-    borderRadius: 10,
-    overflow: 'hidden',
-    marginVertical: 20
-  },
-  progress: {
-    height: '100%',
-    backgroundColor: '#4caf50',
-  },
-  largeAnimation: { width: 100, height: 100, paddingVertical: 20 },
-  smallAnimation: { width: 50, height: 50, paddingVertical: 10 },
-  xtraLargeAnimation: { width: 200, height: 200, paddingVertical: 20 }
-});
+    },
+    cardSmallText: {
+      color: theme.cardText,
+      textAlign: 'center',
+      fontSize: 10
+    },
+    input: {
+      height: 43,
+      borderColor: theme.inputBorder,
+      borderWidth: 0.5,
+      paddingHorizontal: 8,
+      width: '100%',
+      backgroundColor: theme.inputBackground,
+      borderRadius: 10,
+      color: theme.text
+    },
+    centeredView: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center'
+    },
+    modalView: {
+      margin: 15,
+      backgroundColor: theme.background,
+      borderRadius: 20,
+      padding: 15,
+      shadowColor: theme.shadow,
+      width: '90%',
+      shadowOpacity: 0.25,
+      shadowRadius: 4,
+      minHeight: 200,
+      minWidth: 200
+    },
+    modalText: {
+      marginBottom: 15,
+      textAlign: 'left',
+      color: theme.text
+    },
+    modalTextLessMargin: {
+      marginVertical: 5,
+      textAlign: 'left',
+      color: theme.text,
+      paddingTop: 10
+    },
+    buttonContainerModal: {
+      flexDirection: 'row',
+      marginLeft: 'auto',
+      marginTop: 10,
+    },
+    cancel: {
+      padding: 10,
+      width: '100%',
+    },
+    cancelText: {
+      color: theme.text,
+      opacity: 0.7,
+    },
+    generate: {
+      padding: 10,
+      width: '100%',
+    },
+    generateText: {
+      color: theme.secondary,
+    },
+    slider: {
+      width: '100%',
+      height: 40,
+    },
+    wrapper: {
+      height: 20,
+      width: '100%',
+      backgroundColor: theme.progressWrapper,
+      borderRadius: 10,
+      overflow: 'hidden',
+      marginVertical: 20
+    },
+    progress: {
+      height: '100%',
+      backgroundColor: theme.progress,
+    },
+    largeAnimation: {
+      width: 100,
+      height: 100,
+      paddingVertical: 20
+    },
+    smallAnimation: {
+      width: 50,
+      height: 50,
+      paddingVertical: 10
+    },
+    xtraLargeAnimation: {
+      width: 200,
+      height: 200,
+      paddingVertical: 20
+    },
+    pickFile: {
+      paddingTop: 20
+    },
+    dropdown: {
+      backgroundColor: theme.inputBackground,
+      color: theme.text
+    },
+    filesContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginTop: 10,
+      padding: 8,
+      borderWidth: 1,
+      borderColor: '#ccc',
+      borderRadius: 6,
+      justifyContent: 'space-between',
+    },
+    selectionText: {
+      color: theme.text
+    },
+    selectionIcon: {
+      color: theme.text,
+      paddingHorizontal: 10,
+      paddingRight: 20
+    },
+  });
+}

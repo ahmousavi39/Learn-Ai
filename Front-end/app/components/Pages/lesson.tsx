@@ -16,6 +16,7 @@ import {
   ActivityIndicator
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useTheme } from '../../theme';
 
 export function Lesson({ route, navigation }) {
   const dispatch = useAppDispatch();
@@ -40,7 +41,8 @@ export function Lesson({ route, navigation }) {
   let level = "4/10";
   const HTTP_SERVER = "https://learn-ai-w8ke.onrender.com";
   const screenWidth = Dimensions.get('window').width;
-
+  const { theme } = useTheme();
+  const styles = getStyles(theme);
   const { courseId, sectionIndex, contentIndex, language } = route.params || {};
 
   useEffect(() => {
@@ -52,17 +54,19 @@ export function Lesson({ route, navigation }) {
         const newContent = section.content[contentIndex];
         setContent(newContent);
         // Dynamically calculate image height
-        if (newContent.imageUri) {
+        if (newContent.imageUri || newContent.imageUrl) {
+          const imgSrc = newContent.imageUri ?? newContent.imageUrl;
           Image.getSize(
-            newContent.imageUri,
+            imgSrc,
             (width, height) => {
-              const scaleFactor = (screenWidth - 20) / width;
+              const desiredWidth = screenWidth - 20;
+              const scaleFactor = desiredWidth / width;
               const newHeight = height * scaleFactor;
               setImageHeight(newHeight);
             },
             (error) => {
               console.warn('Failed to get image size:', error);
-              setImageHeight(220); // fallback height
+              setImageHeight(220);
             }
           );
         }
@@ -146,9 +150,9 @@ export function Lesson({ route, navigation }) {
 
   return (
     <SafeAreaProvider>
-      <SafeAreaView style={{ flex: 1 }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }}>
         <View style={!loading ? styles.container : styles.disabledContainer}>
-          {loading && <View style={styles.centeredView}><ActivityIndicator size="large" color="#0000ff" /></View>}
+          {loading && <View style={styles.centeredView}><ActivityIndicator size="large" color={theme.secondary} /></View>}
           <ScrollView>
             {content.imageUrl ? (
               <Image
@@ -160,16 +164,17 @@ export function Lesson({ route, navigation }) {
                   marginBottom: 28,
                   alignSelf: 'center',
                 }}
-                resizeMode="contain"
+                resizeMode="cover" // or "contain" depending on your goal
               />
+
             ) : null}
 
             <View style={styles.textContainer}>
-              <Text style={language === "fa" ? [styles.title, styles.persianText] : styles.title}>{content.title}</Text>
+              <Text style={["ar", "fa", "he", "iw", "ur", "ps", "sd", "yi"].includes(language) ? [styles.title, styles.persianText] : styles.title}>{content.title}</Text>
               <View style={styles.textBlock}>
                 {content.bulletpoints.map((text, index) => (
                   <React.Fragment key={index}>
-                    {language === 'fa' ? (
+                    {["ar", "fa", "he", "iw", "ur", "ps", "sd", "yi"].includes(language) ? (
                       <View style={styles.persianBulletContainer}>
                         <Text style={styles.persianBullet}>{'\u2013'}</Text>
                         <Text style={[styles.bulletText, styles.persianText]}>{text}</Text>
@@ -188,116 +193,121 @@ export function Lesson({ route, navigation }) {
 
           <View style={styles.footer}>
             <Pressable style={styles.reGenerateTextButton} onPress={reGenerate}>
-              <MaterialIcons name="refresh" size={36} color="orange" />
+              <MaterialIcons name="refresh" size={36} color={theme.secondary} />
             </Pressable>
-            <Pressable style={styles.nextButton} onPress={language === "fa" ? goToPrevious : goToNext}>
-              <MaterialIcons name="navigate-next" size={36} color="#3730a3" />
+            <Pressable style={styles.nextButton} onPress={["ar", "fa", "he", "iw", "ur", "ps", "sd", "yi"].includes(language) ? goToPrevious : goToNext}>
+              <MaterialIcons name="navigate-next" size={36} color={theme.primary} />
             </Pressable>
-            <Pressable style={styles.backButton} onPress={language === "fa" ? goToNext : goToPrevious}>
-              <MaterialIcons name="navigate-before" size={36} color="#3730a3" />
+            <Pressable style={styles.backButton} onPress={["ar", "fa", "he", "iw", "ur", "ps", "sd", "yi"].includes(language) ? goToNext : goToPrevious}>
+              <MaterialIcons name="navigate-before" size={36} color={theme.primary} />
             </Pressable>
-            </View>
+          </View>
         </View>
       </SafeAreaView>
     </SafeAreaProvider >
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    paddingVertical: 10,
-    justifyContent: 'space-between',
-    flex: 1
-  },
-  disabledContainer: {
-    paddingVertical: 10,
-    justifyContent: 'space-between',
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: '700',
-    marginBottom: 20,
-    color: '#222',
-  },
-  textBlock: {
-    gap: 12,
-  },
-  bulletContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 12,
-  },
-  bullet: {
-    fontSize: 20,
-    lineHeight: 24,
-    marginRight: 10,
-    color: '#333',
-  },
-  persianBulletContainer: {
-    flexDirection: 'row-reverse',
-    alignItems: 'flex-start',
-    marginBottom: 12,
-  },
-  persianBullet: {
-    fontSize: 20,
-    lineHeight: 24,
-    marginLeft: 10,
-    color: '#333',
-  },
-  persianText: {
-    textAlign: 'right',
-    writingDirection: 'rtl',
-  },
-  bulletText: {
-    flex: 1,
-    fontSize: 16,
-    lineHeight: 24,
-    color: '#333',
-  },
-  nextButton: {
-    position: 'absolute',
-    right: 20,
-    backgroundColor: 'transparent',
-    marginVertical: "auto",
-    marginTop: 10
+function getStyles(theme) {
+  return StyleSheet.create({
+    container: {
+      paddingVertical: 10,
+      justifyContent: 'space-between',
+      flex: 1
+    },
+    disabledContainer: {
+      paddingVertical: 10,
+      justifyContent: 'space-between',
+      flex: 1,
+      backgroundColor: theme.disBackground,
+      filter: "brightness(50%)"
+    },
+    title: {
+      fontSize: 24,
+      fontWeight: '700',
+      marginBottom: 20,
+      color: theme.text,
+    },
+    textBlock: {
+      gap: 12,
+      color: theme.text
+    },
+    bulletContainer: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      marginBottom: 12,
+    },
+    bullet: {
+      fontSize: 20,
+      lineHeight: 24,
+      marginRight: 10,
+      color: theme.text,
+    },
+    persianBulletContainer: {
+      flexDirection: 'row-reverse',
+      alignItems: 'flex-start',
+      marginBottom: 12,
+    },
+    persianBullet: {
+      fontSize: 20,
+      lineHeight: 24,
+      marginLeft: 10,
+      color: theme.text
+    },
+    persianText: {
+      textAlign: 'right',
+      writingDirection: 'rtl',
+    },
+    bulletText: {
+      flex: 1,
+      fontSize: 16,
+      lineHeight: 24,
+      color: theme.text,
+    },
+    nextButton: {
+      position: 'absolute',
+      right: 20,
+      backgroundColor: 'transparent',
+      marginVertical: "auto",
+      marginTop: 12
 
-  },
-  backButton: {
-    position: 'absolute',
-    left: 20,
-    backgroundColor: 'transparent',
-    marginVertical: "auto",
-    marginTop: 10
-  },
-  reGenerateTextButton: {
-    backgroundColor: 'transparent',
-    paddingHorizontal: 48,
-    paddingVertical: 2,
-    borderRadius: 8,
-    borderWidth: 2,
-    borderColor: 'orange',
-    alignSelf: 'center',
-    position: 'absolute',
-    marginVertical: "auto",
-    marginTop: 10
-  },
-  reGenerateTextButtonContainer: {
-    paddingTop: 14,
-  },
-  centeredView: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center'
-  },
-  footer: {
-    width: "100%",
-    height: 50,
-    bottom: 0
-  },
-  textContainer: {
-    paddingHorizontal: 10,
-    paddingBottom: 100
-  },
-});
+    },
+    backButton: {
+      position: 'absolute',
+      left: 20,
+      backgroundColor: 'transparent',
+      marginVertical: "auto",
+      marginTop: 12
+    },
+    reGenerateTextButton: {
+      backgroundColor: 'transparent',
+      paddingHorizontal: 48,
+      paddingVertical: 2,
+      borderRadius: 8,
+      borderWidth: 2,
+      borderColor: theme.secondary,
+      alignSelf: 'center',
+      position: 'absolute',
+      marginVertical: "auto",
+      marginTop: 10
+    },
+    reGenerateTextButtonContainer: {
+      paddingTop: 14,
+    },
+    centeredView: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingVertical: 15,
+    },
+    footer: {
+      width: "100%",
+      height: 50,
+      bottom: 0
+    },
+    textContainer: {
+      paddingHorizontal: 10,
+      paddingBottom: 100
+    },
+  });
+}

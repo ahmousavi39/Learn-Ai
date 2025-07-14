@@ -7,12 +7,14 @@ import {
 } from '@react-navigation/native';
 import { useAppDispatch, useAppSelector } from '../hook';
 import { selectCurrentLocation, openLocation } from '../../features/item/itemSlice';
+import { useTheme } from '../theme';
 
 export function LeftHeader() {
     const dispatch = useAppDispatch();
     const currentLocation = useAppSelector(selectCurrentLocation);
     const navigation = useNavigation();
-
+    const { theme } = useTheme();
+    
     return (
         <>
             <View style={styles.icon1Container}>
@@ -27,7 +29,7 @@ export function LeftHeader() {
                         navigation.navigate('Home')
                     }
                 }}>
-                    <FontAwesomeIcon size={19} icon={faChevronLeft} />
+                    <FontAwesomeIcon size={19} icon={faChevronLeft}  color={theme.headerTitle} />
                 </Pressable>
             </View>
         </>

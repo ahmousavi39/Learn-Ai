@@ -1,147 +1,128 @@
-import React, { useEffect, useState } from 'react';
-import { Pressable, View, StyleSheet, Alert, Modal } from 'react-native';
+import React, { useRef, useState } from 'react';
+import { View, StyleSheet, Alert, Modal } from 'react-native';
 import { Text, TouchableHighlight } from 'react-native';
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
-import { setLanguage } from '../../../features/settings/settingsSlice';
-import { loadData, resetData } from '../../../features/item/itemSlice';
-import { useAppDispatch, useAppSelector } from '../../hook';
-import { selectLanguage } from '../../../features/settings/settingsSlice';
-import { SelectList } from 'react-native-dropdown-select-list'
+import { resetData } from '../../../features/item/itemSlice';
+import { useAppDispatch } from '../../hook';
+import { useTheme } from '../../theme';
+import { setModeSetting } from '../../../features/settings/settingsSlice';
+import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
+// import { faChevronDown, faXmark } from '@fortawesome/free-solid-svg-icons';
+// import { SelectList } from 'react-native-dropdown-select-list'
+import {
+  Animated,
+  PanResponder,
+  Easing,
+  Dimensions,
+} from 'react-native';
+import { faSun, faMoon } from '@fortawesome/free-solid-svg-icons';
 
 export function Settings() {
   const dispatch = useAppDispatch();
-  const language = useAppSelector(selectLanguage);
   const [modalVisible, setModalVisible] = useState(false);
+  const { mode, setMode } = useTheme();
+  const { theme } = useTheme();
+  const styles = getStyles(theme);
 
-  const data = [
-    { "key": "af", "value": "Afrikaans" },
-    { "key": "sq", "value": "Albanian" },
-    { "key": "am", "value": "Amharic" },
-    { "key": "ar", "value": "Arabic" },
-    { "key": "hy", "value": "Armenian" },
-    { "key": "az", "value": "Azerbaijani" },
-    { "key": "eu", "value": "Basque" },
-    { "key": "be", "value": "Belarusian" },
-    { "key": "bn", "value": "Bengali" },
-    { "key": "bs", "value": "Bosnian" },
-    { "key": "bg", "value": "Bulgarian" },
-    { "key": "ca", "value": "Catalan" },
-    { "key": "ceb", "value": "Cebuano" },
-    { "key": "ny", "value": "Chichewa" },
-    { "key": "zh", "value": "Chinese (Simplified)" },
-    { "key": "zh-TW", "value": "Chinese (Traditional)" },
-    { "key": "co", "value": "Corsican" },
-    { "key": "hr", "value": "Croatian" },
-    { "key": "cs", "value": "Czech" },
-    { "key": "da", "value": "Danish" },
-    { "key": "nl", "value": "Dutch" },
-    { "key": "en", "value": "English" },
-    { "key": "eo", "value": "Esperanto" },
-    { "key": "et", "value": "Estonian" },
-    { "key": "tl", "value": "Filipino" },
-    { "key": "fi", "value": "Finnish" },
-    { "key": "fr", "value": "French" },
-    { "key": "fy", "value": "Frisian" },
-    { "key": "gl", "value": "Galician" },
-    { "key": "ka", "value": "Georgian" },
-    { "key": "de", "value": "German" },
-    { "key": "el", "value": "Greek" },
-    { "key": "gu", "value": "Gujarati" },
-    { "key": "ht", "value": "Haitian Creole" },
-    { "key": "ha", "value": "Hausa" },
-    { "key": "haw", "value": "Hawaiian" },
-    { "key": "iw", "value": "Hebrew" },
-    { "key": "hi", "value": "Hindi" },
-    { "key": "hmn", "value": "Hmong" },
-    { "key": "hu", "value": "Hungarian" },
-    { "key": "is", "value": "Icelandic" },
-    { "key": "ig", "value": "Igbo" },
-    { "key": "id", "value": "Indonesian" },
-    { "key": "ga", "value": "Irish" },
-    { "key": "it", "value": "Italian" },
-    { "key": "ja", "value": "Japanese" },
-    { "key": "jw", "value": "Javanese" },
-    { "key": "kn", "value": "Kannada" },
-    { "key": "kk", "value": "Kazakh" },
-    { "key": "km", "value": "Khmer" },
-    { "key": "ko", "value": "Korean" },
-    { "key": "ku", "value": "Kurdish (Kurmanji)" },
-    { "key": "ky", "value": "Kyrgyz" },
-    { "key": "lo", "value": "Lao" },
-    { "key": "la", "value": "Latin" },
-    { "key": "lv", "value": "Latvian" },
-    { "key": "lt", "value": "Lithuanian" },
-    { "key": "lb", "value": "Luxembourgish" },
-    { "key": "mk", "value": "Macedonian" },
-    { "key": "mg", "value": "Malagasy" },
-    { "key": "ms", "value": "Malay" },
-    { "key": "ml", "value": "Malayalam" },
-    { "key": "mt", "value": "Maltese" },
-    { "key": "mi", "value": "Maori" },
-    { "key": "mr", "value": "Marathi" },
-    { "key": "mn", "value": "Mongolian" },
-    { "key": "my", "value": "Myanmar (Burmese)" },
-    { "key": "ne", "value": "Nepali" },
-    { "key": "no", "value": "Norwegian" },
-    { "key": "or", "value": "Odia" },
-    { "key": "ps", "value": "Pashto" },
-    { "key": "fa", "value": "Persian" },
-    { "key": "pl", "value": "Polish" },
-    { "key": "pt", "value": "Portuguese" },
-    { "key": "pa", "value": "Punjabi" },
-    { "key": "ro", "value": "Romanian" },
-    { "key": "ru", "value": "Russian" },
-    { "key": "sm", "value": "Samoan" },
-    { "key": "gd", "value": "Scots Gaelic" },
-    { "key": "sr", "value": "Serbian" },
-    { "key": "st", "value": "Sesotho" },
-    { "key": "sn", "value": "Shona" },
-    { "key": "sd", "value": "Sindhi" },
-    { "key": "si", "value": "Sinhala" },
-    { "key": "sk", "value": "Slovak" },
-    { "key": "sl", "value": "Slovenian" },
-    { "key": "so", "value": "Somali" },
-    { "key": "es", "value": "Spanish" },
-    { "key": "su", "value": "Sundanese" },
-    { "key": "sw", "value": "Swahili" },
-    { "key": "sv", "value": "Swedish" },
-    { "key": "tg", "value": "Tajik" },
-    { "key": "ta", "value": "Tamil" },
-    { "key": "te", "value": "Telugu" },
-    { "key": "th", "value": "Thai" },
-    { "key": "tr", "value": "Turkish" },
-    { "key": "uk", "value": "Ukrainian" },
-    { "key": "ur", "value": "Urdu" },
-    { "key": "uz", "value": "Uzbek" },
-    { "key": "vi", "value": "Vietnamese" },
-    { "key": "cy", "value": "Welsh" },
-    { "key": "xh", "value": "Xhosa" },
-    { "key": "yi", "value": "Yiddish" },
-    { "key": "yo", "value": "Yoruba" },
-    { "key": "zu", "value": "Zulu" }
-  ]
+  const knobStartValue = useRef(0);
+  const knobX = useRef(new Animated.Value(mode === 'dark' ? 1 : 0)).current;
+  const knobWidth = 30;
+  const containerWidth = 150;
+  const maxTranslateX = containerWidth - knobWidth - 10;
 
+  const toggleTheme = (toDark: boolean) => {
+    const newMode = toDark ? 'dark' : 'light';
+    setMode(newMode);
+    dispatch(setModeSetting(newMode));
+
+    Animated.timing(knobX, {
+      toValue: toDark ? 1 : 0,
+      duration: 250,
+      easing: Easing.out(Easing.circle),
+      useNativeDriver: false,
+    }).start();
+  };
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderGrant: () => {
+        knobX.stopAnimation((value) => {
+          knobStartValue.current = value;
+        });
+      },
+      onPanResponderMove: (_, gesture) => {
+        const newVal = knobStartValue.current + gesture.dx / maxTranslateX;
+        knobX.setValue(Math.max(0, Math.min(1, newVal)));
+      },
+      onPanResponderRelease: () => {
+        knobX.stopAnimation((currentValue) => {
+          const toDark = currentValue > 0.5;
+          toggleTheme(toDark);
+        });
+      },
+    })
+  ).current;
+
+
+
+  // const data = [{ key: "system", value: "Default" }, { key: "dark", value: "Dark" }, { key: "light", value: "Light" }];
   const toResetData = () => {
-      dispatch(resetData());
-      setModalVisible(false);
-  }
-
-  const toSelectLanguage = async (lang) => {
-    dispatch(setLanguage({key: lang}));
+    dispatch(resetData());
+    setModalVisible(false);
   }
 
   return (
     <>
       <SafeAreaProvider>
         <SafeAreaView style={modalVisible ? styles.containerDisabled : styles.container}>
-          <SelectList
-            setSelected={(lang) => toSelectLanguage(lang)}
+          {/* <SelectList
+            setSelected={modeOption => {
+              setMode(modeOption);
+              dispatch(setModeSetting(modeOption));
+            }}
             data={data}
-            defaultOption={data.find(lang => (lang.key == language.key))}
-          />
+            defaultOption={data.find(modeOption => (modeOption.key == mode))}
+            boxStyles={styles.input}
+            dropdownStyles={styles.dropdown}
+            inputStyles={styles.selectionText}
+            dropdownTextStyles={styles.selectionText}
+            arrowicon={<FontAwesomeIcon icon={faChevronDown} style={styles.selectionIcon} />}
+            search={false}
+          /> */}
+          <View style={styles.modeSwitchContainer}>
+            <View
+              style={styles.toggleContainer}
+            >
+              <Animated.View
+                {...panResponder.panHandlers}
+                style={[
+                  styles.toggleKnob,
+                  {
+                    transform: [
+                      {
+                        translateX: knobX.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [5, maxTranslateX],
+                        }),
+                      },
+                    ],
+                  },
+                ]}
+              >
+                <FontAwesomeIcon
+                  icon={mode === 'light' ? faSun : faMoon}
+                  size={16}
+                  color={theme.background}
+                />
+              </Animated.View>
+            </View>
+          </View>
+
           <TouchableHighlight underlayColor={'transparent'} onPress={() => setModalVisible(true)}>
             <View style={styles.reset}>
-              <Text style={styles.text}>Daten zurücksetzen</Text>
+              <Text style={styles.text}>Reset Data</Text>
             </View>
           </TouchableHighlight>
 
@@ -155,16 +136,16 @@ export function Settings() {
             }}>
             <View style={styles.centeredView}>
               <View style={styles.modalView}>
-                <Text style={styles.modalText}>Möchten Sie alle Daten löschen, einschließlich dessen, was Sie bereits richtig und falsch gemacht haben?</Text>
+                <Text style={styles.modalText}>Do you want to reset the app? All generated courses will be deleted!</Text>
                 <View style={styles.buttonContainer}>
                   <TouchableHighlight underlayColor={'transparent'} onPress={toResetData}>
                     <View style={styles.resetData}>
-                      <Text style={styles.text}>Daten zurücksetzen</Text>
+                      <Text style={styles.text}>Reset</Text>
                     </View>
                   </TouchableHighlight>
                   <TouchableHighlight underlayColor={'transparent'} onPress={() => setModalVisible(false)}>
                     <View style={styles.cancle}>
-                      <Text style={styles.cancleText}>Abbrechen</Text>
+                      <Text style={styles.cancleText}>Cancel</Text>
                     </View>
                   </TouchableHighlight>
 
@@ -179,76 +160,137 @@ export function Settings() {
   );
 }
 
-let styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 10,
-    paddingTop: 50,
-  },
-  containerDisabled: {
-    flex: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 10,
-    paddingTop: 50,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    filter: "brightness(50%)"
-  },
-  button: {
-    alignItems: 'center',
-    padding: 10,
-    margin: 5,
-  },
-  text: {
-    color: "white"
-  },
-  countContainer: {
-    alignItems: 'center',
-    padding: 10,
-  },
-  reset: {
-    backgroundColor: 'red',
-    alignItems: 'center',
-    padding: 10,
-    margin: 5,
-  },
-  centeredView: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalView: {
-    margin: 15,
-    backgroundColor: 'white',
-    borderRadius: 20,
-    padding: 15,
-    shadowColor: '#000',
-    width: "90%",
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-  },
-  modalText: {
-    marginBottom: 15,
-    textAlign: 'left',
-  },
-  buttonContainer: {
-    flexDirection: "row",
-    marginLeft: "auto",
-    marginTop: 10
-  },
-  cancle: {
-    padding: 10,
-    width: "100%",
-  },
-  cancleText: {
-    color: "black",
-    opacity: 0.7
-
-  },
-  resetData: {
-    padding: 10,
-    backgroundColor: 'red',
-    width: "100%",
-    borderRadius: 5,
-  }
-});
+function getStyles(theme) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      justifyContent: 'center',
+      paddingHorizontal: 10,
+      paddingTop: 50,
+      backgroundColor: theme.background,
+    },
+    containerDisabled: {
+      flex: 1,
+      justifyContent: 'center',
+      paddingHorizontal: 10,
+      paddingTop: 50,
+      backgroundColor: theme.disBackground,
+      filter: "brightness(50%)"
+    },
+    button: {
+      alignItems: 'center',
+      padding: 10,
+      margin: 5,
+    },
+    text: {
+      color: theme.cardText,
+    },
+    countContainer: {
+      alignItems: 'center',
+      padding: 10,
+    },
+    reset: {
+      backgroundColor: theme.error,
+      alignItems: 'center',
+      padding: 10,
+      margin: 5,
+      marginVertical: 15,
+      borderRadius: 10,
+    },
+    centeredView: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    modalView: {
+      margin: 15,
+      backgroundColor: theme.background,
+      borderRadius: 20,
+      padding: 15,
+      shadowColor: theme.shadow,
+      width: "90%",
+      shadowOpacity: 0.25,
+      shadowRadius: 4,
+    },
+    modalText: {
+      marginBottom: 15,
+      textAlign: 'left',
+      color: theme.text,
+    },
+    buttonContainer: {
+      flexDirection: "row",
+      marginLeft: "auto",
+      marginTop: 10
+    },
+    cancle: {
+      padding: 10,
+      width: "100%"
+    },
+    cancleText: {
+      color: theme.secondary,
+      opacity: 0.7
+    },
+    resetData: {
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      backgroundColor: theme.error,
+      width: "100%",
+      borderRadius: 5,
+      marginVertical: 5
+    },
+    input: {
+      height: 43,
+      borderColor: theme.inputBorder,
+      borderWidth: 0.5,
+      paddingHorizontal: 8,
+      width: '100%',
+      backgroundColor: theme.inputBackground,
+      borderRadius: 10,
+      color: theme.text
+    },
+    selectionText: {
+      color: theme.text
+    },
+    selectionIcon: {
+      color: theme.text,
+      paddingHorizontal: 10,
+      paddingRight: 20
+    },
+    dropdown: {
+      backgroundColor: theme.inputBackground,
+      color: theme.text
+    },
+    modeSwitchContainer: {
+      alignItems: 'flex-end',
+      justifyContent: 'center',
+      paddingHorizontal: 20,
+    },
+    toggleContainer: {
+      width: 146,
+      height: 40,
+      borderRadius: 25,
+      padding: 5,
+      justifyContent: 'center',
+      overflow: 'hidden',
+      backgroundColor: theme.inputBackground
+    },
+    toggleKnob: {
+      position: 'absolute',
+      width: 30,
+      height: 30,
+      borderRadius: 20,
+      backgroundColor: theme.text,
+      justifyContent: 'center',
+      alignItems: 'center',
+      top: 5,
+      left: 0,
+      zIndex: 2,
+    },
+    modeLabelWrapper: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      zIndex: 1,
+    }
+  });
+};

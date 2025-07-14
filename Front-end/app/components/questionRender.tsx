@@ -5,6 +5,7 @@ import { Audio } from 'expo-av';
 import { MaterialIcons } from '@expo/vector-icons';
 import { testDone, openLocation } from '../../features/item/itemSlice';
 import { useAppDispatch, useAppSelector } from '../hook';
+import { useTheme } from '../theme';
 
 async function correctSound() {
     const { sound } = await Audio.Sound.createAsync(require('../../assets/correct.mp3'));
@@ -34,6 +35,8 @@ export function QuestionRender({ route, navigation }) {
     const borderColorRef = useState(new Animated.Value(0))[0];
     const dispatch = useAppDispatch();
     const courses = useAppSelector(state => state.item.courses);
+    const { theme } = useTheme();
+    const styles = getStyles(theme);
 
     const handlePress = () => {
         Animated.timing(backgroundColorRef, {
@@ -65,23 +68,24 @@ export function QuestionRender({ route, navigation }) {
 
     const backgroundColorCorrect = backgroundColorRef.interpolate({
         inputRange: [0, 1],
-        outputRange: ['#3b82f6', '#16a34a'],
+        outputRange: [theme.secondary, theme.true],
     });
 
     const backgroundColorFalse = backgroundColorRef.interpolate({
         inputRange: [0, 1],
-        outputRange: ['#3b82f6', '#dc2626'],
+        outputRange: [theme.secondary, theme.error],
     });
 
     const borderColorTrue = borderColorRef.interpolate({
         inputRange: [0, 1],
-        outputRange: ['#fff', '#16a34a'],
+        outputRange: [theme.border, theme.true],
     });
 
     const borderColorFalse = borderColorRef.interpolate({
         inputRange: [0, 1],
-        outputRange: ['#fff', '#dc2626'],
+        outputRange: [theme.border, theme.error],
     });
+
     const shuffleArray = (array) => {
         return array
             .map((value) => ({ value, sort: Math.random() }))
@@ -146,7 +150,10 @@ export function QuestionRender({ route, navigation }) {
                     generation();
                     handleRelease();
                 } else {
-                    navigation.goBack();
+                    navigation.navigate('Course', {
+                        courseId,
+                        selectedSectionIndex: sectionIndex,
+                    });
                 }
             }, 2000);
         } else {
@@ -211,7 +218,7 @@ export function QuestionRender({ route, navigation }) {
 
     return (
         <SafeAreaProvider>
-            <SafeAreaView style={{ flex: 1 }}>
+            <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }}>
                 <View style={styles.container}>
 
                     <View style={styles.questionWrapper}>
@@ -239,14 +246,14 @@ export function QuestionRender({ route, navigation }) {
                     <View style={styles.footer}>
                         {showResetButton && (
                             <Pressable style={styles.retryTextButton} onPress={resetWrongAnswer}>
-                                <MaterialIcons name="refresh" size={36} color="white" />
+                                <MaterialIcons name="refresh" size={36} color={theme.secondary} />
                             </Pressable>
                         )}
-                        <Pressable style={styles.nextButton} onPress={language === "fa" ? goToPrevious : goToNext}>
-                            <MaterialIcons name="navigate-next" size={36} color="#3730a3" />
+                        <Pressable style={styles.nextButton} onPress={["ar", "fa", "he", "iw", "ur", "ps", "sd", "yi"].includes(language) ? goToPrevious : goToNext}>
+                            <MaterialIcons name="navigate-next" size={36} color={theme.primary} />
                         </Pressable>
-                        <Pressable style={styles.backButton} onPress={language === "fa" ? goToNext : goToPrevious}>
-                            <MaterialIcons name="navigate-before" size={36} color="#3730a3" />
+                        <Pressable style={styles.backButton} onPress={["ar", "fa", "he", "iw", "ur", "ps", "sd", "yi"].includes(language) ? goToNext : goToPrevious}>
+                            <MaterialIcons name="navigate-before" size={36} color={theme.primary} />
                         </Pressable>
                     </View>
                 </View>
@@ -256,89 +263,91 @@ export function QuestionRender({ route, navigation }) {
     );
 }
 
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        // paddingHorizontal: 10,
-        paddingVertical: 10,
-        justifyContent: 'space-between', // spread question and options/buttons
-    },
 
-    questionWrapper: {
-        marginTop: 40, // push question down a bit from top
-        alignItems: 'center',
-        paddingHorizontal: 10
-    },
+function getStyles(theme) {
+    return StyleSheet.create({
+        container: {
+            flex: 1,
+            // paddingHorizontal: 10,
+            paddingVertical: 10,
+            justifyContent: 'space-between', // spread question and options/buttons
+        },
 
-    optionsContainer: {
-        gap: 24,
-        bottom: 170,  // add space at bottom for buttons
-    },
+        questionWrapper: {
+            marginTop: 40, // push question down a bit from top
+            alignItems: 'center',
+            paddingHorizontal: 10
+        },
 
-    title: {
-        fontSize: 22,
-        fontWeight: '600',
-        textAlign: 'center',
-        marginTop: 20,  // add some top margin
-        color: '#222',
-    },
+        optionsContainer: {
+            gap: 24,
+            bottom: 170,  // add space at bottom for buttons
+        },
 
-    optionWrapper: {
-        width: '100%',
-        paddingHorizontal: 10
-    },
-    optionButton: {
-        backgroundColor: '#3b82f6',
-        borderWidth: 2,
-        borderColor: '#3b82f6',
-        borderRadius: 12,
-        paddingVertical: 14,
-        paddingHorizontal: 20,
-        alignItems: 'center',
-    },
-    optionText: {
-        color: '#fff',
-        fontSize: 16,
-        fontWeight: '500',
-    },
-    actions: {
-        marginTop: 30,
-        alignItems: 'center',
-        gap: 12,
-    },
+        title: {
+            fontSize: 22,
+            fontWeight: '600',
+            textAlign: 'center',
+            marginTop: 20,  // add some top margin
+            color: theme.text,
+        },
 
-    retryTextButton: {
-        alignSelf: 'center',
-        position: 'absolute',
-        backgroundColor: '#16a34a',
-        paddingHorizontal: 48,
-        paddingVertical: 2,
-        borderRadius: 8,
-        marginVertical: "auto",
-        marginTop: 10
+        optionWrapper: {
+            width: '100%',
+            paddingHorizontal: 10
+        },
+        optionButton: {
+            backgroundColor: theme.secondary,
+            borderWidth: 2,
+            borderColor: theme.secondary,
+            borderRadius: 12,
+            paddingVertical: 14,
+            paddingHorizontal: 20,
+            alignItems: 'center',
+        },
+        optionText: {
+            color: theme.optionText,
+            fontSize: 16,
+            fontWeight: '700',
+        },
+        actions: {
+            marginTop: 30,
+            alignItems: 'center',
+            gap: 12,
+        },
 
-    },
-    nextButton: {
-        position: 'absolute',
-        right: 20,
-        backgroundColor: 'transparent',
-        marginVertical: "auto",
-        marginTop: 10
+        retryTextButton: {
+            alignSelf: 'center',
+            position: 'absolute',
+            backgroundColor: theme.error,
+            paddingHorizontal: 48,
+            paddingVertical: 2,
+            borderRadius: 8,
+            marginVertical: "auto",
+            marginTop: 10
 
-    },
-    backButton: {
-        position: 'absolute',
-        left: 20,
-        backgroundColor: 'transparent',
-        marginVertical: "auto",
-        marginTop: 10
-    },
-    footer: {
-        width: "100%",
-        height: 50,
-        backgroundColor: "",
-        bottom: 0,
-        position: "absolute"
-    }
+        },
+        nextButton: {
+            position: 'absolute',
+            right: 20,
+            backgroundColor: 'transparent',
+            marginVertical: "auto",
+            marginTop: 12
 
-});
+        },
+        backButton: {
+            position: 'absolute',
+            left: 20,
+            backgroundColor: 'transparent',
+            marginVertical: "auto",
+            marginTop: 12
+        },
+        footer: {
+            width: "100%",
+            height: 59,
+            backgroundColor: "transparent",
+            bottom: 0,
+            position: "absolute"
+        }
+    });
+}

@@ -1,48 +1,60 @@
 import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { getAllKeys, getItem, putItem, removeItem } from '../../app/services/AsyncStorage';
-import type { RootState } from '../../app/store'
+import { getAllKeys, getItem, putItem } from '../../app/services/AsyncStorage';
+import type { RootState } from '../../app/store';
 
-
-interface settingsState {
-    language: {key: string}
+interface SettingsState {
+    language: { key: string };
+    mode: 'system' | 'light' | 'dark';
 }
 
-const initialState: settingsState = {
-    language: {key: "en"}
-}
+const initialState: SettingsState = {
+    language: { key: 'en' },
+    mode: 'system',
+};
 
-export const loadLanguage = createAsyncThunk('language/loadLanguage', async () => {
-    if ((await getAllKeys()).includes("language")) {
-        const language = await getItem('language');
-        return language;
+export const loadSettings = createAsyncThunk('language/loadSettings', async () => {
+    const keys = await getAllKeys();
+    let mode = 'system';
+    let language = { key: 'en' };
+    if (keys.includes('mode')) {
+        mode = await getItem('mode');
     } else {
-        await putItem("language", {key: "en"});
-        return {key: "en"};
+        await putItem('mode', mode);
     }
+    if (keys.includes('language')) {
+        language = await getItem('language');
+    } else {
+        await putItem('language', language);
+    }
+    return { mode, language }
 });
 
 export const settingsSlice = createSlice({
     name: 'settings',
     initialState,
     reducers: {
-        setLanguage: (state, action: PayloadAction<any>) => {
+        setLanguage: (state, action: PayloadAction<{ key: string }>) => {
             state.language = action.payload;
-            const pushData = async () => {
+            (async () => {
                 await putItem('language', action.payload);
-            }
-
-            pushData();
+            })();
         },
+        setModeSetting: (state, action: PayloadAction<'system' | 'light' | 'dark'>) => {
+            state.mode = action.payload;
+            (async () => {
+                await putItem('mode', action.payload);
+            })();
+        }
     },
     extraReducers: (builder) => {
-        builder.addCase(loadLanguage.fulfilled, (state, action) => {
-                state.language = action.payload;
+        builder.addCase(loadSettings.fulfilled, (state, action) => {
+            state.language = action.payload.language;
+            state.mode = action.payload.mode;
         });
     },
 });
 
-export const { setLanguage } = settingsSlice.actions;
-
+export const { setLanguage, setModeSetting } = settingsSlice.actions;
 export const selectLanguage = (state: RootState) => state.settings.language;
-
+export const selectModeSetting = (state: RootState) => state.settings.mode;
 export default settingsSlice.reducer;
