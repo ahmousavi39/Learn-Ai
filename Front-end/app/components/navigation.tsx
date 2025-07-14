@@ -60,7 +60,11 @@ export default function MyStack() {
                     headerStyle: { backgroundColor: theme.headerBackground }
                 }}
             />
-            <Stack.Screen name="ImageViewer" component={ImageViewer} />
+            <Stack.Screen name="ImageViewer" component={ImageViewer}  options={{
+                    title: "",
+                    headerTintColor: theme.headerTitle,
+                    headerStyle: { backgroundColor: theme.headerBackground }
+                }} />
         </Stack.Navigator>
     );
 }

@@ -1,8 +1,7 @@
-// ImageViewer.js
 import React from 'react';
 import { Modal, View, Image, StyleSheet, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { MaterialIcons } from '@expo/vector-icons';
+// import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '../theme'; // Assuming you have a useTheme hook
 
 export function ImageViewer({ route, navigation }) {
@@ -17,6 +16,7 @@ export function ImageViewer({ route, navigation }) {
       transparent={true}
       visible={true} // Always true when this component is rendered
       onRequestClose={() => navigation.goBack()}
+      style={styles.container}
     >
       <SafeAreaView style={styles.container}>
         <Pressable style={styles.closeButton} onPress={() => navigation.goBack()}>

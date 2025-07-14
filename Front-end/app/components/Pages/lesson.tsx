@@ -165,7 +165,7 @@ export function Lesson({ route, navigation }) {
           {loading && <View style={styles.centeredView}><ActivityIndicator size="large" color={theme.secondary} /></View>}
           <ScrollView>
             {content.imageUrl ? (
-              <Pressable onPress={handleImagePress}>
+              // <Pressable onPress={handleImagePress}>
                 <Image
                   source={{ uri: content.imageUri ? content.imageUri : content.imageUrl }}
                   style={{
@@ -177,7 +177,7 @@ export function Lesson({ route, navigation }) {
                   }}
                   resizeMode="cover"
                 />
-              </Pressable>
+              // </Pressable>
             ) : null}
             <View style={styles.textContainer}>
               <Text style={["ar", "fa", "he", "iw", "ur", "ps", "sd", "yi"].includes(language) ? [styles.title, styles.persianText] : styles.title}>{content.title}</Text>
