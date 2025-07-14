@@ -1,7 +1,7 @@
 import React from 'react';
 import { Modal, View, Image, StyleSheet, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-// import { MaterialIcons } from '@expo/vector-icons';
+import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '../theme'; // Assuming you have a useTheme hook
 
 export function ImageViewer({ route, navigation }) {
