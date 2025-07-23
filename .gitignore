@@ -1,0 +1,132 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment variables and secrets
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Firebase
+firebase-debug.log
+firebase-debug.*.log
+.firebase/
+**/config/firebase-service-account.json
+**/firebase-service-account.json
+
+# API Keys and Credentials (CRITICAL - DO NOT COMMIT)
+**/*.pem
+**/*.p8
+**/google-services.json
+**/GoogleService-Info.plist
+**/service-account-*.json
+
+# React Native / Expo
+.expo/
+.expo-shared/
+expo-env.d.ts
+dist/
+web-build/
+
+# Metro
+.metro-health-check*
+metro.config.js.bak
+
+# Android
+*.apk
+*.aab
+*.ap_
+*.dex
+*.class
+build/
+.gradle/
+local.properties
+*.keystore
+!debug.keystore
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots
+fastlane/test_output
+
+# iOS
+*.ipa
+*.xcarchive
+DerivedData/
+*.hmap
+*.ipa
+*.xcuserstate
+ios/.xcode.env.local
+
+# macOS
+.DS_Store
+*.plist
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# VS Code
+.vscode/settings.json
+.vscode/launch.json
+.vscode/tasks.json
+
+# Logs
+logs/
+*.log
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+
+# Temporary folders
+tmp/
+temp/
+
+# Editor directories and files
+.idea/
+*.swp
+*.swo
+*~
+
+# Package managers
+package-lock.json
+yarn.lock
+
+# Build outputs
+dist/
+build/
+out/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# AI/ML models (if any)
+*.model
+*.pkl
+*.h5
+
+# Backup files
+*.bak
+*.backup
+*.old
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db

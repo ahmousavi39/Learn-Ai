@@ -75,10 +75,6 @@ export function Home({ navigation }) {
   const selectedMode = useAppSelector(selectModeSetting);
   const { mode, setMode } = useTheme();
 
-  const HTTP_SERVER = "https://learn-ai-w8ke.onrender.com";
-  const LOCAL_HTTP_SERVER = "http://192.168.2.107:4000"
-  const WS_SERVER = "wss://learn-ai-w8ke.onrender.com";
-  const LOCAL_WS_SERVER = "ws://192.168.2.107:4000";
   const DUCKDUCKGO_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36";
 
   const progressPercentage = ((progress.current - 1) / (progress.total - 1)) * 100;
@@ -215,7 +211,7 @@ export function Home({ navigation }) {
         ws.current = null;
       }
 
-      ws.current = new WebSocket(WS_SERVER);
+      ws.current = new WebSocket(process.env.PUBLIC_WEBSTOCK_SERVER);
 
       ws.current.onopen = () => {
         console.log('WebSocket connected');
@@ -604,7 +600,7 @@ export function Home({ navigation }) {
       formData.append('language', language);
       formData.append('requestId', requestId.current);
 
-      const response = await fetchWithTimeout(`${HTTP_SERVER}/generate-course`, {
+      const response = await fetchWithTimeout(`${process.env.PUBLIC_HTTP_SERVER}/generate-course`, {
         method: 'POST',
         body: formData,
       });

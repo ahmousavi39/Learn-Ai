@@ -5,18 +5,36 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 // const axios = require("axios");
 const WebSocket = require('ws');
 const http = require('http');
+
+// Import routes and Firebase config
+const authRoutes = require('./routes/auth');
+const subscriptionRoutes = require('./routes/subscriptions');
+const { db, auth } = require('./config/firebase');
+
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+// Add route middlewares
+app.use('/api/auth', authRoutes);
+app.use('/api/subscriptions', subscriptionRoutes);
+
+// Import middleware
+const { 
+  verifyTokenOptional, 
+  checkCourseGenerationLimit, 
+  updateGuestCourseCount, 
+  saveCourseToUser 
+} = require('./middleware/courseMiddleware');
+
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 const multer = require('multer');
-// const translate = require('google-translate-api-x');
 
-const clients = new Map(); // requestId -> ws
+const clients = new Map();
 
 // --- Constants ---
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const ALLOWED_MIMETYPES = [
   'application/pdf',
   'application/msword',
@@ -26,9 +44,7 @@ const ALLOWED_MIMETYPES = [
   'image/gif',
   'image/webp'
 ];
-// const DUCKDUCKGO_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36";
-// It's generally safer to load the model name directly from the environment or use a stable, well-documented default.
-// 'models/gemini-2.0-flash' might not be a globally available fixed model name; 'gemini-1.5-flash-latest' is more common for flash.
+
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'models/gemini-2.0-flash';
 
 // --- Multer Configuration ---
@@ -70,11 +86,7 @@ wss.on('connection', (ws) => {
   });
 });
 
-/**
- * Sends a progress update to a specific client via WebSocket.
- * @param {string} requestId - The ID of the client to send the message to.
- * @param {object} message - The message payload.
- */
+
 function sendProgress(requestId, message) {
   const ws = clients.get(requestId);
   if (ws && ws.readyState === WebSocket.OPEN) {
@@ -82,82 +94,6 @@ function sendProgress(requestId, message) {
   }
 }
 
-// --- DuckDuckGo Image Search Utilities ---
-// /**
-//  * Fetches the vqd parameter from DuckDuckGo's image search HTML.
-//  * @param {string} query - The search query.
-//  * @returns {Promise<string|null>} The vqd string or null if not found.
-//  */
-// async function getVQDFromHTML(query) {
-//   const url = `https://duckduckgo.com/?q=${encodeURIComponent(query)}`;
-//   try {
-//     const response = await axios.get(url, {
-//       headers: {
-//         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
-//         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-//         'Accept-Encoding': 'gzip, deflate, br',
-//         'Accept-Language': 'en-US,en;q=0.9',
-//         'Connection': 'keep-alive'
-//       }
-//     });
-//     const html = response.data;
-//     // Extract vqd from the JavaScript variable in the HTML
-//     const match = html.match(/vqd="([^"]+)"/);
-//     return match ? match[1] : null;
-//   } catch (error) {
-//     console.error("Failed to get vqd:", error.message);
-//     return null;
-//   }
-// }
-
-// /**
-//  * Checks if a given URL points to an image by making a HEAD request.
-//  * @param {string} url - The URL to check.
-//  * @returns {Promise<boolean>} True if the URL is an image, false otherwise.
-//  */
-// async function isImageUrl(url) {
-//   try {
-//     const response = await axios.head(url, {
-//       validateStatus: () => true, // Don't throw on HTTP errors (e.g., 404, 500)
-//       timeout: 2500 // Added a timeout for image HEAD requests
-//     });
-//     const contentType = response.headers['content-type'];
-//     return contentType && contentType.startsWith('image/');
-//   } catch (error) {
-//     // console.warn(`Failed to validate image URL ${url}: ${error.message}`); // Keep this commented unless deep debugging
-//     return false;
-//   }
-// }
-
-// /**
-//  * Retries a promise with a timeout.
-//  * @param {Promise<any>} promise - The promise to execute.
-//  * @param {number} ms - The timeout duration in milliseconds.
-//  * @returns {Promise<any>} The resolved promise result or a timeout error.
-//  */
-// function retryIfTimeout(promise, ms) {
-//   return new Promise((resolve, reject) => {
-//     const timeoutId = setTimeout(() => reject(new Error(`Operation timed out after ${ms}ms`)), ms);
-//     promise
-//       .then((res) => {
-//         clearTimeout(timeoutId);
-//         resolve(res);
-//       })
-//       .catch((err) => {
-//         clearTimeout(timeoutId);
-//         reject(err);
-//       });
-//   });
-// }
-
-/**
- * Retries a function until its result is valid or max retries are reached.
- * Includes exponential backoff for delays.
- * @param {Function} fn - The function to execute.
- * @param {Function} isValid - A function that validates the result of `fn`.
- * @param {number} [maxRetries=2] - The maximum number of retries.
- * @returns {Promise<any>} The valid result.
- */
 const retryIfInvalid = async (fn, isValid, maxRetries = 4) => {
   let result;
   for (let attempt = 0; attempt < maxRetries; attempt++) {
@@ -169,113 +105,11 @@ const retryIfInvalid = async (fn, isValid, maxRetries = 4) => {
   throw new Error(`Validation failed after ${maxRetries} retries.`);
 };
 
-// /**
-//  * Fetches an image link from DuckDuckGo based on a query.
-//  * Includes a robust vqd acquisition.
-//  * @param {string} query - The search query.
-//  * @returns {Promise<string|null>} The image URL or null if not found.
-//  */
-// async function getImageLink(query, url, headers) {
-//   try {
-//     const response = await axios.get(url, { headers, timeout: 10000 }); // Added timeout for the image search itself
-//     const results = response.data.results;
-
-//     for (const item of results) {
-//       if (item.image && !item.image.includes("ytimg.com") && item.height <= (item.width * 2)) {
-//         // Check if it's a valid image URL sequentially for robustness
-//         if (await isImageUrl(item.image)) {
-//           return item.image;
-//         }
-//       }
-//     }
-//     return null;
-//   } catch (error) {
-//     console.error(`Error fetching or checking images for query "${query}": ${error.message}`);
-//     return null;
-//   }
-// }
-
-// /**
-//  * Attempts to get an image with multiple retries and a timeout for each attempt.
-//  * Implements exponential backoff between retries.
-//  * @param {string} query - The search query.
-//  * @param {number} [retries=3] - Number of retries.
-//  * @param {number} [timeoutMs=15000] - Timeout for each attempt in milliseconds.
-//  * @returns {Promise<string|null>} The image URL or null.
-//  */
-// async function getImageWithRetry(query, language, retries = 3, timeoutMs = 10000) {
-//   // Retry vqd acquisition if it fails or returns null
-//   const vqd = await retryIfInvalid(
-//     () => getVQDFromHTML(query),
-//     (v) => v !== null,
-//     3 // Max 3 retries for vqd acquisition
-//   ).catch(err => {
-//     console.warn(`Failed to get vqd for query "${query}" after retries: ${err.message}`);
-//     return null;
-//   });
-
-//   if (!vqd) {
-//     return null; // Cannot proceed without vqd
-//   }
-
-//   const url = `https://duckduckgo.com/i.js?o=json&q=${encodeURIComponent(query)}&l=us-en&vqd=${encodeURIComponent(vqd)}&p=1&f=size%3ALarge`;
-//   const headers = {
-//     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
-//     'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-//     'Accept-Encoding': 'gzip, deflate, br',
-//     'Accept-Language': 'en-US,en;q=0.9',
-//     'Connection': 'keep-alive'
-//   };
-
-//   for (let attempt = 0; attempt <= retries; attempt++) {
-//     try {
-//       let image;
-//       const enQuery = await translate(query, { from: language, to: "en" }).then(res => {
-//         return res.text;
-//       });
-//       if (attempt > 0) {
-//         const vqd = await retryIfInvalid(
-//           () => getVQDFromHTML(enQuery),
-//           (v) => v !== null,
-//           3 // Max 3 retries for vqd acquisition
-//         ).catch(err => {
-//           console.warn(`Failed to get vqd for query "${query}" after retries: ${err.message}`);
-//           return null;
-//         });
-//         const url = `https://duckduckgo.com/i.js?o=json&q=${encodeURIComponent(enQuery)}&l=us-en&vqd=${encodeURIComponent(vqd)}&p=1&f=size%3ALarge`;
-//         const headers = {
-//           "User-Agent": DUCKDUCKGO_USER_AGENT, // CORRECTED TYPO HERE
-//         };
-
-//         image = await retryIfTimeout(getImageLink(enQuery, url, headers), timeoutMs);
-//       } else {
-//         image = await retryIfTimeout(getImageLink(query, url, headers), timeoutMs);
-//       }
-//       if (image) return image;
-//     } catch (err) {
-//       console.log(`Attempt ${attempt + 1}/${retries + 1} for "${query}": No image found or operation timed out. Error: ${err.message}.`);
-//       if (attempt < retries) {
-//         await delay(Math.pow(2, attempt) * 1000); // Exponential backoff: 1s, 2s, 4s...
-//       }
-//     }
-//   }
-//   console.warn(`❌ Failed to get image after ${retries + 1} attempts for query: "${query}"`);
-//   return null;
-// }
-
-// --- Gemini setup ---
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const MODEL = GEMINI_MODEL;
 
-// --- Utility ---
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-/**
- * Wrapper for Gemini API calls.
- * @param {string} prompt - The text prompt for Gemini.
- * @param {Array<object>} [files=[]] - Array of file objects with buffer and mimetype.
- * @returns {Promise<string>} The generated text response.
- */
 async function generateGeminiResponse(prompt, files = []) {
   const model = genAI.getGenerativeModel({ model: MODEL });
   const parts = [
@@ -291,13 +125,6 @@ async function generateGeminiResponse(prompt, files = []) {
   return (await result.response).text();
 }
 
-/**
- * Summarizes provided files using Gemini.
- * @param {object} params
- * @param {Array<object>} params.files - Array of file objects.
- * @param {string} params.language - The desired language for the summary.
- * @returns {Promise<string|null>} The summarized content or null on error.
- */
 async function getSummerizedFile({ files = [], language }) {
   let finalResult;
   // Joining file originalnames with a comma and space for better readability in the prompt
@@ -439,8 +266,6 @@ ${"```"}json
     const parsed = JSON.parse(raw.replace(/```json|```/g, '').trim());
 
     const contentWithIds = await Promise.all(parsed.content.map(async (item, index) => {
-      // const searchQuery = `${topic} ${item.title}`;
-      // let imageUrl = await getImageWithRetry(searchQuery, language); // This now uses the more robust retry logic
       return {
         id: index,
         isDone: false,
@@ -470,7 +295,7 @@ ${"```"}json
 }
 
 // 🔸 STEP 3: Generate Full Course
-app.post('/generate-course', upload.array('files', 3), async (req, res) => {
+app.post('/generate-course', verifyTokenOptional, checkCourseGenerationLimit, upload.array('files', 3), async (req, res) => {
   const { topic, level, time, language, requestId } = req.body;
   const files = req.files || [];
 
@@ -519,12 +344,35 @@ app.post('/generate-course', upload.array('files', 3), async (req, res) => {
 
     sendProgress(requestId, { done: true, error: false, current: coursePlan.sections.length, total: coursePlan.sections.length, sectionTitle: "Generating Course Plan", type: "DONE" });
 
-    res.json({
+    const courseData = {
       topic: coursePlan.title,
       level,
       language,
-      sections: sectionsData
-    });
+      sections: sectionsData,
+      timeAllocated: time,
+      generatedAt: new Date().toISOString()
+    };
+
+    // Save course data based on user type
+    if (req.user) {
+      // Authenticated user - save to Firebase
+      try {
+        const courseId = await saveCourseToUser(req.user.uid, courseData);
+        courseData.firebaseCourseId = courseId;
+        console.log(`💾 Course saved to Firebase with ID: ${courseId}`);
+      } catch (error) {
+        console.error('Failed to save course to Firebase:', error);
+        // Continue without saving - don't fail the generation
+      }
+    } else {
+      // Guest user - update generation count
+      if (req.guestData && req.guestId) {
+        await updateGuestCourseCount(req.guestId, req.guestData);
+        console.log(`📊 Guest course count updated: ${req.guestData.coursesGenerated + 1}/2`);
+      }
+    }
+
+    res.json(courseData);
 
   } catch (error) {
     console.error('Error during course generation:', error.message);
@@ -537,6 +385,104 @@ app.post('/generate-course', upload.array('files', 3), async (req, res) => {
       done: false
     });
     res.status(500).json({ error: error.message });
+  }
+});
+
+// Get user's saved courses
+app.get('/api/courses', verifyTokenOptional, async (req, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const coursesSnapshot = await db.collection('courses')
+      .where('userId', '==', req.user.uid)
+      .orderBy('createdAt', 'desc')
+      .get();
+
+    const courses = [];
+    coursesSnapshot.forEach(doc => {
+      courses.push({
+        id: doc.id,
+        ...doc.data()
+      });
+    });
+
+    res.json({ courses });
+  } catch (error) {
+    console.error('Error fetching user courses:', error);
+    res.status(500).json({ error: 'Failed to fetch courses' });
+  }
+});
+
+// Delete a specific course
+app.delete('/api/courses/:courseId', verifyTokenOptional, async (req, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const { courseId } = req.params;
+    
+    // Verify the course belongs to the user
+    const courseDoc = await db.collection('courses').doc(courseId).get();
+    
+    if (!courseDoc.exists) {
+      return res.status(404).json({ error: 'Course not found' });
+    }
+
+    const courseData = courseDoc.data();
+    if (courseData.userId !== req.user.uid) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+
+    await db.collection('courses').doc(courseId).delete();
+    
+    // Update user stats
+    await db.collection('users').doc(req.user.uid).update({
+      'stats.totalCourses': db.FieldValue.increment(-1),
+      updatedAt: new Date().toISOString()
+    });
+
+    res.json({ success: true, message: 'Course deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting course:', error);
+    res.status(500).json({ error: 'Failed to delete course' });
+  }
+});
+
+// Check course generation limits for guests
+app.get('/api/course-limits', async (req, res) => {
+  try {
+    const guestId = req.headers['x-guest-id'] || req.ip;
+    const guestDoc = await db.collection('guests').doc(guestId).get();
+    
+    let coursesGenerated = 0;
+    
+    if (guestDoc.exists) {
+      const guestData = guestDoc.data();
+      
+      // Reset counter if it's a new day
+      const lastReset = new Date(guestData.lastReset);
+      const now = new Date();
+      const daysDiff = Math.floor((now - lastReset) / (1000 * 60 * 60 * 24));
+      
+      if (daysDiff >= 1) {
+        coursesGenerated = 0;
+      } else {
+        coursesGenerated = guestData.coursesGenerated || 0;
+      }
+    }
+    
+    res.json({
+      coursesGenerated,
+      limit: 2,
+      remaining: Math.max(0, 2 - coursesGenerated),
+      canGenerate: coursesGenerated < 2
+    });
+  } catch (error) {
+    console.error('Error checking course limits:', error);
+    res.status(500).json({ error: 'Failed to check limits' });
   }
 });
 
