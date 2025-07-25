@@ -1,38 +1,59 @@
 import React from 'react';
 import { Pressable, View, StyleSheet } from 'react-native';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
-import { faInfo, faGears } from '@fortawesome/free-solid-svg-icons'
+import { faInfo, faGears, faCrown } from '@fortawesome/free-solid-svg-icons'
 import {
   useNavigation,
 } from '@react-navigation/native';
 import { useTheme } from '../../app/theme';
 
-export function RightHeaderHome() {
+interface RightHeaderHomeProps {
+  onPremiumPress?: () => void;
+}
+
+export function RightHeaderHome({ onPremiumPress }: RightHeaderHomeProps) {
   const navigation = useNavigation();
-    const { theme } = useTheme();
+  const { theme } = useTheme();
+
+  const handlePremiumPress = () => {
+    if (onPremiumPress) {
+      onPremiumPress();
+    } else {
+      console.log('Premium icon clicked from header - no handler provided');
+    }
+  };
 
   return (
-    <>
-      <View style={styles.icon1Container}>
+    <View style={styles.container}>
+      {/* Premium Icon */}
+      <View style={styles.iconContainer}>
+        <Pressable style={styles.button} onPress={handlePremiumPress}>
+          <FontAwesomeIcon size={19} icon={faCrown} color={theme.headerTitle}/>
+        </Pressable>
+      </View>
+      
+      {/* Settings Icon */}
+      <View style={styles.iconContainer}>
         <Pressable style={styles.button} onPress={() => {
-          navigation.navigate("Settings")
+          navigation.navigate("Settings" as never)
         }}>
           <FontAwesomeIcon size={19} icon={faGears} color={theme.headerTitle}/>
         </Pressable>
       </View>
-    </>
+    </View>
   );
 }
 
 let styles = StyleSheet.create({
-  icon1Container: {
-    paddingRight: 10,
+  container: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  icon2Container: {
-    paddingLeft: 10,
+  iconContainer: {
+    paddingHorizontal: 8,
   },
   button: {
-    padding: 0,
+    padding: 4,
     margin: 0
   }
 });

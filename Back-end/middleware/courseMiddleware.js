@@ -1,4 +1,5 @@
 const { auth, db } = require('../config/firebase');
+const CONFIG = require('../config/appConfig');
 
 // Middleware to verify Firebase ID token (optional for course generation)
 const verifyTokenOptional = async (req, res, next) => {
@@ -57,13 +58,13 @@ const checkCourseGenerationLimit = async (req, res, next) => {
         }
       }
       
-      if (guestData.coursesGenerated >= 2) {
+      if (guestData.coursesGenerated >= CONFIG.COURSE_LIMITS.FREE_USER_MONTHLY_LIMIT) {
         return res.status(403).json({
           error: 'Free course generation limit reached',
-          message: 'You have reached the limit of 2 free courses. Please subscribe to generate unlimited courses.',
+          message: `You have reached the limit of ${CONFIG.COURSE_LIMITS.FREE_USER_MONTHLY_LIMIT} free courses. Please subscribe to generate unlimited courses.`,
           isLimitReached: true,
           coursesGenerated: guestData.coursesGenerated,
-          limit: 2
+          limit: CONFIG.COURSE_LIMITS.FREE_USER_MONTHLY_LIMIT
         });
       }
       

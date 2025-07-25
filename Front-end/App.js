@@ -6,6 +6,8 @@ import { ThemeProvider } from './app/theme';
 import { AuthProvider } from './contexts/AuthContext';
 import AuthGuard from './app/components/authGuard';
 import MyStack from './app/components/navigation';
+// Import Firestore utilities for automatic error monitoring
+import './utils/firestoreUtils';
 
 export default function App() {
   return (

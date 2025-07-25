@@ -7,6 +7,7 @@ import { useAppDispatch } from '../../hook';
 import { useTheme } from '../../theme';
 import { setModeSetting } from '../../../features/settings/settingsSlice';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
+import DebugPanel from '../debugPanel';
 // import { faChevronDown, faXmark } from '@fortawesome/free-solid-svg-icons';
 // import { SelectList } from 'react-native-dropdown-select-list'
 import {
@@ -20,6 +21,7 @@ import { faSun, faMoon } from '@fortawesome/free-solid-svg-icons';
 export function Settings() {
   const dispatch = useAppDispatch();
   const [modalVisible, setModalVisible] = useState(false);
+  const [debugPanelVisible, setDebugPanelVisible] = useState(false);
   const { mode, setMode } = useTheme();
   const { theme } = useTheme();
   const styles = getStyles(theme);
@@ -126,6 +128,14 @@ export function Settings() {
             </View>
           </TouchableHighlight>
 
+          {__DEV__ && (
+            <TouchableHighlight underlayColor={'transparent'} onPress={() => setDebugPanelVisible(true)}>
+              <View style={styles.debug}>
+                <Text style={styles.text}>Debug Panel</Text>
+              </View>
+            </TouchableHighlight>
+          )}
+
           <Modal
             animationType="slide"
             transparent={true}
@@ -153,6 +163,11 @@ export function Settings() {
               </View>
             </View>
           </Modal>
+
+          <DebugPanel 
+            visible={debugPanelVisible} 
+            onClose={() => setDebugPanelVisible(false)} 
+          />
 
         </SafeAreaView>
       </SafeAreaProvider>
@@ -191,6 +206,14 @@ function getStyles(theme) {
     },
     reset: {
       backgroundColor: theme.error,
+      alignItems: 'center',
+      padding: 10,
+      margin: 5,
+      marginVertical: 15,
+      borderRadius: 10,
+    },
+    debug: {
+      backgroundColor: theme.cardBackground,
       alignItems: 'center',
       padding: 10,
       margin: 5,

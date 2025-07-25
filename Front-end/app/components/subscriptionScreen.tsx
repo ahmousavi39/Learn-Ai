@@ -12,6 +12,8 @@ import {
 import subscriptionService, { SubscriptionProduct } from '../../services/subscriptionService';
 import authService from '../../services/authService';
 import { FontAwesome } from '@expo/vector-icons';
+import { useTheme } from '../theme';
+import APP_CONFIG from '../../config/appConfig';
 
 interface SubscriptionScreenProps {
   onSubscriptionSuccess: (user: any) => void;
@@ -26,6 +28,8 @@ const SubscriptionScreen: React.FC<SubscriptionScreenProps> = ({
   const [loading, setLoading] = useState(true);
   const [purchasing, setPurchasing] = useState<string | null>(null);
   const [restoring, setRestoring] = useState(false);
+  const { theme, mode } = useTheme();
+  const styles = getStyles(theme, mode);
 
   useEffect(() => {
     loadProducts();
@@ -104,15 +108,12 @@ const SubscriptionScreen: React.FC<SubscriptionScreenProps> = ({
     <View style={styles.featuresContainer}>
       <Text style={styles.featuresTitle}>Premium Features</Text>
       {[
-        'Unlimited AI-powered lessons',
-        'Personalized learning paths',
-        'Advanced progress tracking',
-        'Offline mode access',
+        `Up to ${APP_CONFIG.COURSE_LIMITS.PREMIUM_USER_MONTHLY_LIMIT} AI-powered courses per month`,
         'Priority customer support',
         'No advertisements',
       ].map((feature, index) => (
         <View key={index} style={styles.featureItem}>
-          <FontAwesome name="check" size={16} color="#4CAF50" />
+          <FontAwesome name="check" size={16} color={mode === 'light' ? '#4CAF50' : theme.secondary} />
           <Text style={styles.featureText}>{feature}</Text>
         </View>
       ))}
@@ -120,39 +121,25 @@ const SubscriptionScreen: React.FC<SubscriptionScreenProps> = ({
   );
 
   const renderProduct = (product: SubscriptionProduct) => {
-    const isYearly = product.productId.includes('yearly');
     const isPurchasing = purchasing === product.productId;
     
     return (
       <TouchableOpacity
         key={product.productId}
-        style={[
-          styles.productCard,
-          isYearly && styles.popularProduct,
-        ]}
+        style={styles.productCard}
         onPress={() => handlePurchase(product.productId)}
         disabled={isPurchasing || purchasing !== null}
       >
-        {isYearly && (
-          <View style={styles.popularBadge}>
-            <Text style={styles.popularText}>Most Popular</Text>
-          </View>
-        )}
-        
         <Text style={styles.productTitle}>{product.title}</Text>
         <Text style={styles.productPrice}>{product.price}</Text>
         <Text style={styles.productDescription}>{product.description}</Text>
-        
-        {isYearly && (
-          <Text style={styles.savingsText}>Save 30% compared to monthly</Text>
-        )}
         
         {isPurchasing ? (
           <ActivityIndicator color="#fff" style={styles.purchaseButton} />
         ) : (
           <View style={styles.purchaseButton}>
             <Text style={styles.purchaseButtonText}>
-              {isYearly ? 'Choose Yearly' : 'Choose Monthly'}
+              Choose Plan
             </Text>
           </View>
         )}
@@ -164,7 +151,7 @@ const SubscriptionScreen: React.FC<SubscriptionScreenProps> = ({
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#007AFF" />
+          <ActivityIndicator size="large" color={mode === 'light' ? '#007AFF' : theme.secondary} />
           <Text style={styles.loadingText}>Loading subscription options...</Text>
         </View>
       </SafeAreaView>
@@ -194,7 +181,7 @@ const SubscriptionScreen: React.FC<SubscriptionScreenProps> = ({
           disabled={restoring}
         >
           {restoring ? (
-            <ActivityIndicator color="#007AFF" />
+            <ActivityIndicator color={mode === 'light' ? '#007AFF' : theme.secondary} />
           ) : (
             <Text style={styles.restoreButtonText}>Restore Purchases</Text>
           )}
@@ -215,10 +202,10 @@ const SubscriptionScreen: React.FC<SubscriptionScreenProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any, mode: string) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: mode === 'light' ? '#f8f9fa' : theme.background,
   },
   scrollContent: {
     padding: 20,
@@ -231,7 +218,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 10,
     fontSize: 16,
-    color: '#666',
+    color: mode === 'light' ? '#666' : theme.text,
   },
   header: {
     alignItems: 'center',
@@ -240,22 +227,23 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#333',
+    color: mode === 'light' ? '#333' : theme.text,
     marginBottom: 10,
     textAlign: 'center',
   },
   subtitle: {
     fontSize: 16,
-    color: '#666',
+    color: mode === 'light' ? '#666' : theme.text,
     textAlign: 'center',
     lineHeight: 22,
+    opacity: mode === 'light' ? 1 : 0.8,
   },
   featuresContainer: {
-    backgroundColor: '#fff',
+    backgroundColor: mode === 'light' ? '#fff' : theme.card,
     padding: 20,
     borderRadius: 12,
     marginBottom: 30,
-    shadowColor: '#000',
+    shadowColor: mode === 'light' ? '#000' : theme.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -264,7 +252,7 @@ const styles = StyleSheet.create({
   featuresTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#333',
+    color: mode === 'light' ? '#333' : theme.text,
     marginBottom: 15,
   },
   featureItem: {
@@ -275,7 +263,8 @@ const styles = StyleSheet.create({
   featureText: {
     marginLeft: 10,
     fontSize: 16,
-    color: '#555',
+    color: mode === 'light' ? '#555' : theme.text,
+    opacity: mode === 'light' ? 1 : 0.9,
   },
   productsContainer: {
     marginBottom: 30,
@@ -283,71 +272,47 @@ const styles = StyleSheet.create({
   productsTitle: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: '#333',
+    color: mode === 'light' ? '#333' : theme.text,
     marginBottom: 20,
     textAlign: 'center',
   },
   productCard: {
-    backgroundColor: '#fff',
+    backgroundColor: mode === 'light' ? '#fff' : theme.card,
     padding: 20,
     borderRadius: 12,
     marginBottom: 15,
-    shadowColor: '#000',
+    shadowColor: mode === 'light' ? '#000' : theme.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
-    position: 'relative',
-  },
-  popularProduct: {
-    borderColor: '#007AFF',
-    borderWidth: 2,
-  },
-  popularBadge: {
-    position: 'absolute',
-    top: -10,
-    left: 20,
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  popularText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: 'bold',
   },
   productTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#333',
+    color: mode === 'light' ? '#333' : theme.text,
     marginBottom: 5,
   },
   productPrice: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#007AFF',
+    color: mode === 'light' ? '#007AFF' : theme.secondary,
     marginBottom: 8,
   },
   productDescription: {
     fontSize: 14,
-    color: '#666',
+    color: mode === 'light' ? '#666' : theme.text,
     marginBottom: 10,
-  },
-  savingsText: {
-    fontSize: 14,
-    color: '#4CAF50',
-    fontWeight: '600',
-    marginBottom: 15,
+    opacity: mode === 'light' ? 1 : 0.8,
   },
   purchaseButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: mode === 'light' ? '#007AFF' : theme.secondary,
     paddingVertical: 12,
     borderRadius: 8,
     alignItems: 'center',
   },
   purchaseButtonText: {
-    color: '#fff',
+    color: mode === 'light' ? '#fff' : '#000',
     fontSize: 16,
     fontWeight: 'bold',
   },
@@ -357,7 +322,7 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   restoreButtonText: {
-    color: '#007AFF',
+    color: mode === 'light' ? '#007AFF' : theme.secondary,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -367,14 +332,16 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   skipButtonText: {
-    color: '#666',
+    color: mode === 'light' ? '#666' : theme.text,
     fontSize: 16,
+    opacity: mode === 'light' ? 1 : 0.7,
   },
   termsText: {
     fontSize: 12,
-    color: '#999',
+    color: mode === 'light' ? '#999' : theme.text,
     textAlign: 'center',
     lineHeight: 18,
+    opacity: mode === 'light' ? 1 : 0.6,
   },
 });
 

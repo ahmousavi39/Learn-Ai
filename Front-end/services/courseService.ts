@@ -1,7 +1,8 @@
 import { auth } from './firebaseConfig';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
-import DeviceInfo from 'react-native-device-info';
+import 'react-native-get-random-values';
+import { v4 as uuidv4 } from 'uuid';
 
 class CourseService {
   private static instance: CourseService;
@@ -43,8 +44,8 @@ class CourseService {
       let guestId = await AsyncStorage.getItem('guestId');
       
       if (!guestId) {
-        // Create unique guest ID using device info
-        const deviceId = await DeviceInfo.getUniqueId();
+        // Create unique guest ID using UUID and timestamp
+        const deviceId = uuidv4();
         const timestamp = Date.now();
         guestId = `guest_${deviceId}_${timestamp}`;
         await AsyncStorage.setItem('guestId', guestId);
@@ -68,7 +69,7 @@ class CourseService {
     try {
       const headers = await this.getAuthHeaders();
       
-      const response = await fetch(`${process.env.PUBLIC_HTTP_SERVER}/api/course-limits`, {
+      const response = await fetch(`${process.env.EXPO_PUBLIC_HTTP_SERVER}/api/course-limits`, {
         method: 'GET',
         headers,
       });
@@ -125,7 +126,7 @@ class CourseService {
     formData.append('language', data.language);
     formData.append('requestId', data.requestId);
 
-    return fetch(`${process.env.PUBLIC_HTTP_SERVER}/generate-course`, {
+    return fetch(`${process.env.EXPO_PUBLIC_HTTP_SERVER}/generate-course`, {
       method: 'POST',
       headers: {
         // Don't set Content-Type for FormData - let browser set it
@@ -141,7 +142,7 @@ class CourseService {
     try {
       const headers = await this.getAuthHeaders();
       
-      const response = await fetch(`${process.env.PUBLIC_HTTP_SERVER}/api/courses`, {
+      const response = await fetch(`${process.env.EXPO_PUBLIC_HTTP_SERVER}/api/courses`, {
         method: 'GET',
         headers,
       });
@@ -164,7 +165,7 @@ class CourseService {
     try {
       const headers = await this.getAuthHeaders();
       
-      const response = await fetch(`${process.env.PUBLIC_HTTP_SERVER}/api/courses/${courseId}`, {
+      const response = await fetch(`${process.env.EXPO_PUBLIC_HTTP_SERVER}/api/courses/${courseId}`, {
         method: 'DELETE',
         headers,
       });
@@ -184,7 +185,7 @@ class CourseService {
   }): Promise<Response> {
     const headers = await this.getAuthHeaders();
     
-    return fetch(`${process.env.PUBLIC_HTTP_SERVER}/regenerate-lesson`, {
+    return fetch(`${process.env.EXPO_PUBLIC_HTTP_SERVER}/regenerate-lesson`, {
       method: 'POST',
       headers,
       body: JSON.stringify(data),

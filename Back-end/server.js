@@ -10,6 +10,7 @@ const http = require('http');
 const authRoutes = require('./routes/auth');
 const subscriptionRoutes = require('./routes/subscriptions');
 const { db, auth } = require('./config/firebase');
+const CONFIG = require('./config/appConfig');
 
 const app = express();
 app.use(cors());
@@ -476,9 +477,9 @@ app.get('/api/course-limits', async (req, res) => {
     
     res.json({
       coursesGenerated,
-      limit: 2,
-      remaining: Math.max(0, 2 - coursesGenerated),
-      canGenerate: coursesGenerated < 2
+      limit: CONFIG.COURSE_LIMITS.FREE_USER_MONTHLY_LIMIT,
+      remaining: Math.max(0, CONFIG.COURSE_LIMITS.FREE_USER_MONTHLY_LIMIT - coursesGenerated),
+      canGenerate: coursesGenerated < CONFIG.COURSE_LIMITS.FREE_USER_MONTHLY_LIMIT
     });
   } catch (error) {
     console.error('Error checking course limits:', error);

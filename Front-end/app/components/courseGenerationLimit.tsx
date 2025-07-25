@@ -11,6 +11,7 @@ import { FontAwesome } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 import courseService from '../../services/courseService';
 import SubscriptionScreen from './subscriptionScreen';
+import APP_CONFIG from '../../config/appConfig';
 
 interface CourseGenerationLimitProps {
   visible: boolean;
@@ -27,8 +28,8 @@ const CourseGenerationLimit: React.FC<CourseGenerationLimitProps> = ({
   const [showSubscription, setShowSubscription] = useState(false);
   const [limits, setLimits] = useState({
     coursesGenerated: 0,
-    limit: 2,
-    remaining: 2,
+    limit: APP_CONFIG.COURSE_LIMITS.FREE_USER_MONTHLY_LIMIT,
+    remaining: APP_CONFIG.COURSE_LIMITS.FREE_USER_MONTHLY_LIMIT,
     canGenerate: true
   });
 

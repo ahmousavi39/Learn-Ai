@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Alert, Button, Modal, StyleSheet, Text, TextInput, TouchableHighlight, View, Animated, TouchableOpacity } from 'react-native';
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 import { useAppDispatch, useAppSelector } from '../../hook';
+import { useAuth } from '../../../contexts/AuthContext';
 import {
   loadData, selectCourses, openLocation, generateCourse
 } from '../../../features/item/itemSlice';
@@ -27,7 +28,9 @@ import { setLanguage, selectLanguage, selectModeSetting } from '../../../feature
 import { loadSettings } from '../../../features/settings/settingsSlice';
 import { useTheme } from '../../theme';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
-import { faMagnifyingGlass, faXmark } from '@fortawesome/free-solid-svg-icons';
+import { faMagnifyingGlass, faXmark, faCrown } from '@fortawesome/free-solid-svg-icons';
+import SubscriptionScreen from '../subscriptionScreen';
+import { RightHeaderHome } from '../rightHeaderHome';
 
 const CustomCheckbox = ({ value, onValueChange }) => {
   return (
@@ -59,7 +62,9 @@ const CustomCheckbox = ({ value, onValueChange }) => {
 export function Home({ navigation }) {
   const dispatch = useAppDispatch();
   const courses = useAppSelector(selectCourses);
+  const { user, canGenerateCourse, incrementCourseCount } = useAuth();
   const [modalVisible, setModalVisible] = useState(false);
+  const [subscriptionModalVisible, setSubscriptionModalVisible] = useState(false);
   const [text, setText] = useState('');
   const [levelOneToTen, setLevelOneToTen] = useState(4);
   const [time, setTime] = useState(10);
@@ -211,7 +216,7 @@ export function Home({ navigation }) {
         ws.current = null;
       }
 
-      ws.current = new WebSocket(process.env.PUBLIC_WEBSTOCK_SERVER);
+      ws.current = new WebSocket(process.env.EXPO_PUBLIC_WEBSTOCK_SERVER || 'ws://192.168.1.100:4000');
 
       ws.current.onopen = () => {
         console.log('WebSocket connected');
@@ -255,15 +260,8 @@ export function Home({ navigation }) {
     }
   };
 
-  // --- DuckDuckGo Image Search Utilities ---
-
   const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-  /**
-   * Fetches the vqd parameter from DuckDuckGo's image search HTML.
-   * @param {string} query - The search query.
-   * @returns {Promise<string|null>} The vqd string or null if not found.
-   */
   async function getVQDFromHTML(query) {
     const url = `https://duckduckgo.com/?q=${encodeURIComponent(query)}`;
     try {
@@ -282,31 +280,19 @@ export function Home({ navigation }) {
     }
   }
 
-  /**
-   * Checks if a given URL points to an image by making a HEAD request.
-   * @param {string} url - The URL to check.
-   * @returns {Promise<boolean>} True if the URL is an image, false otherwise.
-   */
   async function isImageUrl(url) {
     try {
       const response = await axios.head(url, {
-        validateStatus: () => true, // Don't throw on HTTP errors (e.g., 404, 500)
-        timeout: 2500 // Added a timeout for image HEAD requests
+        validateStatus: () => true,
+        timeout: 2500
       });
       const contentType = response.headers['content-type'];
       return contentType && contentType.startsWith('image/');
     } catch (error) {
-      // console.warn(`Failed to validate image URL ${url}: ${error.message}`); // Keep this commented unless deep debugging
       return false;
     }
   }
 
-  /**
-   * Retries a promise with a timeout.
-   * @param {Promise<any>} promise - The promise to execute.
-   * @param {number} ms - The timeout duration in milliseconds.
-   * @returns {Promise<any>} The resolved promise result or a timeout error.
-   */
   function retryIfTimeout(promise, ms) {
     return new Promise((resolve, reject) => {
       const timeoutId = setTimeout(() => reject(new Error(`Operation timed out after ${ms}ms`)), ms);
@@ -322,31 +308,16 @@ export function Home({ navigation }) {
     });
   }
 
-  /**
-   * Retries a function until its result is valid or max retries are reached.
-   * Includes exponential backoff for delays.
-   * @param {Function} fn - The function to execute.
-   * @param {Function} isValid - A function that validates the result of `fn`.
-   * @param {number} [maxRetries=2] - The maximum number of retries.
-   * @returns {Promise<any>} The valid result.
-   */
   const retryIfInvalid = async (fn, isValid, maxRetries = 4) => {
     let result;
     for (let attempt = 0; attempt < maxRetries; attempt++) {
       result = await fn();
       if (isValid(result)) return result;
-      // Exponential backoff
-      await delay(Math.pow(2, attempt) * 1000); // 1s, 2s, 4s, ...
+      await delay(Math.pow(2, attempt) * 1000);
     }
     throw new Error(`Validation failed after ${maxRetries} retries.`);
   };
 
-  /**
-   * Fetches an image link from DuckDuckGo based on a query.
-   * Includes a robust vqd acquisition.
-   * @param {string} query - The search query.
-   * @returns {Promise<string|null>} The image URL or null if not found.
-   */
   async function getImageLink(query, url, headers) {
     try {
       const response = await axios.get(url, { headers, timeout: 10000 }); // Added timeout for the image search itself
@@ -367,27 +338,18 @@ export function Home({ navigation }) {
     }
   }
 
-  /**
-   * Attempts to get an image with multiple retries and a timeout for each attempt.
-   * Implements exponential backoff between retries.
-   * @param {string} query - The search query.
-   * @param {number} [retries=3] - Number of retries.
-   * @param {number} [timeoutMs=15000] - Timeout for each attempt in milliseconds.
-   * @returns {Promise<string|null>} The image URL or null.
-   */
   async function getImageWithRetry(query, language, retries = 3, timeoutMs = 10000) {
-    // Retry vqd acquisition if it fails or returns null
     const vqd = await retryIfInvalid(
       () => getVQDFromHTML(query),
       (v) => v !== null,
-      3 // Max 3 retries for vqd acquisition
+      3
     ).catch(err => {
       console.warn(`Failed to get vqd for query "${query}" after retries: ${err.message}`);
       return null;
     });
 
     if (!vqd) {
-      return null; // Cannot proceed without vqd
+      return null;
     }
 
     const url = `https://duckduckgo.com/i.js?o=json&q=${encodeURIComponent(query)}&l=us-en&vqd=${encodeURIComponent(vqd)}&p=1&f=size%3ALarge`;
@@ -424,7 +386,7 @@ export function Home({ navigation }) {
         }
       }
     }
-    console.warn(`❌ Failed to get image after ${retries + 1} attempts for query: "${query}"`);
+    console.warn(`Failed to get image after ${retries + 1} attempts for query: "${query}"`);
     return null;
   }
 
@@ -530,7 +492,7 @@ export function Home({ navigation }) {
   // };
 
   const onFindImages = async ({ targetCourse }) => {
-    const courseWithImageUris = JSON.parse(JSON.stringify(targetCourse)); // Deep clone
+    const courseWithImageUris = JSON.parse(JSON.stringify(targetCourse));
     const { sections, topic, language } = courseWithImageUris;
 
     for (let sectionIndex = 0; sectionIndex < sections.length; sectionIndex++) {
@@ -552,6 +514,27 @@ export function Home({ navigation }) {
     }
 
     return courseWithImageUris;
+  };
+
+  const handleGenerateCourse = async (topic, level, readingTimeMin, language) => {
+    // Check if user can generate a course
+    if (!canGenerateCourse) {
+      // Directly redirect to subscription page when limit is reached
+      setModalVisible(false); // Close the current modal first
+      openPremiumScreen(); // Open premium/subscription screen
+      return;
+    }
+
+    try {
+      await generate(topic, level, readingTimeMin, language);
+      
+      // Increment course count for anonymous users
+      if (user?.isAnonymous) {
+        await incrementCourseCount();
+      }
+    } catch (error) {
+      console.error('Error generating course:', error);
+    }
   };
 
   const generate = async (topic, level, readingTimeMin, language) => {
@@ -600,7 +583,7 @@ export function Home({ navigation }) {
       formData.append('language', language);
       formData.append('requestId', requestId.current);
 
-      const response = await fetchWithTimeout(`${process.env.PUBLIC_HTTP_SERVER}/generate-course`, {
+      const response = await fetchWithTimeout(`${process.env.EXPO_PUBLIC_HTTP_SERVER || 'http://192.168.1.100:4000'}/generate-course`, {
         method: 'POST',
         body: formData,
       });
@@ -671,6 +654,18 @@ export function Home({ navigation }) {
       }
     });
   };
+
+  const openPremiumScreen = () => {
+    // Open subscription screen modal
+    setSubscriptionModalVisible(true);
+  };
+
+  // Set navigation options with the openPremiumScreen function
+  React.useEffect(() => {
+    navigation.setOptions({
+      headerRight: () => <RightHeaderHome onPremiumPress={openPremiumScreen} />,
+    });
+  }, [navigation]);
 
   return (
     <SafeAreaProvider>
@@ -787,7 +782,7 @@ export function Home({ navigation }) {
                   loop
                   style={styles.largeAnimation}
                 />
-                <Text>Uploading the file{"[s]"}...</Text>
+                <Text style={styles.modalText}>Uploading the file{"[s]"}...</Text>
               </View> : progress.type === "PROCESSING" ? <View style={styles.generatingContainer}>
                 <LottieView
                   source={processingAnimation}
@@ -795,7 +790,7 @@ export function Home({ navigation }) {
                   loop
                   style={styles.xtraLargeAnimation}
                 />
-                <Text>Processing the file{"[s]"}...</Text>
+                <Text style={styles.modalText}>Processing the file{"[s]"}...</Text>
               </View> : progress.type === "IMAGE" ?
                 <View style={styles.generatingContainer}>
                   <LottieView
@@ -804,7 +799,7 @@ export function Home({ navigation }) {
                     loop
                     style={styles.xtraLargeAnimation}
                   />
-                  <Text>Finding the right Images...</Text>
+                  <Text style={styles.modalText}>Finding the right Images...</Text>
                 </View>
                 : <View style={styles.searchingContainer}>
                   <LottieView
@@ -813,8 +808,8 @@ export function Home({ navigation }) {
                     loop={false}
                     style={styles.smallAnimation}
                   />
-                  <Text>Opps! something went worng...</Text>
-                  <Text>Please try later</Text>
+                  <Text style={styles.modalText}>Opps! something went worng...</Text>
+                  <Text style={styles.modalText}>Please try later</Text>
                 </View>) : ""}
 
               {!loading && <>
@@ -900,7 +895,7 @@ export function Home({ navigation }) {
                       <Text style={styles.cancelText}>Cancel</Text>
                     </View>
                   </TouchableHighlight>
-                  <TouchableHighlight underlayColor={'transparent'} onPress={() => generate(text, levelOneToTen, time, selectedLanguage?.key)}>
+                  <TouchableHighlight underlayColor={'transparent'} onPress={() => handleGenerateCourse(text, levelOneToTen, time, selectedLanguage?.key)}>
                     <View style={styles.generate}>
                       <Text style={styles.generateText}>Generate</Text>
                     </View>
@@ -909,13 +904,28 @@ export function Home({ navigation }) {
               </>}
             </View>
           </View>
-        </Modal>
-      </SafeAreaView>
-    </SafeAreaProvider>
-  );
-}
+          </Modal>
 
-function getStyles(theme) {
+        {/* Subscription Modal */}
+        <Modal
+          animationType="slide"
+          transparent={false}
+          visible={subscriptionModalVisible}
+          onRequestClose={() => setSubscriptionModalVisible(false)}
+        >
+          <SubscriptionScreen
+            onSubscriptionSuccess={(user) => {
+              console.log('Subscription successful:', user);
+              setSubscriptionModalVisible(false);
+              // You can add additional logic here, like updating user state
+            }}
+            onSkip={() => setSubscriptionModalVisible(false)}
+          />
+        </Modal>
+        </SafeAreaView>
+      </SafeAreaProvider>
+    );
+  }function getStyles(theme) {
   return StyleSheet.create({
     container: {
       flex: 1,
