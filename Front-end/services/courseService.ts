@@ -20,17 +20,20 @@ class CourseService {
       'Content-Type': 'application/json',
     };
 
-    // Add auth token if user is logged in
+    // Add auth token if user is logged in with Firebase (not local users)
     const user = auth.currentUser;
-    if (user) {
+    if (user && !user.uid.startsWith('local-')) {
       try {
         const token = await user.getIdToken();
         headers['Authorization'] = `Bearer ${token}`;
       } catch (error) {
         console.error('Failed to get auth token:', error);
+        // Fallback to guest mode
+        const guestId = await this.getGuestId();
+        headers['x-guest-id'] = guestId;
       }
     } else {
-      // For guests, add a unique identifier
+      // For guests and local users, add a unique identifier
       const guestId = await this.getGuestId();
       headers['x-guest-id'] = guestId;
     }

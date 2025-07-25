@@ -4,7 +4,7 @@ import { terminateFirestore, reinitializeFirestore, isFirestoreActive } from '..
 
 export class FirestoreManager {
   private static errorCount = 0;
-  private static maxErrors = 5;
+  private static maxErrors = __DEV__ ? 3 : 5; // Terminate faster in development
   private static isMonitoring = false;
   private static isTerminated = false;
 
@@ -22,7 +22,13 @@ export class FirestoreManager {
       
       if (message.includes('Firestore') && message.includes('transport errored')) {
         this.errorCount++;
-        console.log(`Firestore error count: ${this.errorCount}/${this.maxErrors}`);
+        
+        if (__DEV__ && this.errorCount <= 3) {
+          console.log(`Firestore error count: ${this.errorCount}/${this.maxErrors}`);
+          if (this.errorCount === 1) {
+            console.log('🔧 Development mode: Switching to offline mode for faster loading');
+          }
+        }
         
         if (this.errorCount >= this.maxErrors && !this.isTerminated) {
           this.terminateFirestoreCompletely();

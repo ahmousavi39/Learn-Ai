@@ -278,6 +278,10 @@ class AuthService {
         await AsyncStorage.setItem(`device_firebase_${deviceId}`, user.uid);
         await AsyncStorage.setItem(`firebase_device_${user.uid}`, deviceId);
         
+        // Store the full user data for persistence
+        await AsyncStorage.setItem('authUser', JSON.stringify(authUser));
+        console.log('💾 Anonymous user stored locally for persistence');
+        
         return authUser;
       }
       return null;
@@ -293,31 +297,52 @@ class AuthService {
       const deviceId = await this.createDeviceFingerprint();
       const existingUid = await AsyncStorage.getItem(`device_firebase_${deviceId}`);
       
-      if (existingUid && auth.currentUser?.uid === existingUid) {
-        // User is already signed in with the correct account for this device
-        const coursesGenerated = await this.getDeviceCoursesGenerated();
-        
-        // Update last seen timestamp in Firestore
-        if (this.firestoreEnabled && isFirestoreActive()) {
-          try {
-            const userDocRef = doc(db, 'users', auth.currentUser.uid);
-            await setDoc(userDocRef, {
-              lastSeen: new Date().toISOString(),
-              deviceId
-            }, { merge: true });
-          } catch (error) {
-            console.warn('Failed to update last seen in Firestore:', error);
+      if (existingUid) {
+        // Check if current Firebase user matches stored UID
+        if (auth.currentUser?.uid === existingUid) {
+          console.log('✅ Firebase user already matches device UID:', existingUid);
+          const coursesGenerated = await this.getDeviceCoursesGenerated();
+          
+          // Update last seen timestamp in Firestore
+          if (this.firestoreEnabled && isFirestoreActive()) {
+            try {
+              const userDocRef = doc(db, 'users', auth.currentUser.uid);
+              await setDoc(userDocRef, {
+                lastSeen: new Date().toISOString(),
+                deviceId
+              }, { merge: true });
+            } catch (error) {
+              console.warn('Failed to update last seen in Firestore:', error);
+            }
+          }
+          
+          return {
+            uid: auth.currentUser.uid,
+            email: auth.currentUser.email,
+            displayName: auth.currentUser.displayName,
+            emailVerified: auth.currentUser.emailVerified,
+            isAnonymous: auth.currentUser.isAnonymous,
+            coursesGenerated
+          };
+        } else {
+          // We have a stored UID but no current Firebase user
+          // This suggests Firebase auth hasn't loaded yet or session was lost
+          console.log('ℹ️ Found stored UID but no current Firebase user. UID:', existingUid);
+          
+          // Try to get user data from local storage as fallback
+          const storedUserData = await AsyncStorage.getItem('authUser');
+          if (storedUserData) {
+            const userData = JSON.parse(storedUserData);
+            if (userData.uid === existingUid) {
+              console.log('✅ Using stored user data for device:', deviceId);
+              const coursesGenerated = await this.getDeviceCoursesGenerated();
+              return {
+                ...userData,
+                coursesGenerated
+              };
+            }
           }
         }
-        
-        return {
-          uid: auth.currentUser.uid,
-          email: auth.currentUser.email,
-          displayName: auth.currentUser.displayName,
-          emailVerified: auth.currentUser.emailVerified,
-          isAnonymous: auth.currentUser.isAnonymous,
-          coursesGenerated
-        };
       }
       
       return null;

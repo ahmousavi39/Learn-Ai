@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import authService, { AuthUser } from '../services/authService';
+import { retryFirestoreConnection } from '../utils/firestoreConnectionTest';
 
 interface AuthContextType {
   user: AuthUser | null;
@@ -37,22 +38,64 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const checkAuthState = async () => {
     try {
       setLoading(true);
-      const currentUser = await authService.getCurrentUser();
+      
+      // Test Firestore connection first
+      console.log('🔍 Testing Firestore connection before auth...');
+      await retryFirestoreConnection(2); // Only 2 quick attempts
+      
+      // Wait for Firebase auth state to initialize properly
+      console.log('⏳ Waiting for Firebase auth state to load...');
+      
+      // Create a promise that resolves when auth state is determined
+      const authStatePromise = new Promise<AuthUser | null>((resolve) => {
+        const unsubscribe = authService.onAuthStateChange((firebaseUser) => {
+          unsubscribe(); // Stop listening after first state change
+          
+          if (firebaseUser) {
+            console.log('✅ Found persisted Firebase user:', firebaseUser.uid);
+            // Convert Firebase User to AuthUser
+            const authUser: AuthUser = {
+              uid: firebaseUser.uid,
+              email: firebaseUser.email,
+              displayName: firebaseUser.displayName,
+              emailVerified: firebaseUser.emailVerified,
+              isAnonymous: firebaseUser.isAnonymous,
+              coursesGenerated: 0
+            };
+            resolve(authUser);
+          } else {
+            console.log('ℹ️ No persisted Firebase user found');
+            resolve(null);
+          }
+        });
+      });
+      
+      // Wait for auth state with timeout
+      const timeoutPromise = new Promise<null>((_, reject) => 
+        setTimeout(() => reject(new Error('Auth state timeout')), 3000)
+      );
+      
+      const currentUser = await Promise.race([
+        authStatePromise,
+        timeoutPromise
+      ]) as AuthUser | null;
       
       if (currentUser) {
         if (currentUser.isAnonymous) {
-          // For anonymous users, always allow them
           setUser(currentUser);
         } else {
-          // For regular users, verify subscription is still valid
-          const hasValidSubscription = await authService.checkSubscriptionStatus(currentUser.uid);
-          
-          if (hasValidSubscription) {
+          // For regular users, verify subscription
+          try {
+            const hasValidSubscription = await authService.checkSubscriptionStatus(currentUser.uid);
+            if (hasValidSubscription) {
+              setUser(currentUser);
+            } else {
+              await authService.signOut();
+              await signInAnonymouslyInternal();
+            }
+          } catch (subError) {
+            console.warn('Subscription check failed, allowing user:', subError);
             setUser(currentUser);
-          } else {
-            // Subscription expired, sign out
-            await authService.signOut();
-            setUser(null);
           }
         }
       } else {
@@ -60,14 +103,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         await signInAnonymouslyInternal();
       }
     } catch (error) {
-      console.error('Error checking auth state:', error);
-      // If error, try to sign in anonymously
-      try {
-        await signInAnonymouslyInternal();
-      } catch (anonymousError) {
-        console.error('Error signing in anonymously:', anonymousError);
-        setUser(null);
-      }
+      console.error('Auth state error:', error);
+      // Only fall back to local user if there's a persistent problem
+      console.log('� Falling back to local user due to connection issues');
+      const fallbackUser: AuthUser = {
+        uid: 'local-' + Date.now(),
+        email: null,
+        displayName: 'Local User',
+        emailVerified: false,
+        isAnonymous: true,
+        coursesGenerated: 0
+      };
+      setUser(fallbackUser);
     } finally {
       setLoading(false);
     }
@@ -75,13 +122,34 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const signInAnonymouslyInternal = async () => {
     try {
+      // Check if we already have a stored anonymous user first
+      const storedUser = await authService.getCurrentUser();
+      if (storedUser && storedUser.isAnonymous) {
+        console.log('✅ Using existing stored anonymous user:', storedUser.uid);
+        setUser(storedUser);
+        return;
+      }
+      
+      console.log('🔄 Creating new Firebase anonymous user...');
       const anonymousUser = await authService.signInAnonymously();
       if (anonymousUser) {
+        console.log('✅ New Firebase anonymous user created:', anonymousUser.uid);
         setUser(anonymousUser);
+      } else {
+        throw new Error('Failed to create anonymous user');
       }
     } catch (error) {
-      console.error('Error signing in anonymously:', error);
-      throw error;
+      console.error('❌ Firebase anonymous auth failed:', error);
+      console.log('� Creating local fallback user');
+      const fallbackUser: AuthUser = {
+        uid: 'local-' + Date.now(),
+        email: null,
+        displayName: 'Local User',
+        emailVerified: false,
+        isAnonymous: true,
+        coursesGenerated: 0
+      };
+      setUser(fallbackUser);
     }
   };
 

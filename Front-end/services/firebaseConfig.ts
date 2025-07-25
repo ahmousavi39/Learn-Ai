@@ -1,6 +1,22 @@
-import { initializeApp } from 'firebase/app';
+import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { initializeFirestore, memoryLocalCache, memoryEagerGarbageCollector, terminate, clearIndexedDbPersistence } from 'firebase/firestore';
+import { 
+  initializeFirestore, 
+  getFirestore,
+  memoryLocalCache, 
+  memoryEagerGarbageCollector, 
+  terminate, 
+  clearIndexedDbPersistence 
+} from 'firebase/firestore';
+import { debugFirebaseConfig } from '../utils/firebaseDebug';
+
+// Debug Firebase configuration in development
+if (__DEV__) {
+  const hasAllConfig = debugFirebaseConfig();
+  if (!hasAllConfig) {
+    console.log('🚀 Missing Firebase config - enabling fast offline mode');
+  }
+}
 
 // Firebase config from environment variables
 const firebaseConfig = {
@@ -12,28 +28,54 @@ const firebaseConfig = {
   appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
+// Check if Firebase config is complete
+const hasCompleteConfig = Object.values(firebaseConfig).every(value => value && value !== '');
+
+if (__DEV__ && !hasCompleteConfig) {
+  console.log('⚠️ Incomplete Firebase config - running in offline mode');
+}
+
+// Initialize Firebase (use existing app if available)
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
 // Initialize Auth
 const auth = getAuth(app);
 
-// Initialize Firestore with offline-friendly settings
+// Initialize Firestore with proper singleton pattern
 let db;
 let isFirestoreTerminated = false;
 
 try {
-  // Use memory cache and disable persistence to avoid connection issues
-  db = initializeFirestore(app, {
-    localCache: memoryLocalCache({
-      garbageCollector: memoryEagerGarbageCollector()
-    })
-  });
-  console.log('Firestore initialized with memory cache');
+  // First try to get existing Firestore instance
+  db = getFirestore(app);
+  console.log('✅ Using existing Firestore instance');
 } catch (error) {
-  console.error('Failed to initialize Firestore:', error);
-  // Create a mock db object that will cause operations to fail gracefully
-  db = null;
+  // If no existing instance, initialize with development-friendly settings
+  try {
+    const firestoreSettings: any = {
+      localCache: memoryLocalCache({
+        garbageCollector: memoryEagerGarbageCollector()
+      })
+    };
+    
+    // Only use long polling in production or if specifically needed
+    if (!__DEV__ || process.env.EXPO_PUBLIC_FORCE_LONG_POLLING === 'true') {
+      firestoreSettings.experimentalForceLongPolling = true;
+    }
+    
+    db = initializeFirestore(app, firestoreSettings);
+    console.log('✅ Firestore initialized with optimized settings for', __DEV__ ? 'development' : 'production');
+  } catch (initError) {
+    console.error('❌ Failed to initialize Firestore:', initError);
+    // Last resort: try to get the default instance
+    try {
+      db = getFirestore(app);
+      console.log('✅ Retrieved default Firestore instance');
+    } catch (fallbackError) {
+      console.error('❌ Complete Firestore failure:', fallbackError);
+      db = null;
+    }
+  }
 }
 
 // Function to completely terminate Firestore connections
