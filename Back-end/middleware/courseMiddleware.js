@@ -1,155 +1,202 @@
-const { auth, db } = require('../config/firebase');
-const CONFIG = require('../config/appConfig');
+const userVerificationService = require('../services/userVerificationService');
+const courseCountService = require('../services/courseCountService');
 
-// Middleware to verify Firebase ID token (optional for course generation)
-const verifyTokenOptional = async (req, res, next) => {
+// Middleware to verify Firebase ID token and register/verify user
+const verifyAndRegisterUser = async (req, res, next) => {
   try {
-    const authHeader = req.headers.authorization;
+    console.log('🔍 Verifying and registering user...');
     
-    if (authHeader && authHeader.startsWith('Bearer ') && auth) {
-      const token = authHeader.split(' ')[1];
-      const decodedToken = await auth.verifyIdToken(token);
-      req.user = decodedToken;
-      
-      // Get user data from Firestore if available
-      if (db) {
-        const userDoc = await db.collection('users').doc(decodedToken.uid).get();
-        if (userDoc.exists) {
-          req.userData = userDoc.data();
-        }
-      }
+    // Extract token from Authorization header
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ 
+        error: 'Unauthorized - No valid token provided',
+        needsAuth: true 
+      });
+    }
+
+    const token = authHeader.split(' ')[1];
+
+    // Extract user type from request body (optional, defaults to anonymous)
+    const requestedUserType = req.body?.userType || 'anonymous';
+
+    // Verify user with Firebase and register in JSON if new
+    const verification = await userVerificationService.verifyAndRegisterUser(token, requestedUserType);
+
+    // Add verified user info to request
+    req.user = {
+      uid: verification.uid,
+      email: verification.email,
+      userIdentifier: verification.userIdentifier,
+      userType: verification.userType,
+      decodedToken: verification.decodedToken
+    };
+
+    console.log(`✅ User verified and registered: ${verification.userType} (${verification.userIdentifier.substring(0, 8)}...)`);
+    next();
+
+  } catch (error) {
+    console.error('❌ User verification failed:', error);
+    
+    if (error.message.includes('Token expired') || error.code === 'auth/id-token-expired') {
+      return res.status(401).json({ 
+        error: 'Token expired - Please sign in again',
+        needsAuth: true 
+      });
     }
     
-    next();
-  } catch (error) {
-    console.error('Token verification error:', error);
-    // Continue without user data for guests
-    next();
+    if (error.message.includes('Invalid token') || error.code === 'auth/invalid-id-token') {
+      return res.status(401).json({ 
+        error: 'Invalid token - Please sign in again',
+        needsAuth: true 
+      });
+    }
+
+    return res.status(500).json({ 
+      error: 'User verification failed',
+      details: error.message 
+    });
   }
 };
 
-// Check if user has valid subscription or within free limit
+// Check if user has valid subscription or within free limit using JSON storage
 const checkCourseGenerationLimit = async (req, res, next) => {
   try {
-    // If Firebase is not configured, allow unlimited generation for development
-    if (!db) {
-      console.log('🔧 Firebase not configured - allowing unlimited course generation for development');
-      return next();
+    console.log('🔍 Checking course generation limit...');
+    
+    // Extract token from Authorization header
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ 
+        error: 'Unauthorized - No valid token provided',
+        needsAuth: true 
+      });
     }
 
-    if (!req.user) {
-      // Guest user - check course generation limit by IP or device
-      const guestId = req.headers['x-guest-id'] || req.ip;
-      const guestDoc = await db.collection('guests').doc(guestId).get();
-      
-      let guestData = { coursesGenerated: 0, lastReset: new Date().toISOString() };
-      
-      if (guestDoc.exists) {
-        guestData = guestDoc.data();
-        
-        // Reset counter if it's a new day
-        const lastReset = new Date(guestData.lastReset);
-        const now = new Date();
-        const daysDiff = Math.floor((now - lastReset) / (1000 * 60 * 60 * 24));
-        
-        if (daysDiff >= 1) {
-          guestData.coursesGenerated = 0;
-          guestData.lastReset = now.toISOString();
-        }
-      }
-      
-      if (guestData.coursesGenerated >= CONFIG.COURSE_LIMITS.FREE_USER_MONTHLY_LIMIT) {
-        return res.status(403).json({
-          error: 'Free course generation limit reached',
-          message: `You have reached the limit of ${CONFIG.COURSE_LIMITS.FREE_USER_MONTHLY_LIMIT} free courses. Please subscribe to generate unlimited courses.`,
-          isLimitReached: true,
-          coursesGenerated: guestData.coursesGenerated,
-          limit: CONFIG.COURSE_LIMITS.FREE_USER_MONTHLY_LIMIT
-        });
-      }
-      
-      req.guestData = guestData;
-      req.guestId = guestId;
-      
-    } else {
-      // Authenticated user - check subscription
-      if (!req.userData || !req.userData.subscription || !req.userData.subscription.isActive) {
-        return res.status(403).json({
-          error: 'No active subscription',
-          message: 'An active subscription is required to generate courses. Please subscribe to continue.',
-          requiresSubscription: true
-        });
-      }
-      
-      // Check if subscription is expired
-      const expiryDate = new Date(req.userData.subscription.expiryDate);
-      if (expiryDate <= new Date()) {
-        return res.status(403).json({
-          error: 'Subscription expired',
-          message: 'Your subscription has expired. Please renew to continue generating courses.',
-          requiresSubscription: true
-        });
-      }
+    const token = authHeader.split(' ')[1];
+
+    // Extract user type from request body (optional)
+    const requestedUserType = req.body?.userType || 'anonymous';
+
+    // Verify user with Firebase and check limits
+    const result = await userVerificationService.verifyAndCheckLimits(token, requestedUserType);
+
+    if (!result.canGenerate) {
+      console.log(`❌ Course limit reached for ${result.verification.userType}: ${result.limits.count}/${result.limits.limit}`);
+      return res.status(429).json({
+        error: 'Course generation limit exceeded',
+        message: `You have reached your monthly limit of ${result.limits.limit} courses. ${result.verification.userType === 'anonymous' ? 'Upgrade to premium for more courses.' : 'Your premium limit has been reached.'}`,
+        coursesGenerated: result.limits.count,
+        limit: result.limits.limit,
+        remaining: result.limits.remaining,
+        userType: result.limits.userType,
+        resetDate: result.limits.resetDate
+      });
+    }
+
+    console.log(`✅ Course generation allowed: ${result.limits.count}/${result.limits.limit} (${result.limits.remaining} remaining)`);
+
+    // Add user info to request for later use
+    req.user = {
+      uid: result.verification.uid,
+      email: result.verification.email,
+      userIdentifier: result.verification.userIdentifier,
+      userType: result.verification.userType,
+      decodedToken: result.verification.decodedToken
+    };
+
+    req.courseCount = result.limits.count;
+
+    next();
+
+  } catch (error) {
+    console.error('❌ Course limit check failed:', error);
+    
+    if (error.message.includes('Token expired') || error.code === 'auth/id-token-expired') {
+      return res.status(401).json({ 
+        error: 'Token expired - Please sign in again',
+        needsAuth: true 
+      });
     }
     
+    if (error.message.includes('Invalid token') || error.code === 'auth/invalid-id-token') {
+      return res.status(401).json({ 
+        error: 'Invalid token - Please sign in again',
+        needsAuth: true 
+      });
+    }
+
+    return res.status(500).json({ 
+      error: 'Course limit check failed',
+      details: error.message 
+    });
+  }
+};
+
+// Increment course count after successful generation
+const incrementCourseCount = async (req, res, next) => {
+  try {
+    if (req.user && req.user.userIdentifier && req.user.userType) {
+      await courseCountService.incrementCourseCount(req.user.userIdentifier, req.user.userType);
+      console.log(`📈 Course count incremented for user: ${req.user.userIdentifier.substring(0, 8)}...`);
+    }
     next();
   } catch (error) {
-    console.error('Error checking course generation limit:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('Error incrementing course count:', error);
+    // Don't fail the request, just log the error
+    next();
   }
 };
 
-// Update course generation count for guests
-const updateGuestCourseCount = async (guestId, guestData) => {
+// Simple token verification middleware (without registration)
+const verifyTokenOnly = async (req, res, next) => {
   try {
-    if (!db) {
-      console.log('🔧 Firebase not configured - skipping guest count update');
-      return;
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ 
+        error: 'Unauthorized - No valid token provided',
+        needsAuth: true 
+      });
     }
-    
-    await db.collection('guests').doc(guestId).set({
-      ...guestData,
-      coursesGenerated: guestData.coursesGenerated + 1,
-      lastGenerated: new Date().toISOString()
-    }, { merge: true });
-  } catch (error) {
-    console.error('Error updating guest course count:', error);
-  }
-};
 
-// Save course to user's Firebase document
-const saveCourseToUser = async (userId, courseData) => {
-  try {
-    if (!db) {
-      console.log('🔧 Firebase not configured - skipping course save');
-      return null;
+    const token = authHeader.split(' ')[1];
+    const verification = await userVerificationService.verifyTokenOnly(token);
+
+    req.user = {
+      uid: verification.uid,
+      email: verification.email,
+      decodedToken: verification.decodedToken
+    };
+
+    next();
+
+  } catch (error) {
+    console.error('❌ Token verification failed:', error);
+    
+    if (error.message.includes('Token expired') || error.code === 'auth/id-token-expired') {
+      return res.status(401).json({ 
+        error: 'Token expired - Please sign in again',
+        needsAuth: true 
+      });
     }
     
-    const courseRef = await db.collection('courses').add({
-      ...courseData,
-      userId,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+    if (error.message.includes('Invalid token') || error.code === 'auth/invalid-id-token') {
+      return res.status(401).json({ 
+        error: 'Invalid token - Please sign in again',
+        needsAuth: true 
+      });
+    }
+
+    return res.status(500).json({ 
+      error: 'Token verification failed',
+      details: error.message 
     });
-    
-    // Also update user's course list
-    const userRef = db.collection('users').doc(userId);
-    await userRef.update({
-      'stats.totalCourses': db.FieldValue.increment(1),
-      'stats.lastCourseGenerated': new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    });
-    
-    return courseRef.id;
-  } catch (error) {
-    console.error('Error saving course to user:', error);
-    throw error;
   }
 };
 
 module.exports = {
-  verifyTokenOptional,
+  verifyAndRegisterUser,
+  verifyTokenOnly,
   checkCourseGenerationLimit,
-  updateGuestCourseCount,
-  saveCourseToUser
+  incrementCourseCount
 };

@@ -20,13 +20,121 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
 
-// Import middleware
-const { 
-  verifyTokenOptional, 
+// Import middleware and services
+const {
+  verifyAndRegisterUser,
+  verifyTokenOnly,
   checkCourseGenerationLimit, 
-  updateGuestCourseCount, 
-  saveCourseToUser 
+  incrementCourseCount
 } = require('./middleware/courseMiddleware');
+const { checkDeviceHashCourseLimit } = require('./middleware/deviceHashMiddleware');
+const userVerificationService = require('./services/userVerificationService');// User registration endpoint for anonymous users
+app.post('/api/register/anonymous', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ 
+        error: 'Unauthorized - No valid token provided' 
+      });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const verification = await userVerificationService.verifyAndRegisterUser(token, 'anonymous');
+
+    res.json({
+      success: true,
+      message: 'Anonymous user registered successfully',
+      uid: verification.uid,
+      userType: verification.userType,
+      userIdentifier: verification.userIdentifier.substring(0, 8) + '...'
+    });
+
+  } catch (error) {
+    console.error('❌ Anonymous user registration failed:', error);
+    res.status(400).json({ 
+      error: 'Registration failed', 
+      details: error.message 
+    });
+  }
+});
+
+// User registration endpoint for premium users
+app.post('/api/register/premium', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ 
+        error: 'Unauthorized - No valid token provided' 
+      });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const verification = await userVerificationService.verifyAndRegisterUser(token, 'premium');
+
+    if (!verification.email) {
+      return res.status(400).json({ 
+        error: 'Premium registration requires an email address' 
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Premium user registered successfully',
+      uid: verification.uid,
+      email: verification.email,
+      userType: verification.userType,
+      userIdentifier: verification.email
+    });
+
+  } catch (error) {
+    console.error('❌ Premium user registration failed:', error);
+    res.status(400).json({ 
+      error: 'Registration failed', 
+      details: error.message 
+    });
+  }
+});
+
+// Course limits API endpoint for debugging
+app.get('/api/course-limits', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ 
+        error: 'Unauthorized - No valid token provided' 
+      });
+    }
+
+    const token = authHeader.split(' ')[1];
+    
+    // Verify token and get user info
+    const verification = await userVerificationService.verifyTokenOnly(token);
+    
+    // Determine user identifier (UID for anonymous, email for premium)
+    const courseCountService = require('./services/courseCountService');
+    const userIdentifier = verification.email || verification.uid;
+    const userType = verification.email ? 'premium' : 'anonymous';
+    
+    const limitCheck = await courseCountService.canGenerateCourse(userIdentifier, userType);
+    
+    res.json({
+      canGenerate: limitCheck.canGenerate,
+      coursesGenerated: limitCheck.count,
+      limit: limitCheck.limit,
+      remaining: limitCheck.remaining,
+      userType: limitCheck.userType,
+      userIdentifier: userIdentifier.substring(0, 8) + '...',
+      resetDate: limitCheck.resetDate
+    });
+    
+  } catch (error) {
+    console.error('Error checking course limits:', error);
+    res.status(500).json({ 
+      error: 'Failed to check course limits', 
+      details: error.message 
+    });
+  }
+});
 
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
@@ -295,8 +403,8 @@ ${"```"}json
   };
 }
 
-// 🔸 STEP 3: Generate Full Course
-app.post('/generate-course', verifyTokenOptional, checkCourseGenerationLimit, upload.array('files', 3), async (req, res) => {
+// 🔸 STEP 3: Generate Full Course (with device hash authentication)
+app.post('/generate-course', checkDeviceHashCourseLimit, upload.array('files', 3), async (req, res) => {
   const { topic, level, time, language, requestId } = req.body;
   const files = req.files || [];
 
@@ -354,23 +462,18 @@ app.post('/generate-course', verifyTokenOptional, checkCourseGenerationLimit, up
       generatedAt: new Date().toISOString()
     };
 
-    // Save course data based on user type
-    if (req.user) {
-      // Authenticated user - save to Firebase
+    // Increment course count in JSON storage for all authenticated users
+    if (req.user?.userIdentifier && req.user?.userType) {
       try {
-        const courseId = await saveCourseToUser(req.user.uid, courseData);
-        courseData.firebaseCourseId = courseId;
-        console.log(`💾 Course saved to Firebase with ID: ${courseId}`);
+        const courseCountService = require('./services/courseCountService');
+        await courseCountService.incrementCourseCount(req.user.userIdentifier, req.user.userType);
+        console.log(`🔢 Course count incremented for ${req.user.userType} user: ${req.user.userIdentifier.substring(0, 8)}...`);
       } catch (error) {
-        console.error('Failed to save course to Firebase:', error);
-        // Continue without saving - don't fail the generation
+        console.error('Failed to increment course count:', error);
+        // Continue without failing - course generation was successful
       }
     } else {
-      // Guest user - update generation count
-      if (req.guestData && req.guestId) {
-        await updateGuestCourseCount(req.guestId, req.guestData);
-        console.log(`📊 Guest course count updated: ${req.guestData.coursesGenerated + 1}/2`);
-      }
+      console.warn('⚠️ No user identifier found - skipping course count increment');
     }
 
     res.json(courseData);
@@ -390,7 +493,7 @@ app.post('/generate-course', verifyTokenOptional, checkCourseGenerationLimit, up
 });
 
 // Get user's saved courses
-app.get('/api/courses', verifyTokenOptional, async (req, res) => {
+app.get('/api/courses', verifyTokenOnly, async (req, res) => {
   try {
     if (!req.user) {
       return res.status(401).json({ error: 'Authentication required' });
@@ -417,7 +520,7 @@ app.get('/api/courses', verifyTokenOptional, async (req, res) => {
 });
 
 // Delete a specific course
-app.delete('/api/courses/:courseId', verifyTokenOptional, async (req, res) => {
+app.delete('/api/courses/:courseId', verifyTokenOnly, async (req, res) => {
   try {
     if (!req.user) {
       return res.status(401).json({ error: 'Authentication required' });

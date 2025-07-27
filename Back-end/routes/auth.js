@@ -152,4 +152,403 @@ router.delete('/account', verifyToken, async (req, res) => {
   }
 });
 
+// ===== PAYMENT-FIRST PREMIUM ACCOUNT SYSTEM =====
+
+const paymentVerificationService = require('../services/paymentVerificationService');
+
+/**
+ * Step 1: Verify payment and create premium account
+ * POST /api/auth/create-premium-account
+ * Body: { email, password, receipt, platform }
+ */
+router.post('/create-premium-account', async (req, res) => {
+  try {
+    const { email, password, receipt, platform } = req.body;
+
+    if (!email || !password || !receipt || !platform) {
+      return res.status(400).json({
+        error: 'Missing required fields',
+        required: ['email', 'password', 'receipt', 'platform']
+      });
+    }
+
+    console.log('🛒 Processing premium account creation for:', email);
+
+    // Step 1: Verify payment first
+    let paymentVerification;
+    
+    if (platform === 'ios') {
+      paymentVerification = await paymentVerificationService.verifyAppleReceipt(receipt);
+    } else if (platform === 'android') {
+      const { packageName, productId, purchaseToken } = receipt;
+      paymentVerification = await paymentVerificationService.verifyGooglePurchase(
+        packageName, 
+        productId, 
+        purchaseToken
+      );
+    } else {
+      return res.status(400).json({
+        error: 'Invalid platform',
+        supported: ['ios', 'android']
+      });
+    }
+
+    if (!paymentVerification.valid) {
+      console.log('❌ Payment verification failed for:', email);
+      return res.status(402).json({
+        error: 'Payment verification failed',
+        details: paymentVerification.error,
+        message: 'Please complete your purchase first'
+      });
+    }
+
+    console.log('✅ Payment verified for:', email, 'Transaction:', paymentVerification.transactionId);
+
+    // Step 2: Create Firebase account only after payment verification
+    const accountResult = await paymentVerificationService.createPremiumAccount(
+      email, 
+      password, 
+      paymentVerification
+    );
+
+    if (!accountResult.success) {
+      return res.status(500).json({
+        error: 'Failed to create account',
+        message: 'Payment verified but account creation failed. Please contact support.'
+      });
+    }
+
+    // Step 3: Return success with account details
+    res.status(201).json({
+      success: true,
+      message: 'Premium account created successfully',
+      user: accountResult.user,
+      courseStatus: {
+        limit: accountResult.courseTracking.limit,
+        remaining: accountResult.courseTracking.remaining,
+        userType: 'premium'
+      },
+      nextSteps: [
+        'Please verify your email address',
+        'You can now sign in to your premium account',
+        'Enjoy 50 courses per month!'
+      ]
+    });
+
+  } catch (error) {
+    console.error('❌ Premium account creation failed:', error);
+    
+    // Determine appropriate error response
+    if (error.code === 'auth/email-already-exists') {
+      return res.status(409).json({
+        error: 'Email already registered',
+        message: 'This email is already registered. Please sign in instead.',
+        action: 'signin'
+      });
+    }
+
+    if (error.code === 'auth/invalid-email') {
+      return res.status(400).json({
+        error: 'Invalid email format',
+        message: 'Please provide a valid email address.'
+      });
+    }
+
+    if (error.code === 'auth/weak-password') {
+      return res.status(400).json({
+        error: 'Weak password',
+        message: 'Password should be at least 6 characters long.'
+      });
+    }
+
+    res.status(500).json({
+      error: 'Account creation failed',
+      message: 'An unexpected error occurred. Please try again.',
+      details: error.message
+    });
+  }
+});
+
+/**
+ * Step 2: Sign in with existing credentials
+ * POST /api/auth/signin-premium
+ * Body: { email, idToken }
+ */
+router.post('/signin-premium', async (req, res) => {
+  try {
+    const { email, idToken } = req.body;
+
+    if (!email || !idToken) {
+      return res.status(400).json({
+        error: 'Missing credentials',
+        required: ['email', 'idToken']
+      });
+    }
+
+    console.log('🔐 Processing premium sign in for:', email);
+
+    // Verify user exists in Firebase and credentials are valid
+    const loginResult = await paymentVerificationService.verifyUserLogin(email, idToken);
+
+    if (!loginResult.valid) {
+      return res.status(401).json({
+        error: 'Authentication failed',
+        message: 'Invalid credentials or user not found',
+        details: loginResult.error
+      });
+    }
+
+    if (loginResult.user.disabled) {
+      return res.status(403).json({
+        error: 'Account disabled',
+        message: 'Your account has been disabled. Please contact support.'
+      });
+    }
+
+    // Check subscription status
+    const subscriptionStatus = await paymentVerificationService.checkSubscriptionStatus(
+      loginResult.user.uid
+    );
+
+    console.log('✅ Premium user signed in successfully:', email);
+
+    res.json({
+      success: true,
+      message: 'Premium sign in successful',
+      user: {
+        ...loginResult.user,
+        subscription: subscriptionStatus
+      },
+      courseStatus: loginResult.courseStatus,
+      warnings: !loginResult.user.emailVerified ? ['Please verify your email address'] : []
+    });
+
+  } catch (error) {
+    console.error('❌ Premium sign in failed:', error);
+    
+    res.status(500).json({
+      error: 'Sign in failed',
+      message: 'An unexpected error occurred during sign in.',
+      details: error.message
+    });
+  }
+});
+
+/**
+ * Get user subscription status
+ * GET /api/auth/subscription-status
+ * Headers: Authorization: Bearer <firebase-id-token>
+ */
+router.get('/subscription-status', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({
+        error: 'No authorization token provided'
+      });
+    }
+
+    const idToken = authHeader.split(' ')[1];
+    const decodedToken = await auth.verifyIdToken(idToken);
+
+    const subscriptionStatus = await paymentVerificationService.checkSubscriptionStatus(
+      decodedToken.uid
+    );
+
+    res.json({
+      success: true,
+      subscription: subscriptionStatus,
+      user: {
+        uid: decodedToken.uid,
+        email: decodedToken.email,
+        emailVerified: decodedToken.email_verified
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Failed to get subscription status:', error);
+    res.status(401).json({
+      error: 'Invalid or expired token'
+    });
+  }
+});
+
+// Register anonymous user (for startup flow Path 2)
+router.post('/register-anonymous', async (req, res) => {
+  try {
+    const { uid, userType, coursesGenerated, monthlyLimit } = req.body;
+
+    if (!uid) {
+      return res.status(400).json({ error: 'User ID is required' });
+    }
+
+    console.log('👤 Registering anonymous user:', uid);
+
+    // Add user to course count service
+    const courseCountService = require('../services/courseCountService');
+    const userRecord = await courseCountService.createUserRecord(uid, userType || 'anonymous', coursesGenerated || 0);
+
+    console.log('✅ Anonymous user registered successfully:', uid);
+    res.json('Anonymous user registered successfully');
+  } catch (error) {
+    console.error('❌ Error registering anonymous user:', error);
+    res.status(500).json({ error: 'Failed to register anonymous user' });
+  }
+});
+
+// Verify if device hash exists in the system (for device hash approach)
+router.post('/verify-device', async (req, res) => {
+  try {
+    const { deviceHash } = req.body;
+
+    if (!deviceHash) {
+      return res.status(400).json({ error: 'Device hash is required' });
+    }
+
+    console.log('🔍 Verifying device hash existence:', deviceHash.substring(0, 15) + '...');
+
+    // Check if device hash exists in course counts
+    const courseCountService = require('../services/courseCountService');
+    const deviceExists = await courseCountService.userExists(deviceHash);
+
+    if (deviceExists) {
+      console.log('✅ Device hash verified successfully:', deviceHash.substring(0, 15) + '...');
+      res.json({ 
+        success: true, 
+        message: 'Device hash verified successfully',
+        deviceHash: deviceHash
+      });
+    } else {
+      console.log('❌ Device hash not found in system:', deviceHash.substring(0, 15) + '...');
+      res.status(404).json({ 
+        error: 'Device hash not found',
+        deviceHash: deviceHash
+      });
+    }
+  } catch (error) {
+    console.error('❌ Error verifying device hash:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Initialize device hash - register if new, return course count if existing
+router.post('/initialize-device', async (req, res) => {
+  try {
+    const { deviceHash } = req.body;
+
+    if (!deviceHash) {
+      return res.status(400).json({ error: 'Device hash is required' });
+    }
+
+    console.log('� Initializing device hash:', deviceHash.substring(0, 20) + '...');
+
+    const courseCountService = require('../services/courseCountService');
+    
+    // Check if device hash already exists
+    const deviceExists = await courseCountService.userExists(deviceHash);
+
+    if (deviceExists) {
+      // Device exists - fetch and return current course count
+      console.log('✅ Device hash already exists, fetching course count...');
+      const userData = await courseCountService.getUserData(deviceHash);
+      
+      res.json({ 
+        success: true,
+        message: 'Device hash found',
+        deviceHash: deviceHash,
+        isNew: false,
+        courseCount: userData.count || 0,
+        userType: userData.userType || 'anonymous',
+        createdAt: userData.createdAt
+      });
+    } else {
+      // Device doesn't exist - create new record
+      console.log('🆕 New device hash detected, creating record...');
+      await courseCountService.createUserRecord(deviceHash, 'anonymous');
+      
+      res.json({ 
+        success: true,
+        message: 'Device hash registered successfully',
+        deviceHash: deviceHash,
+        isNew: true,
+        courseCount: 0,
+        userType: 'anonymous',
+        createdAt: new Date().toISOString()
+      });
+    }
+  } catch (error) {
+    console.error('❌ Error initializing device hash:', error);
+    res.status(500).json({ error: 'Failed to initialize device hash' });
+  }
+});
+
+// Verify if user exists in the system (for startup flow) - LEGACY FIREBASE APPROACH
+router.post('/verify-user', async (req, res) => {
+  try {
+    const { uid } = req.body;
+
+    if (!uid) {
+      return res.status(400).json({ error: 'User ID is required' });
+    }
+
+    console.log('🔍 Verifying user existence for UID:', uid);
+
+    // First check if user exists in Firebase (source of truth)
+    try {
+      const firebaseUser = await auth.getUser(uid);
+      console.log('✅ User exists in Firebase:', uid);
+      
+      // Now check if user exists in backend
+      const courseCountService = require('../services/courseCountService');
+      const userExistsInBackend = await courseCountService.userExists(uid);
+      
+      if (userExistsInBackend) {
+        console.log('✅ User exists in both Firebase and backend');
+        res.json({ 
+          success: true, 
+          message: 'User verified successfully',
+          uid: uid,
+          status: 'verified'
+        });
+      } else {
+        console.log('⚠️ User exists in Firebase but not in backend, adding to backend...');
+        
+        try {
+          // Add user to backend with default values
+          await courseCountService.createUserRecord(uid, 'anonymous');
+          
+          console.log('✅ User added to backend successfully:', uid);
+          res.json({ 
+            success: true, 
+            message: 'User verified and added to backend',
+            uid: uid,
+            status: 'synced'
+          });
+        } catch (backendError) {
+          console.error('❌ Failed to add user to backend:', backendError);
+          res.status(500).json({ 
+            error: 'Failed to sync user with backend',
+            uid: uid
+          });
+        }
+      }
+      
+    } catch (firebaseError) {
+      // User doesn't exist in Firebase - this means they should sign up
+      console.log('❌ User does not exist in Firebase:', uid);
+      console.log('🔄 User should be redirected to signup');
+      
+      res.status(404).json({ 
+        error: 'User not found in Firebase',
+        message: 'Please sign up to create an account',
+        uid: uid,
+        requiresSignup: true
+      });
+    }
+  } catch (error) {
+    console.error('❌ Error verifying user:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 module.exports = router;

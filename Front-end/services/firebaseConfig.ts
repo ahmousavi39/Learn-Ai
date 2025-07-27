@@ -1,5 +1,6 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import { getAuth, initializeAuth } from 'firebase/auth';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { 
   initializeFirestore, 
   getFirestore,
@@ -31,15 +32,44 @@ const firebaseConfig = {
 // Check if Firebase config is complete
 const hasCompleteConfig = Object.values(firebaseConfig).every(value => value && value !== '');
 
+console.log('🔧 Firebase config status:', {
+  hasCompleteConfig,
+  projectId: firebaseConfig.projectId,
+  authDomain: firebaseConfig.authDomain,
+  apiKey: firebaseConfig.apiKey ? `${firebaseConfig.apiKey.substring(0, 10)}...` : 'Missing'
+});
+
+console.log('🔧 Detailed config check:');
+Object.entries(firebaseConfig).forEach(([key, value]) => {
+  console.log(`- ${key}: ${value ? '✅ Set' : '❌ Missing'} ${value ? `(${typeof value}, length: ${value.length})` : ''}`);
+});
+
 if (__DEV__ && !hasCompleteConfig) {
   console.log('⚠️ Incomplete Firebase config - running in offline mode');
+  console.log('🔧 Missing config values:', Object.entries(firebaseConfig)
+    .filter(([key, value]) => !value || value === '')
+    .map(([key]) => key)
+  );
+} else {
+  console.log('✅ Firebase configuration appears complete');
 }
 
 // Initialize Firebase (use existing app if available)
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
-// Initialize Auth
-const auth = getAuth(app);
+// Initialize Auth (persistence is broken in React Native, we'll handle it manually)
+let auth;
+
+try {
+  // Try to get existing auth instance first
+  auth = getAuth(app);
+  console.log('✅ Using existing Auth instance');
+} catch (error) {
+  // Simple initialization without persistence (we'll handle persistence manually)
+  auth = initializeAuth(app);
+  console.log('⚠️ Auth initialized without automatic persistence');
+  console.log('🔧 Manual persistence will be handled by app logic');
+}
 
 // Initialize Firestore with proper singleton pattern
 let db;

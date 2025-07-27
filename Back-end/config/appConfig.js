@@ -5,7 +5,7 @@ const CONFIG = {
   // Course generation limits
   COURSE_LIMITS: {
     // For testing: Set to 100, for production: Set to 2
-    FREE_USER_MONTHLY_LIMIT: 100, // Change this to 2 for production
+    FREE_USER_MONTHLY_LIMIT: 3, // Change this to 2 for production
     PREMIUM_USER_MONTHLY_LIMIT: 50,
   },
   

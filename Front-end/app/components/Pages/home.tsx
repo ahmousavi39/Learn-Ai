@@ -6,6 +6,8 @@ import { useAuth } from '../../../contexts/AuthContext';
 import {
   loadData, selectCourses, openLocation, generateCourse
 } from '../../../features/item/itemSlice';
+import courseService from '../../../services/courseService';
+import CourseLimitDisplay from '../CourseLimitDisplay';
 import MultiSlider from '@ptomasroos/react-native-multi-slider';
 import { SelectList } from 'react-native-dropdown-select-list';
 import 'react-native-get-random-values';
@@ -517,21 +519,32 @@ export function Home({ navigation }) {
   };
 
   const handleGenerateCourse = async (topic, level, readingTimeMin, language) => {
-    // Check if user can generate a course
-    if (!canGenerateCourse) {
-      // Directly redirect to subscription page when limit is reached
-      setModalVisible(false); // Close the current modal first
-      openPremiumScreen(); // Open premium/subscription screen
-      return;
-    }
-
     try {
+      // Check course generation limits using the service (frontend-only check, no backend request)
+      const limitCheck = await courseService.canGenerateCourse();
+      
+      if (!limitCheck.canGenerate) {
+        setModalVisible(false); // Close the current modal
+        
+        if (limitCheck.needsSubscription) {
+          // Directly open upgrade screen for anonymous users who reached limit
+          console.log('🚀 Limit reached - opening upgrade screen directly');
+          openPremiumScreen();
+        } else {
+          // Show generic limit reached message for other cases
+          Alert.alert(
+            '⚠️ Limit Reached',
+            limitCheck.message || 'You\'ve reached your monthly course limit.',
+            [{ text: 'OK' }]
+          );
+        }
+        return; // Important: Stop here, no backend request should be made
+      }
+
+      // Proceed with course generation only if limit check passes
       await generate(topic, level, readingTimeMin, language);
       
-      // Increment course count for anonymous users
-      if (user?.isAnonymous) {
-        await incrementCourseCount();
-      }
+      // Note: Course count is automatically incremented by the backend and frontend service
     } catch (error) {
       console.error('Error generating course:', error);
     }
@@ -567,25 +580,14 @@ export function Home({ navigation }) {
       requestId.current = uuidv4();
       connectWebSocket();
 
-      const formData = new FormData();
-
-      selectedFiles.forEach(file => {
-        formData.append('files', {
-          uri: file.uri,
-          name: file.name || 'upload.jpg',
-          type: file.type || 'image/jpeg',
-        } as any);
-      });
-
-      formData.append('topic', topic);
-      formData.append('level', level);
-      formData.append('time', readingTimeMin.toString());
-      formData.append('language', language);
-      formData.append('requestId', requestId.current);
-
-      const response = await fetchWithTimeout(`${process.env.EXPO_PUBLIC_HTTP_SERVER || 'http://192.168.1.100:4000'}/generate-course`, {
-        method: 'POST',
-        body: formData,
+      // Use courseService for proper authentication and tracking
+      const response = await courseService.generateCourse({
+        topic,
+        level,
+        time: readingTimeMin.toString(),
+        language,
+        requestId: requestId.current,
+        files: selectedFiles
       });
 
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
@@ -617,6 +619,15 @@ export function Home({ navigation }) {
           sectionTitle: "Generating Course Plan",
           type: "DONE"
         }));
+
+        // Update AuthContext with new course count
+        try {
+          await incrementCourseCount();
+          console.log('✅ AuthContext course count updated after course generation');
+        } catch (error) {
+          console.error('❌ Failed to update AuthContext course count:', error);
+          // Don't fail the entire operation for this
+        }
 
         doneSound();
         setText('');
@@ -723,6 +734,15 @@ export function Home({ navigation }) {
             </TouchableHighlight>
           </View>
         </ScrollView>
+        
+        {/* Course Limit Display */}
+        <CourseLimitDisplay 
+          onSubscribe={() => {
+            setModalVisible(false);
+            openPremiumScreen();
+          }}
+        />
+        
         {/* Modal */}
         <Modal
           animationType="slide"

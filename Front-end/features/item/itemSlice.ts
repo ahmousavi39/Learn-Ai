@@ -101,6 +101,13 @@ export const itemSlice = createSlice({
       (async () => {
         await putItem('coursesList', coursesListData);
         await putItem('courses', coursesData);
+        console.log(`📚 NEW COURSE STORED LOCALLY:`);
+        console.log(`   - Course name: ${action.payload.name}`);
+        console.log(`   - Language: ${action.payload.language}`);
+        console.log(`   - Level: ${action.payload.level}`);
+        console.log(`   - Sections: ${action.payload.sections.length}`);
+        console.log(`   - Total courses in storage: ${coursesData.length}`);
+        console.log(`📋 All courses in storage:`, coursesListData.map(c => `"${c.name}" (ID: ${c.id})`));
       })();
 
       state.isLoading = false;
@@ -128,6 +135,23 @@ export const itemSlice = createSlice({
     updateData: (state) => {
       (async () => {
         await putItem('courses', state.courses);
+        console.log(`🔄 COURSE PROGRESS UPDATED:`);
+        console.log(`   - Total courses: ${state.courses.length}`);
+        
+        // Show progress summary for each course
+        state.courses.forEach(course => {
+          let totalItems = 0;
+          let completedItems = 0;
+          
+          course.sections.forEach(section => {
+            totalItems += section.content?.length || 0;
+            totalItems += section.test?.length || 0;
+            completedItems += section.content?.filter(item => item.isDone).length || 0;
+            completedItems += section.test?.filter(test => test.isDone).length || 0;
+          });
+          
+          console.log(`   - "${course.name}": ${completedItems}/${totalItems} completed`);
+        });
       })();
     },
 
@@ -145,6 +169,10 @@ export const itemSlice = createSlice({
 
       (async () => {
         await putItem('courses', state.courses);
+        console.log(`🧪 TEST COMPLETED AND STORED:`);
+        console.log(`   - Course ID: ${courseId}`);
+        console.log(`   - Section: ${sectionIndex}`);
+        console.log(`   - Test: ${testIndex}`);
       })();
     },
 
@@ -162,6 +190,10 @@ export const itemSlice = createSlice({
 
       (async () => {
         await putItem('courses', state.courses);
+        console.log(`✅ LESSON COMPLETED AND STORED:`);
+        console.log(`   - Course ID: ${courseId}`);
+        console.log(`   - Section: ${sectionIndex}`);
+        console.log(`   - Content: ${contentIndex}`);
       })();
     },
 
@@ -172,6 +204,7 @@ export const itemSlice = createSlice({
       (async () => {
         await removeItem('coursesList');
         await removeItem('courses');
+        console.log(`🗑️ ALL COURSE DATA CLEARED FROM STORAGE`);
       })();
     },
 
@@ -208,6 +241,11 @@ export const itemSlice = createSlice({
 
       (async () => {
         await putItem('courses', state.courses);
+        console.log(`🔄 LESSON REGENERATED AND STORED:`);
+        console.log(`   - Course ID: ${courseId}`);
+        console.log(`   - Section: ${sectionIndex}`);
+        console.log(`   - Content: ${contentIndex}`);
+        console.log(`   - New bulletpoints: ${newBulletpoints.length} items`);
       })();
     },
   },

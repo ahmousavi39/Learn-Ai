@@ -1,0 +1,17 @@
+{
+  "users": {
+    "device_android_411.42857142857144x890.2857142857143_ae5765f7": {
+      "count": 3,
+      "userType": "anonymous",
+      "firstCourse": "2025-07-27T19:47:28.959Z",
+      "lastCourse": "2025-07-27T19:53:51.920Z",
+      "createdAt": "2025-07-27T19:24:34.377Z"
+    }
+  },
+  "lastUpdated": "2025-07-27T19:53:51.920Z",
+  "metadata": {
+    "totalUsers": 1,
+    "totalCourses": 3,
+    "version": "1.0.0"
+  }
+}

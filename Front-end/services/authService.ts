@@ -6,7 +6,10 @@ import {
   User,
   sendPasswordResetEmail,
   updateProfile,
-  signInAnonymously
+  signInAnonymously,
+  GoogleAuthProvider,
+  signInWithCredential,
+  OAuthProvider
 } from 'firebase/auth';
 import { getFirestore, doc, getDoc, setDoc, DocumentSnapshot } from 'firebase/firestore';
 import { auth, db, isFirestoreActive } from './firebaseConfig';
@@ -23,6 +26,7 @@ export interface AuthUser {
   emailVerified: boolean;
   isAnonymous: boolean;
   coursesGenerated?: number;
+  requiresPremiumSignup?: boolean; // Flag to indicate invalid user needs premium signup
 }
 
 class AuthService {
@@ -161,6 +165,7 @@ class AuthService {
       
       // Always update local storage immediately (primary source)
       await AsyncStorage.setItem(`device_courses_${deviceId}`, newCount.toString());
+      console.log(`💾 Device course count stored: device_courses_${deviceId.substring(0, 8)}... = ${newCount}`);
       
       // Try to sync with Firestore in background (non-blocking)
       this.updateFirestoreBackground(deviceId, newCount);
@@ -223,26 +228,161 @@ class AuthService {
     };
   }
 
+  // Test Firebase connection and configuration
+  async testFirebaseConnection(): Promise<boolean> {
+    try {
+      console.log('🔧 Testing Firebase connection...');
+      
+      // Check environment variables first
+      console.log('🔍 Firebase Config Status:');
+      console.log('- API Key:', process.env.EXPO_PUBLIC_FIREBASE_API_KEY ? '✅ Set' : '❌ Missing');
+      console.log('- Project ID:', process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID || '❌ Missing');
+      console.log('- Auth Domain:', process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN || '❌ Missing');
+      
+      // Check if auth is initialized
+      if (!auth) {
+        console.error('❌ Firebase Auth not initialized');
+        return false;
+      }
+      
+      // Check if we can access auth properties
+      const authReady = !!auth.app;
+      console.log('🔧 Firebase Auth app ready:', authReady);
+      
+      if (!authReady) {
+        console.error('❌ Firebase Auth app not ready');
+        return false;
+      }
+      
+      console.log('📍 Firebase App Info:');
+      console.log('- Auth Domain:', auth.app.options.authDomain);
+      console.log('- Project ID:', auth.app.options.projectId);
+      console.log('- API Key:', auth.app.options.apiKey ? '✅ Set' : '❌ Missing');
+      
+      // Try to get current auth state (this will trigger connection)
+      const currentUser = auth.currentUser;
+      console.log('🔧 Current Firebase user:', currentUser?.uid || 'none');
+      
+      // Test network connectivity with auth state listener
+      console.log('🌐 Testing Firebase network connectivity...');
+      
+      const connectionTest = new Promise<boolean>((resolve) => {
+        const timeout = setTimeout(() => {
+          console.warn('⏰ Firebase connection timeout - may indicate network issues');
+          resolve(true); // Don't fail on timeout, just warn
+        }, 3000);
+        
+        const unsubscribe = auth.onAuthStateChanged((user) => {
+          clearTimeout(timeout);
+          console.log('🔍 Auth state listener triggered:', user ? `User: ${user.uid}` : 'No user');
+          unsubscribe();
+          resolve(true);
+        }, (error) => {
+          clearTimeout(timeout);
+          console.error('❌ Auth state change error:', error);
+          unsubscribe();
+          resolve(false);
+        });
+      });
+      
+      const isConnected = await connectionTest;
+      
+      if (isConnected) {
+        console.log('✅ Firebase connection test passed');
+      } else {
+        console.error('❌ Firebase connection test failed');
+      }
+      
+      return isConnected;
+      
+    } catch (error) {
+      console.error('❌ Firebase connection test failed:', error);
+      return false;
+    }
+  }
+
   // Sign in anonymously using device hash as consistent identifier
   async signInAnonymously(): Promise<AuthUser | null> {
     try {
+      console.log('🔍 Starting anonymous sign-in process...');
+      console.log('🔍 Step 1: Skipping connection test (might be causing hang)...');
+      
+      console.log('🔍 Step 2: Checking Firebase auth state...');
+      console.log('🔧 Firebase auth state:', {
+        isAuthReady: !!auth,
+        currentUser: auth?.currentUser?.uid || 'none'
+      });
+      
+      console.log('🔍 Step 3: Attempting to restore existing session...');
       // First, try to restore existing anonymous session for this device
       const existingUser = await this.restoreAnonymousSession();
       if (existingUser) {
+        console.log('✅ Restored existing anonymous session:', existingUser.uid);
         return existingUser;
       }
 
-      // Create new anonymous Firebase user with device-based consistency
-      const result = await signInAnonymously(auth);
-      const user = result.user;
+      console.log('� Step 4: No existing session, creating new Firebase user...');
+      console.log('�🔄 Creating new Firebase anonymous user...');
+      console.log('🔧 Auth instance ready:', !!auth);
       
-      if (user) {
+      // Ensure we have a valid Firebase auth instance
+      if (!auth) {
+        throw new Error('Firebase Auth not initialized');
+      }
+      
+      console.log('� Step 5: Pre-flight checks...');
+      console.log('�🔧 Pre-flight Firebase auth checks:');
+      console.log('- Auth instance exists:', !!auth);
+      console.log('- Auth app exists:', !!auth.app);
+      console.log('- Auth app name:', auth.app?.name);
+      console.log('- Auth app options valid:', !!auth.app?.options);
+      console.log('- Project ID:', auth.app?.options?.projectId);
+      console.log('- API Key length:', auth.app?.options?.apiKey?.length || 0);
+      
+      // Test auth readiness with a simple property access
+      try {
+        const currentUserBeforeSignIn = auth.currentUser;
+        console.log('- Current user before sign-in:', currentUserBeforeSignIn?.uid || 'none');
+      } catch (accessError) {
+        console.error('❌ Error accessing auth.currentUser:', accessError);
+        throw new Error('Firebase Auth instance not accessible');
+      }
+      
+      console.log('🔍 Step 6: Calling Firebase signInAnonymously...');
+      // Create new anonymous Firebase user with better error handling
+      console.log('📞 Calling Firebase signInAnonymously...');
+      
+      try {
+        // Ultra-simplified approach - direct call without timeout protection
+        console.log('⚡ Attempting ultra-simple Firebase signInAnonymously call...');
+        
+        const result = await signInAnonymously(auth);
+        console.log('🎉 Firebase signInAnonymously completed successfully!');
+        
+        const user = result.user;
+        
+        console.log('🎉 Firebase signInAnonymously completed:', {
+          success: !!user,
+          uid: user?.uid,
+          isAnonymous: user?.isAnonymous
+        });
+        
+        if (!user) {
+          throw new Error('Firebase returned null user');
+        }
+        
+        console.log('✅ Firebase anonymous user created successfully:', user.uid);
         const deviceId = await this.createDeviceFingerprint();
         
         // Update the user's display name to include device hash for identification
-        await updateProfile(user, { 
-          displayName: `Device_${deviceId}` 
-        });
+        try {
+          await updateProfile(user, { 
+            displayName: `Device_${deviceId}` 
+          });
+          console.log('✅ User profile updated with device ID');
+        } catch (profileError) {
+          console.warn('⚠️ Failed to update profile, continuing...', profileError);
+        }
 
         // Store device information in Firestore for better tracking
         if (this.firestoreEnabled && isFirestoreActive()) {
@@ -283,10 +423,15 @@ class AuthService {
         console.log('💾 Anonymous user stored locally for persistence');
         
         return authUser;
+        
+      } catch (firebaseError) {
+        console.error('❌ Firebase signInAnonymously failed:', firebaseError);
+        throw new Error(`Firebase authentication failed: ${firebaseError.message}`);
       }
-      return null;
+      
     } catch (error) {
-      console.error('Error signing in anonymously:', error);
+      console.error('❌ Error signing in anonymously:', error);
+      // Don't create fallback user here - Firebase MUST work for backend course generation
       throw error;
     }
   }
@@ -458,6 +603,39 @@ class AuthService {
     }
   }
 
+  // Ensure user is authenticated (create anonymous if needed)
+  async ensureAuthenticated(): Promise<AuthUser> {
+    try {
+      console.log('🔍 Starting authentication check...');
+      
+      // Check if there's already a current user
+      const currentUser = await this.getCurrentUser();
+      if (currentUser) {
+        console.log('✅ User already authenticated:', currentUser.uid);
+        return currentUser;
+      }
+
+      // No user found, create anonymous account - Firebase REQUIRED for backend
+      console.log('🔍 No authenticated user found, creating Firebase anonymous account...');
+      console.log('⚠️ Firebase authentication is REQUIRED for course generation');
+      
+      const anonymousUser = await this.signInAnonymously();
+      
+      if (anonymousUser) {
+        console.log('✅ Firebase anonymous account created successfully:', anonymousUser.uid);
+        return anonymousUser;
+      }
+
+      throw new Error('Failed to create Firebase anonymous account - backend requires Firebase authentication');
+    } catch (error) {
+      console.error('❌ Critical error: Firebase authentication failed:', error);
+      console.error('❌ Backend will not generate courses without Firebase authentication');
+      
+      // Don't create fallback - Firebase is required for backend functionality
+      throw new Error(`Firebase authentication required: ${error.message}`);
+    }
+  }
+
   // Get current user from Firebase and storage
   async getCurrentUser(): Promise<AuthUser | null> {
     try {
@@ -487,6 +665,122 @@ class AuthService {
     } catch (error) {
       console.error('Error getting current user:', error);
       return null;
+    }
+  }
+
+  // Sign in with Google
+  async signInWithGoogle(googleIdToken: string): Promise<{ user: AuthUser | null; hasSubscription: boolean }> {
+    try {
+      const credential = GoogleAuthProvider.credential(googleIdToken);
+      const userCredential = await signInWithCredential(auth, credential);
+      const firebaseUser = userCredential.user;
+
+      if (firebaseUser) {
+        // Check if this is a premium user by verifying with backend
+        const idToken = await firebaseUser.getIdToken();
+        const hasSubscription = await this.verifyPremiumStatus(firebaseUser.email!, idToken);
+
+        const authUser: AuthUser = {
+          uid: firebaseUser.uid,
+          email: firebaseUser.email,
+          displayName: firebaseUser.displayName,
+          emailVerified: firebaseUser.emailVerified,
+          isAnonymous: false,
+          coursesGenerated: 0
+        };
+
+        if (this.firestoreEnabled && isFirestoreActive()) {
+          const userDocRef = doc(db, 'users', authUser.uid);
+          await setDoc(userDocRef, {
+            uid: authUser.uid,
+            email: authUser.email,
+            displayName: authUser.displayName,
+            emailVerified: authUser.emailVerified,
+            createdAt: new Date().toISOString(),
+            authProvider: 'google'
+          });
+        }
+        await AsyncStorage.setItem('authUser', JSON.stringify(authUser));
+
+        return { user: authUser, hasSubscription };
+      }
+      
+      return { user: null, hasSubscription: false };
+    } catch (error: any) {
+      console.error('Google sign in error:', error);
+      throw new Error(error.message || 'Failed to sign in with Google');
+    }
+  }
+
+  // Sign in with Apple
+  async signInWithApple(appleIdToken: string, nonce?: string): Promise<{ user: AuthUser | null; hasSubscription: boolean }> {
+    try {
+      const provider = new OAuthProvider('apple.com');
+      const credential = provider.credential({
+        idToken: appleIdToken,
+        rawNonce: nonce
+      });
+      
+      const userCredential = await signInWithCredential(auth, credential);
+      const firebaseUser = userCredential.user;
+
+      if (firebaseUser) {
+        // Check if this is a premium user by verifying with backend
+        const idToken = await firebaseUser.getIdToken();
+        const hasSubscription = await this.verifyPremiumStatus(firebaseUser.email!, idToken);
+
+        const authUser: AuthUser = {
+          uid: firebaseUser.uid,
+          email: firebaseUser.email,
+          displayName: firebaseUser.displayName,
+          emailVerified: firebaseUser.emailVerified,
+          isAnonymous: false,
+          coursesGenerated: 0
+        };
+
+        if (this.firestoreEnabled && isFirestoreActive()) {
+          const userDocRef = doc(db, 'users', authUser.uid);
+          await setDoc(userDocRef, {
+            uid: authUser.uid,
+            email: authUser.email,
+            displayName: authUser.displayName,
+            emailVerified: authUser.emailVerified,
+            createdAt: new Date().toISOString(),
+            authProvider: 'apple'
+          });
+        }
+        await AsyncStorage.setItem('authUser', JSON.stringify(authUser));
+
+        return { user: authUser, hasSubscription };
+      }
+      
+      return { user: null, hasSubscription: false };
+    } catch (error: any) {
+      console.error('Apple sign in error:', error);
+      throw new Error(error.message || 'Failed to sign in with Apple');
+    }
+  }
+
+  // Helper method to verify premium status with backend
+  private async verifyPremiumStatus(email: string, idToken: string): Promise<boolean> {
+    try {
+      const response = await fetch('https://your-backend.com/api/auth/subscription-status', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`
+        },
+        body: JSON.stringify({ email })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        return data.isPremium || false;
+      }
+      return false;
+    } catch (error) {
+      console.error('Error verifying premium status:', error);
+      return false;
     }
   }
 
