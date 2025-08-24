@@ -287,6 +287,44 @@ class CourseCountService {
       return { totalUsers: 0, activeUsers: 0, totalCourses: 0, lastUpdated: null };
     }
   }
+
+  // Create premium user record with enhanced data
+  async createPremiumUserRecord(uid, userData) {
+    try {
+      console.log(`📊 Creating premium user record for: ${uid}`);
+      
+      const data = await this.loadData();
+      
+      // Create enhanced user record for premium users
+      data.users[uid] = {
+        uid: userData.uid,
+        email: userData.email,
+        accountType: userData.accountType || 'premium',
+        subscriptionType: userData.subscriptionType || 'premium_monthly',
+        count: userData.coursesGenerated || 0,
+        courseLimit: userData.courseLimit || 50,
+        firstCourse: null,
+        lastCourse: null,
+        lastResetDate: userData.lastResetDate || new Date().toISOString(),
+        createdAt: userData.createdAt || new Date().toISOString(),
+        paymentReceipt: userData.paymentReceipt,
+        isActive: userData.isActive !== false, // Default to true
+        userType: 'premium'
+      };
+
+      // Update metadata
+      data.metadata.totalUsers = Object.keys(data.users).length;
+      
+      await this.saveData(data);
+      
+      console.log(`✅ Premium user record created successfully for: ${uid}`);
+      return data.users[uid];
+      
+    } catch (error) {
+      console.error('❌ Error creating premium user record:', error);
+      throw error;
+    }
+  }
 }
 
 module.exports = new CourseCountService();

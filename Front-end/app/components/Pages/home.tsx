@@ -32,6 +32,7 @@ import { useTheme } from '../../theme';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faMagnifyingGlass, faXmark, faCrown } from '@fortawesome/free-solid-svg-icons';
 import SubscriptionScreen from '../subscriptionScreen';
+import LoginScreen from '../login';
 import { RightHeaderHome } from '../rightHeaderHome';
 
 const CustomCheckbox = ({ value, onValueChange }) => {
@@ -67,6 +68,7 @@ export function Home({ navigation }) {
   const { user, canGenerateCourse, incrementCourseCount } = useAuth();
   const [modalVisible, setModalVisible] = useState(false);
   const [subscriptionModalVisible, setSubscriptionModalVisible] = useState(false);
+  const [loginModalVisible, setLoginModalVisible] = useState(false);
   const [text, setText] = useState('');
   const [levelOneToTen, setLevelOneToTen] = useState(4);
   const [time, setTime] = useState(10);
@@ -939,7 +941,28 @@ export function Home({ navigation }) {
               setSubscriptionModalVisible(false);
               // You can add additional logic here, like updating user state
             }}
+            onSignupRequired={() => {
+              console.log('Signup required from home page');
+              setSubscriptionModalVisible(false);
+              setLoginModalVisible(true);
+            }}
             onSkip={() => setSubscriptionModalVisible(false)}
+          />
+        </Modal>
+
+        <Modal
+          animationType="slide"
+          transparent={false}
+          visible={loginModalVisible}
+          onRequestClose={() => setLoginModalVisible(false)}
+        >
+          <LoginScreen
+            initialMode="signup"
+            onLoginSuccess={(user) => {
+              console.log('Login successful from home page:', user);
+              setLoginModalVisible(false);
+              // User state will be updated by AuthContext
+            }}
           />
         </Modal>
         </SafeAreaView>

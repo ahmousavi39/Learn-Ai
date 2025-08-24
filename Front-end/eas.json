@@ -1,19 +1,25 @@
 {
   "cli": {
     "version": ">= 15.0.14",
-    "appVersionSource": "remote"
+    "appVersionSource": "local"
   },
   "build": {
     "development": {
-      "developmentClient": true,
-      "distribution": "internal"
-    },
-    "preview": {
+      "releaseChannel": "development",
       "distribution": "internal"
     },
     "production": {
-      "distribution": "store"
+      "releaseChannel": "default",
+      "distribution": "store",
+      "ios": {
+        "resourceClass": "m-medium"
+      }
+    },
+    "production-ios": {
+      "distribution": "store",
+      "ios": {
+        "resourceClass": "m-medium"
+      }
     }
   }
 }
-  

@@ -1,4 +1,7 @@
 import { Platform } from 'react-native';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { auth } from './firebaseConfig';
+import { APPLE_CONFIG, validateAppleConfig } from '../config/appleConfig';
 
 // Mock implementation - replace with actual payment SDK
 // For iOS: react-native-iap or expo-in-app-purchases
@@ -22,7 +25,10 @@ export interface PremiumAccountData {
 class PaymentService {
   private static instance: PaymentService;
   private readonly BACKEND_URL = 'http://192.168.1.100:3000'; // Update with your backend URL
-  private readonly PREMIUM_PRODUCT_ID = 'premium_subscription_monthly';
+  private readonly PREMIUM_PRODUCT_ID = APPLE_CONFIG.products.premiumMonthly;
+  
+  // Apple Developer Account Configuration
+  private readonly APPLE_CONFIG = APPLE_CONFIG;
 
   static getInstance(): PaymentService {
     if (!PaymentService.instance) {
@@ -32,11 +38,47 @@ class PaymentService {
   }
 
   /**
+   * Validate Apple configuration before processing payments
+   */
+  private validateConfiguration(): { isValid: boolean; error?: string } {
+    const validation = validateAppleConfig();
+    
+    if (!validation.isValid) {
+      console.error('❌ Apple configuration validation failed. Missing environment variables:', validation.missingVars);
+      return {
+        isValid: false,
+        error: `Missing Apple configuration: ${validation.missingVars.join(', ')}`
+      };
+    }
+
+    if (!APPLE_CONFIG.products.premiumMonthly) {
+      return {
+        isValid: false,
+        error: 'Premium monthly product ID is not configured'
+      };
+    }
+
+    return { isValid: true };
+  }
+
+  /**
    * Step 1: Initiate payment process
    */
   async purchasePremiumSubscription(): Promise<PaymentResult> {
     try {
+      // Validate configuration first
+      const configValidation = this.validateConfiguration();
+      if (!configValidation.isValid) {
+        return {
+          success: false,
+          error: configValidation.error || 'Configuration error',
+          platform: Platform.OS as 'ios' | 'android'
+        };
+      }
+
       console.log('🛒 Starting premium subscription purchase...');
+      console.log('📱 Platform:', Platform.OS);
+      console.log('🆔 Product ID:', this.PREMIUM_PRODUCT_ID);
 
       if (Platform.OS === 'ios') {
         return await this.purchaseIOS();
@@ -50,7 +92,7 @@ class PaymentService {
         };
       }
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Payment failed:', error);
       return {
         success: false,
@@ -83,12 +125,15 @@ class PaymentService {
       */
 
       // Mock success response
+      const regionPricing = this.getUserRegionPricing();
       const mockReceipt = {
         success: true,
         receipt: 'mock_ios_receipt_data_base64_encoded',
         transactionId: 'ios_' + Date.now(),
         productId: this.PREMIUM_PRODUCT_ID,
-        platform: 'ios' as const
+        platform: 'ios' as const,
+        price: regionPricing.price,
+        currency: regionPricing.currency
       };
 
       console.log('✅ iOS payment successful:', mockReceipt.transactionId);
@@ -126,6 +171,7 @@ class PaymentService {
       */
 
       // Mock success response
+      const regionPricing = this.getUserRegionPricing();
       const mockReceipt = {
         success: true,
         receipt: JSON.stringify({
@@ -135,7 +181,9 @@ class PaymentService {
         }),
         transactionId: 'android_' + Date.now(),
         productId: this.PREMIUM_PRODUCT_ID,
-        platform: 'android' as const
+        platform: 'android' as const,
+        price: regionPricing.price,
+        currency: regionPricing.currency
       };
 
       console.log('✅ Android payment successful:', mockReceipt.transactionId);
@@ -208,6 +256,7 @@ class PaymentService {
 
   /**
    * Complete purchase-to-account flow
+   * New Flow: Payment -> Firebase Auth Account -> Store in courseCounts.json -> Login
    */
   async purchaseAndCreateAccount(email: string, password: string): Promise<{
     success: boolean;
@@ -218,8 +267,8 @@ class PaymentService {
     step?: string;
   }> {
     try {
-      // Step 1: Process payment
-      console.log('🛒 Step 1: Processing payment...');
+      // Step 1: Process payment using Apple/Google Pay
+      console.log('🛒 Step 1: Processing payment with Apple/Google Pay...');
       const paymentResult = await this.purchasePremiumSubscription();
 
       if (!paymentResult.success) {
@@ -231,29 +280,39 @@ class PaymentService {
         };
       }
 
-      // Step 2: Create account with payment proof
-      console.log('🔐 Step 2: Creating premium account...');
-      const accountResult = await this.createPremiumAccount({
-        email,
-        password,
-        receipt: paymentResult
-      });
+      // Step 2: Create Firebase Auth account
+      console.log('🔐 Step 2: Creating Firebase Auth account...');
+      const firebaseResult = await this.createFirebaseAccount(email, password);
 
-      if (!accountResult.success) {
-        // Payment succeeded but account creation failed
-        // In a real app, you'd want to store the receipt for manual processing
+      if (!firebaseResult.success) {
         return {
           success: false,
-          error: accountResult.error,
-          message: 'Payment successful but account creation failed. Please contact support with your receipt.',
-          step: 'account_creation'
+          error: firebaseResult.error,
+          message: 'Payment successful but account creation failed. Please contact support.',
+          step: 'firebase_auth'
         };
       }
 
+      // Step 3: Store user data and course count in backend
+      console.log('📊 Step 3: Storing user data in courseCounts.json...');
+      const storeResult = await this.storeUserDataInBackend(firebaseResult.user, paymentResult);
+
+      if (!storeResult.success) {
+        return {
+          success: false,
+          error: storeResult.error,
+          message: 'Account created but data storage failed. Please contact support.',
+          step: 'data_storage'
+        };
+      }
+
+      // Step 4: User is automatically logged in through Firebase Auth
+      console.log('✅ Step 4: User logged in successfully');
+
       return {
         success: true,
-        user: accountResult.user,
-        courseStatus: accountResult.courseStatus,
+        user: firebaseResult.user,
+        courseStatus: storeResult.courseStatus,
         message: 'Premium account created successfully!',
         step: 'complete'
       };
@@ -363,6 +422,29 @@ class PaymentService {
   }
 
   /**
+   * Get user's region and return appropriate pricing
+   */
+  private getUserRegionPricing(): { price: string; currency: string } {
+    try {
+      // Get user's locale/region
+      const locale = Intl.DateTimeFormat().resolvedOptions().locale;
+      const region = locale.split('-')[1] || 'US';
+      
+      // European countries
+      const europeanCountries = ['DE', 'FR', 'IT', 'ES', 'NL', 'BE', 'AT', 'PT', 'IE', 'GR', 'FI', 'EE', 'LV', 'LT', 'LU', 'MT', 'SK', 'SI', 'CY', 'HR', 'BG', 'RO', 'HU', 'PL', 'CZ', 'DK', 'SE', 'GB'];
+      
+      if (europeanCountries.includes(region)) {
+        return { price: '€9.99', currency: 'EUR' };
+      } else {
+        return { price: '$8.99', currency: 'USD' };
+      }
+    } catch (error) {
+      // Default to USD if region detection fails
+      return { price: '$8.99', currency: 'USD' };
+    }
+  }
+
+  /**
    * Get available products (for displaying prices)
    */
   async getAvailableProducts(): Promise<{
@@ -371,17 +453,19 @@ class PaymentService {
     error?: string;
   }> {
     try {
+      const regionPricing = this.getUserRegionPricing();
+      
       // This would integrate with react-native-iap to get actual product info
-      // For now, return mock data
+      // For now, return mock data with regional pricing
       return {
         success: true,
         products: [
           {
             productId: this.PREMIUM_PRODUCT_ID,
-            title: 'Premium Monthly Subscription',
+            title: 'LearnIntel Premium',
             description: '50 courses per month + premium features',
-            price: Platform.OS === 'ios' ? '$9.99' : '$9.99',
-            currency: 'USD'
+            price: regionPricing.price,
+            currency: regionPricing.currency
           }
         ]
       };
@@ -390,6 +474,106 @@ class PaymentService {
       return {
         success: false,
         error: 'Failed to load products'
+      };
+    }
+  }
+
+  /**
+   * Create Firebase Auth account
+   */
+  private async createFirebaseAccount(email: string, password: string): Promise<{
+    success: boolean;
+    user?: any;
+    error?: string;
+  }> {
+    try {
+      console.log('🔐 Creating Firebase account for:', email);
+      
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+      
+      // Get the ID token
+      const idToken = await user.getIdToken();
+      
+      console.log('✅ Firebase account created successfully');
+      
+      return {
+        success: true,
+        user: {
+          uid: user.uid,
+          email: user.email,
+          idToken: idToken
+        }
+      };
+      
+    } catch (error: any) {
+      console.error('❌ Firebase account creation failed:', error);
+      
+      let errorMessage = 'Account creation failed';
+      if (error.code === 'auth/email-already-in-use') {
+        errorMessage = 'Email address is already in use';
+      } else if (error.code === 'auth/weak-password') {
+        errorMessage = 'Password is too weak';
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = 'Invalid email address';
+      }
+      
+      return {
+        success: false,
+        error: errorMessage
+      };
+    }
+  }
+
+  /**
+   * Store user data in backend courseCounts.json
+   */
+  private async storeUserDataInBackend(user: any, paymentResult: PaymentResult): Promise<{
+    success: boolean;
+    courseStatus?: any;
+    error?: string;
+  }> {
+    try {
+      console.log('📊 Storing user data in backend...');
+      
+      const response = await fetch(`${this.BACKEND_URL}/api/auth/create-premium-user`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user.idToken}`
+        },
+        body: JSON.stringify({
+          uid: user.uid,
+          email: user.email,
+          paymentReceipt: paymentResult,
+          subscriptionType: 'premium_monthly',
+          courseLimit: 50, // Premium users get 50 courses per month
+          createdAt: new Date().toISOString()
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        console.error('❌ Backend storage failed:', result);
+        return {
+          success: false,
+          error: result.error || 'Failed to store user data'
+        };
+      }
+
+      console.log('✅ User data stored in backend successfully');
+      
+      return {
+        success: true,
+        courseStatus: result.courseStatus
+      };
+
+    } catch (error) {
+      console.error('❌ Backend storage error:', error);
+      return {
+        success: false,
+        error: 'Network error during data storage'
       };
     }
   }

@@ -60,7 +60,10 @@ router.post('/verify', async (req, res) => {
       isActive: true,
       verificationTime: new Date().toISOString(),
       originalTransactionId: purchaseData.originalTransactionId || null,
-      subscriptionId: purchaseData.subscriptionId || null
+      subscriptionId: purchaseData.subscriptionId || null,
+      isMockPurchase: purchaseData.isMockPurchase || false,
+      // Add a flag to indicate this subscription is verified but not yet linked to a user
+      awaitingUserLink: true
     };
 
     // Store in Firestore (you might want to associate with a user later)
@@ -77,6 +80,196 @@ router.post('/verify', async (req, res) => {
     res.status(500).json({ 
       success: false, 
       error: 'Verification service unavailable' 
+    });
+  }
+});
+
+// New endpoint: Process payment-first flow
+router.post('/process-payment-first', async (req, res) => {
+  try {
+    const { receipt, purchaseToken, productId, platform, userEmail } = req.body;
+
+    if (!productId || !platform) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Product ID and platform are required' 
+      });
+    }
+
+    let verificationResult;
+
+    if (platform === 'ios') {
+      if (!receipt) {
+        return res.status(400).json({ 
+          success: false, 
+          error: 'Receipt is required for iOS verification' 
+        });
+      }
+      verificationResult = await verifyAppleReceipt(receipt);
+    } else if (platform === 'android') {
+      if (!purchaseToken) {
+        return res.status(400).json({ 
+          success: false, 
+          error: 'Purchase token is required for Android verification' 
+        });
+      }
+      verificationResult = await verifyGooglePlayPurchase(productId, purchaseToken);
+    } else {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Unsupported platform' 
+      });
+    }
+
+    if (!verificationResult.isValid) {
+      return res.json({ 
+        success: false, 
+        error: 'Purchase verification failed' 
+      });
+    }
+
+    // Create a temporary subscription record that can be claimed during account creation
+    const purchaseData = verificationResult.purchaseData;
+    const tempSubscriptionDoc = {
+      productId,
+      platform,
+      purchaseToken: purchaseToken || null,
+      receipt: receipt || null,
+      purchaseTime: purchaseData.purchaseTime || new Date().toISOString(),
+      expiryTime: purchaseData.expiryTime,
+      isActive: true,
+      verificationTime: new Date().toISOString(),
+      originalTransactionId: purchaseData.originalTransactionId || null,
+      subscriptionId: purchaseData.subscriptionId || null,
+      isMockPurchase: purchaseData.isMockPurchase || false,
+      // This subscription is verified and ready to be linked to an account
+      awaitingUserLink: true,
+      // Optional: store user email for verification during account creation
+      associatedEmail: userEmail || null,
+      // Set expiration for this temporary record (1 hour)
+      linkExpirationTime: new Date(Date.now() + 60 * 60 * 1000).toISOString()
+    };
+
+    const subscriptionRef = await db.collection('temp_subscriptions').add(tempSubscriptionDoc);
+    
+    // Return a verification token that can be used during account creation
+    const verificationToken = Buffer.from(JSON.stringify({
+      subscriptionId: subscriptionRef.id,
+      productId,
+      timestamp: Date.now()
+    })).toString('base64');
+
+    res.json({ 
+      success: true, 
+      verificationToken,
+      message: 'Payment verified successfully. Use this token to complete account creation.'
+    });
+
+  } catch (error) {
+    console.error('Payment-first processing error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Payment processing failed' 
+    });
+  }
+});
+
+// New endpoint: Claim verified subscription with user account
+router.post('/claim-subscription', async (req, res) => {
+  try {
+    const { verificationToken, uid, email } = req.body;
+
+    if (!verificationToken || !uid) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Verification token and user ID are required' 
+      });
+    }
+
+    // Decode the verification token
+    let tokenData;
+    try {
+      const decodedToken = Buffer.from(verificationToken, 'base64').toString('utf-8');
+      tokenData = JSON.parse(decodedToken);
+    } catch (error) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Invalid verification token' 
+      });
+    }
+
+    const { subscriptionId, productId, timestamp } = tokenData;
+
+    // Check if token is not too old (1 hour expiration)
+    if (Date.now() - timestamp > 60 * 60 * 1000) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Verification token has expired' 
+      });
+    }
+
+    // Get the temporary subscription
+    const tempSubscriptionDoc = await db.collection('temp_subscriptions').doc(subscriptionId).get();
+    
+    if (!tempSubscriptionDoc.exists) {
+      return res.status(404).json({ 
+        success: false, 
+        error: 'Subscription not found or already claimed' 
+      });
+    }
+
+    const tempSubscriptionData = tempSubscriptionDoc.data();
+
+    // Check if already linked
+    if (!tempSubscriptionData.awaitingUserLink) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Subscription has already been claimed' 
+      });
+    }
+
+    // Create the permanent subscription record
+    const subscriptionDoc = {
+      ...tempSubscriptionData,
+      linkedUserId: uid,
+      linkedAt: new Date().toISOString(),
+      awaitingUserLink: false,
+      userEmail: email
+    };
+
+    // Move to permanent subscriptions collection
+    const permanentSubscriptionRef = await db.collection('subscriptions').add(subscriptionDoc);
+
+    // Update user document with subscription
+    const userSubscription = {
+      subscriptionId: permanentSubscriptionRef.id,
+      productId: tempSubscriptionData.productId,
+      platform: tempSubscriptionData.platform,
+      isActive: tempSubscriptionData.isActive,
+      expiryDate: tempSubscriptionData.expiryTime,
+      linkedAt: new Date().toISOString(),
+      isMockPurchase: tempSubscriptionData.isMockPurchase || false
+    };
+
+    await db.collection('users').doc(uid).set({
+      subscription: userSubscription,
+      updatedAt: new Date().toISOString()
+    }, { merge: true });
+
+    // Delete the temporary subscription
+    await db.collection('temp_subscriptions').doc(subscriptionId).delete();
+
+    res.json({ 
+      success: true, 
+      message: 'Subscription claimed successfully',
+      subscription: userSubscription
+    });
+
+  } catch (error) {
+    console.error('Error claiming subscription:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to claim subscription' 
     });
   }
 });

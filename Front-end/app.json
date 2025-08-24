@@ -1,27 +1,29 @@
 {
   "expo": {
-    "name": "4F",
-    "slug": "4F",
-    "version": "1.0.0",
+    "name": "LearnIntel",
+    "slug": "learnintel",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
-    "plugins": [],
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "bundleIdentifier": "com.4f",
-      "buildNumber": "1",
+      "bundleIdentifier": "com.ahmousavi.learnintel",
+      "buildNumber": "7",
       "supportsTablet": true,
       "icon": "./assets/icon.png",
-      "backgroundColor": "#FFFFFF"
+      "backgroundColor": "#FFFFFF",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
-      "package": "com.4f",
+      "package": "com.ahmousavi.learnintel",
       "versionCode": 1,
       "icon": "./assets/icon.png",
       "adaptiveIcon": {
@@ -35,7 +37,7 @@
     },
     "extra": {
       "eas": {
-        "projectId": "79325ffb-b302-4e89-8b44-aec28c8515f6"
+        "projectId": "ba1bd225-8508-4b9b-a7ad-a6a40760c267"
       }
     }
   }

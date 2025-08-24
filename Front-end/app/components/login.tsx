@@ -12,18 +12,22 @@ import {
   SafeAreaView,
   ScrollView,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import authService, { AuthUser } from '../../services/authService';
+import subscriptionService from '../../services/subscriptionService';
+import paymentService from '../../services/paymentService';
 import SubscriptionScreen from './subscriptionScreen';
 import { FontAwesome } from '@expo/vector-icons';
 
 interface LoginProps {
   onLoginSuccess: (user: AuthUser) => void;
+  initialMode?: 'login' | 'signup' | 'subscription' | 'forgotPassword';
 }
 
 type AuthMode = 'login' | 'signup' | 'subscription' | 'forgotPassword';
 
-const LoginScreen: React.FC<LoginProps> = ({ onLoginSuccess }) => {
-  const [mode, setMode] = useState<AuthMode>('login');
+const LoginScreen: React.FC<LoginProps> = ({ onLoginSuccess, initialMode = 'login' }) => {
+  const [mode, setMode] = useState<AuthMode>(initialMode);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -107,20 +111,179 @@ const LoginScreen: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   };
 
   const handleSignup = async () => {
-    if (!subscriptionData?.hasSubscription) {
-      Alert.alert('Subscription Required', 'Please subscribe first to create an account');
-      setMode('subscription');
-      return;
-    }
-
     if (!validateForm()) return;
 
     try {
       setLoading(true);
+      console.log('📝 Starting 9-step subscription flow...');
+      
+      // Step 3: User enters info (form validation already done)
+      // Step 4: Validate email with backend (no duplicated email)
+      console.log('🔍 Step 4: Validating email with backend...');
+      
+      const emailValidationResponse = await fetch(`${process.env.EXPO_PUBLIC_HTTP_SERVER}/api/auth/validate-email`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      const emailValidation = await emailValidationResponse.json();
+
+      if (!emailValidation.success) {
+        Alert.alert(
+          'Email Validation Failed',
+          emailValidation.message || 'This email is already registered or invalid.',
+          [{ text: 'OK' }]
+        );
+        setLoading(false);
+        return;
+      }
+
+      console.log('✅ Step 4 completed: Email validation passed');
+
+      // Step 5: Get the selected product ID from subscription flow
+      const selectedProductId = await AsyncStorage.getItem('selectedProductId');
+      if (!selectedProductId) {
+        Alert.alert(
+          'Subscription Required',
+          'Please select a subscription plan first.',
+          [
+            {
+              text: 'Select Plan',
+              onPress: () => setMode('subscription')
+            }
+          ]
+        );
+        setLoading(false);
+        return;
+      }
+
+      console.log('💳 Step 5: Initiating Apple payment for product:', selectedProductId);
+
+      // Step 5: Process Apple payment
+      const purchaseResult = await paymentService.getInstance().purchasePremiumSubscription();
+      
+      if (!purchaseResult.success) {
+        Alert.alert(
+          'Payment Failed',
+          purchaseResult.error || 'Unable to process payment. Please try again.',
+          [{ text: 'OK' }]
+        );
+        setLoading(false);
+        return;
+      }
+
+      console.log('✅ Step 5 completed: Apple payment successful');
+      console.log('� Step 6: Verifying payment with backend...');
+
+      // Step 6: Verify payment with backend
+      const verificationResponse = await fetch(`${process.env.EXPO_PUBLIC_HTTP_SERVER}/api/subscriptions/process-payment-first`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          receipt: purchaseResult.receipt,
+          purchaseToken: purchaseResult.transactionId,
+          productId: selectedProductId,
+          platform: 'ios',
+          userEmail: email
+        }),
+      });
+
+      const verificationResult = await verificationResponse.json();
+
+      if (!verificationResult.success) {
+        Alert.alert(
+          'Payment Verification Failed',
+          'Payment was processed but could not be verified. Please contact support.',
+          [{ text: 'OK' }]
+        );
+        setLoading(false);
+        return;
+      }
+
+      console.log('✅ Step 6 completed: Payment verified by backend');
+      console.log('🔥 Step 7: Creating Firebase account...');
+
+      // Step 7: Create Firebase account
       const user = await authService.createAccount(email, password, displayName);
-      onLoginSuccess(user);
-    } catch (error: any) {
-      Alert.alert('Signup Failed', error.message || 'Failed to create account');
+      console.log('✅ Step 7 completed: Firebase account created:', user.uid);
+
+      console.log('📊 Step 8: Adding UID to courseCount.json...');
+
+      // Step 8: Claim subscription and add to courseCount.json
+      const claimResponse = await fetch(`${process.env.EXPO_PUBLIC_HTTP_SERVER}/api/subscriptions/claim-subscription`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          verificationToken: verificationResult.verificationToken,
+          uid: user.uid,
+          email: user.email
+        }),
+      });
+
+      const claimResult = await claimResponse.json();
+
+      if (!claimResult.success) {
+        Alert.alert(
+          'Subscription Activation Failed',
+          'Account created but subscription could not be activated. Please contact support.',
+          [{ text: 'OK' }]
+        );
+        setLoading(false);
+        return;
+      }
+
+      console.log('✅ Step 8 completed: UID added to courseCount.json');
+      console.log('💾 Step 9: Storing login info locally...');
+
+      // Step 9: Store needed info locally to stay logged in
+      await authService.updateUserSubscription(user.uid, {
+        productId: claimResult.subscription.productId,
+        purchaseDate: claimResult.subscription.linkedAt,
+        isActive: claimResult.subscription.isActive,
+        subscriptionId: claimResult.subscription.subscriptionId,
+        isMockPurchase: claimResult.subscription.isMockPurchase || false
+      });
+
+      // Clear the selected product ID
+      await AsyncStorage.removeItem('selectedProductId');
+
+      const updatedUser = {
+        ...user,
+        hasSubscription: true,
+        subscriptionData: claimResult.subscription
+      };
+
+      console.log('✅ Step 9 completed: All subscription flow steps completed successfully!');
+
+      Alert.alert(
+        'Account Created Successfully!',
+        'Your account has been created and your subscription is now active. Welcome to Learn AI!',
+        [
+          {
+            text: 'Continue',
+            onPress: () => {
+              console.log('🎉 9-step subscription flow completed successfully');
+              onLoginSuccess(updatedUser);
+            }
+          }
+        ]
+      );
+      return;
+
+    } catch (error) {
+      console.error('❌ Signup error:', error);
+      Alert.alert(
+        'Account Creation Failed',
+        error.message || 'An error occurred while creating your account. Please try again.',
+        [{ text: 'OK' }]
+      );
     } finally {
       setLoading(false);
     }
@@ -148,7 +311,18 @@ const LoginScreen: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   };
 
   const handleSubscriptionSuccess = (data: any) => {
-    setSubscriptionData(data);
+    // If user already exists and has subscription, login directly
+    if (data.uid) {
+      onLoginSuccess(data);
+    } else {
+      // Otherwise, store subscription data and proceed to signup
+      setSubscriptionData(data);
+      setMode('signup');
+    }
+  };
+
+  const handleSignupRequired = () => {
+    // User tried to purchase but needs to signup first
     setMode('signup');
   };
 
@@ -156,6 +330,7 @@ const LoginScreen: React.FC<LoginProps> = ({ onLoginSuccess }) => {
     return (
       <SubscriptionScreen
         onSubscriptionSuccess={handleSubscriptionSuccess}
+        onSignupRequired={handleSignupRequired}
         onSkip={() => setMode('login')}
       />
     );
@@ -239,6 +414,30 @@ const LoginScreen: React.FC<LoginProps> = ({ onLoginSuccess }) => {
     <View style={styles.formContainer}>
       <Text style={styles.title}>Create Account</Text>
       <Text style={styles.subtitle}>Complete your account setup</Text>
+
+      {subscriptionData?.hasSubscription && (
+        <View style={styles.subscriptionStatus}>
+          <FontAwesome name="check-circle" size={20} color="#4CAF50" />
+          <Text style={styles.subscriptionStatusText}>
+            ✅ Subscription Active - Ready to create account
+          </Text>
+        </View>
+      )}
+
+      {!subscriptionData?.hasSubscription && (
+        <View style={styles.subscriptionWarning}>
+          <FontAwesome name="exclamation-triangle" size={20} color="#FF9800" />
+          <Text style={styles.subscriptionWarningText}>
+            ⚠️ No active subscription - Subscribe first to continue
+          </Text>
+          <TouchableOpacity
+            style={styles.subscribeButton}
+            onPress={() => setMode('subscription')}
+          >
+            <Text style={styles.subscribeButtonText}>Subscribe Now</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       <View style={styles.inputContainer}>
         <FontAwesome name="user" size={20} color="#666" style={styles.inputIcon} />
@@ -481,6 +680,50 @@ const styles = StyleSheet.create({
     marginHorizontal: 15,
     fontSize: 14,
     color: '#666',
+  },
+  subscriptionStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E8F5E8',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#4CAF50',
+  },
+  subscriptionStatusText: {
+    marginLeft: 10,
+    fontSize: 14,
+    color: '#2E7D32',
+    fontWeight: '600',
+  },
+  subscriptionWarning: {
+    backgroundColor: '#FFF3E0',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#FF9800',
+  },
+  subscriptionWarningText: {
+    marginLeft: 10,
+    fontSize: 14,
+    color: '#E65100',
+    fontWeight: '600',
+    marginBottom: 10,
+  },
+  subscribeButton: {
+    backgroundColor: '#FF9800',
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderRadius: 6,
+    alignItems: 'center',
+    marginTop: 5,
+  },
+  subscribeButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: 'bold',
   },
 });
 

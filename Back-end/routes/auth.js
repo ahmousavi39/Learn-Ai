@@ -1,6 +1,62 @@
 const express = require('express');
 const { auth, db } = require('../config/firebase');
+const receiptVerificationService = require('../services/receiptVerificationService');
 const router = express.Router();
+
+// Email validation endpoint for step 4 of subscription flow
+router.post('/validate-email', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ 
+        error: 'Email is required',
+        message: 'Please provide an email address to validate.'
+      });
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        error: 'Invalid email format',
+        message: 'Please enter a valid email address.'
+      });
+    }
+
+    try {
+      // Check if email already exists in Firebase Auth
+      await auth.getUserByEmail(email);
+      
+      // If we reach here, email exists
+      return res.status(409).json({
+        error: 'Email already exists',
+        message: 'This email is already registered. Please use a different email or sign in instead.',
+        emailExists: true
+      });
+      
+    } catch (error) {
+      if (error.code === 'auth/user-not-found') {
+        // Email doesn't exist - validation passed
+        return res.json({
+          success: true,
+          message: 'Email is available',
+          emailExists: false
+        });
+      }
+      
+      // Other errors
+      throw error;
+    }
+
+  } catch (error) {
+    console.error('Email validation error:', error);
+    res.status(500).json({ 
+      error: 'Email validation failed',
+      message: 'Unable to validate email. Please try again.'
+    });
+  }
+});
 
 // Middleware to verify Firebase ID token
 const verifyToken = async (req, res, next) => {
@@ -547,6 +603,120 @@ router.post('/verify-user', async (req, res) => {
     }
   } catch (error) {
     console.error('❌ Error verifying user:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Create premium user after payment and Firebase account creation
+router.post('/create-premium-user', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'No valid token provided' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decodedToken = await auth.verifyIdToken(token);
+    const uid = decodedToken.uid;
+
+    const { email, paymentReceipt, subscriptionType, courseLimit, createdAt } = req.body;
+
+    console.log('📊 Creating premium user in courseCounts.json:', { uid, email, subscriptionType });
+
+    // Verify Apple receipt if provided
+    let subscriptionInfo = null;
+    if (paymentReceipt && paymentReceipt.receipt && paymentReceipt.platform === 'ios') {
+      console.log('🧾 Verifying Apple receipt...');
+      const receiptVerification = await receiptVerificationService.verifyAppleReceipt(
+        paymentReceipt.receipt,
+        paymentReceipt.productId
+      );
+
+      if (!receiptVerification.success) {
+        console.error('❌ Receipt verification failed:', receiptVerification.error);
+        return res.status(400).json({ 
+          error: 'Receipt verification failed',
+          message: receiptVerification.error
+        });
+      }
+
+      subscriptionInfo = receiptVerification.subscription;
+      console.log('✅ Apple receipt verified successfully');
+    }
+
+    // Initialize course count service
+    const courseCountService = require('../services/courseCountService');
+
+    // Create premium user record with higher course limits
+    const userData = {
+      uid: uid,
+      email: email,
+      accountType: 'premium',
+      subscriptionType: subscriptionType || 'premium_monthly',
+      paymentReceipt: paymentReceipt,
+      subscriptionInfo: subscriptionInfo, // Verified subscription details
+      coursesGenerated: 0,
+      courseLimit: courseLimit || 50, // Premium users get 50 courses per month
+      lastResetDate: new Date().toISOString(),
+      createdAt: createdAt || new Date().toISOString(),
+      isActive: true
+    };
+
+    // Store user in courseCounts.json
+    await courseCountService.createPremiumUserRecord(uid, userData);
+
+    // Also create user profile in Firestore for additional data
+    const userProfile = {
+      uid,
+      email,
+      accountType: 'premium',
+      subscriptionType: subscriptionType || 'premium_monthly',
+      createdAt: createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      subscription: {
+        isActive: subscriptionInfo?.isActive || true,
+        type: subscriptionType || 'premium_monthly',
+        startDate: subscriptionInfo?.purchaseDate?.toISOString() || new Date().toISOString(),
+        expiryDate: subscriptionInfo?.expirationDate?.toISOString() || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        courseLimit: courseLimit || 50,
+        transactionId: subscriptionInfo?.transactionId,
+        originalTransactionId: subscriptionInfo?.originalTransactionId,
+        autoRenew: subscriptionInfo?.autoRenewStatus || false
+      }
+    };
+
+    await db.collection('users').doc(uid).set(userProfile, { merge: true });
+
+    console.log('✅ Premium user created successfully:', uid);
+
+    res.json({ 
+      success: true, 
+      message: 'Premium user created successfully',
+      user: userProfile,
+      courseStatus: {
+        coursesGenerated: 0,
+        courseLimit: courseLimit || 50,
+        remainingCourses: courseLimit || 50
+      },
+      subscription: subscriptionInfo
+    });
+
+  } catch (error) {
+    console.error('❌ Error creating premium user:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Check Apple configuration status (for debugging)
+router.get('/apple-config-status', async (req, res) => {
+  try {
+    const status = receiptVerificationService.getConfigurationStatus();
+    res.json({
+      success: true,
+      appleConfig: status
+    });
+  } catch (error) {
+    console.error('❌ Error checking Apple config:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

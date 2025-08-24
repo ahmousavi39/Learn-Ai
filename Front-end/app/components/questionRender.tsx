@@ -285,11 +285,12 @@ function getStyles(theme) {
         },
 
         title: {
-            fontSize: 22,
+            fontSize: 16,
             fontWeight: '600',
             textAlign: 'center',
             marginTop: 20,  // add some top margin
             color: theme.text,
+            lineHeight: 20
         },
 
         optionWrapper: {
@@ -307,7 +308,7 @@ function getStyles(theme) {
         },
         optionText: {
             color: theme.optionText,
-            fontSize: 16,
+            fontSize: 14,
             fontWeight: '700',
         },
         actions: {

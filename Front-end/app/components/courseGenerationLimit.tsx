@@ -58,10 +58,32 @@ const CourseGenerationLimit: React.FC<CourseGenerationLimitProps> = ({
     onClose();
   };
 
+  const handleSignupRequired = () => {
+    // Close the subscription screen and show signup
+    setShowSubscription(false);
+    
+    // Create a simple signup alert as a fallback
+    Alert.alert(
+      'Create Account',
+      'You need to create an account to subscribe. This will redirect you to the signup page.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Create Account', 
+          onPress: () => {
+            // Close this modal entirely and let the app handle signup
+            onClose();
+          }
+        }
+      ]
+    );
+  };
+
   if (showSubscription) {
     return (
       <SubscriptionScreen
         onSubscriptionSuccess={handleSubscriptionSuccess}
+        onSignupRequired={handleSignupRequired}
         onSkip={() => setShowSubscription(false)}
       />
     );

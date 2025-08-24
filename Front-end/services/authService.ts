@@ -811,6 +811,64 @@ class AuthService {
       return null;
     }
   }
+
+  // Update user subscription data in Firebase and local storage
+  async updateUserSubscription(uid: string, subscriptionData: {
+    productId: string;
+    purchaseToken?: string;
+    transactionId?: string;
+    receipt?: string;
+    purchaseDate: string;
+    isActive: boolean;
+    subscriptionId?: string;
+    isMockPurchase?: boolean;
+  }): Promise<void> {
+    try {
+      // Always store in local storage first (most reliable)
+      const userKey = `user_${uid}`;
+      const existingData = await AsyncStorage.getItem(userKey);
+      const userData = existingData ? JSON.parse(existingData) : {};
+      
+      userData.subscription = subscriptionData;
+      userData.hasSubscription = subscriptionData.isActive;
+      userData.updatedAt = new Date().toISOString();
+      
+      await AsyncStorage.setItem(userKey, JSON.stringify(userData));
+
+      // Also update the current auth user data
+      const authUserData = await AsyncStorage.getItem('authUser');
+      if (authUserData) {
+        const authUser = JSON.parse(authUserData);
+        authUser.hasSubscription = subscriptionData.isActive;
+        authUser.subscriptionData = subscriptionData;
+        await AsyncStorage.setItem('authUser', JSON.stringify(authUser));
+      }
+
+      console.log('✅ Subscription data saved to local storage');
+
+      // Try to store in Firestore if available (non-blocking)
+      try {
+        if (this.firestoreEnabled && isFirestoreActive()) {
+          const userRef = doc(db, 'users', uid);
+          await setDoc(userRef, {
+            subscription: subscriptionData,
+            updatedAt: new Date().toISOString()
+          }, { merge: true });
+          console.log('✅ Subscription data synced to Firestore');
+        } else {
+          console.log('⚠️ Firestore not available, using local storage only');
+        }
+      } catch (firestoreError) {
+        console.warn('⚠️ Failed to sync to Firestore, but local storage successful:', firestoreError);
+        // Don't throw error - local storage is sufficient
+      }
+
+      console.log('✅ Subscription data updated successfully');
+    } catch (error) {
+      console.error('❌ Error updating subscription data:', error);
+      throw error;
+    }
+  }
 }
 
 export default AuthService.getInstance();

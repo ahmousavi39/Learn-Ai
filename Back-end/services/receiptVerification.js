@@ -4,6 +4,25 @@ const { google } = require('googleapis');
 // Apple App Store Receipt Verification
 const verifyAppleReceipt = async (receiptData) => {
   try {
+    // Special handling for development/mock receipts
+    if (receiptData && receiptData.startsWith('sandbox-receipt-')) {
+      console.log('🧪 Processing mock sandbox receipt for development:', receiptData);
+      
+      // Return a valid mock response for development
+      return {
+        isValid: true,
+        purchaseData: {
+          originalTransactionId: receiptData.replace('sandbox-receipt-', 'mock-original-'),
+          transactionId: receiptData.replace('sandbox-receipt-', 'mock-txn-'),
+          productId: process.env.EXPO_PUBLIC_APPLE_PREMIUM_MONTHLY_PRODUCT_ID || 'com.ahmousavi.learnintel.monthly',
+          purchaseTime: new Date().toISOString(),
+          expiryTime: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days from now
+          subscriptionId: `mock-sub-${Date.now()}`,
+          isMockPurchase: true
+        }
+      };
+    }
+
     // Check if Apple credentials are configured
     const issuerId = process.env.APPLE_ISSUER_ID;
     const keyId = process.env.APPLE_KEY_ID;
