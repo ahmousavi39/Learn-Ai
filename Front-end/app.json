@@ -14,7 +14,7 @@
     },
     "ios": {
       "bundleIdentifier": "com.ahmousavi.learnintel",
-      "buildNumber": "7",
+      "buildNumber": "10",
       "supportsTablet": true,
       "icon": "./assets/icon.png",
       "backgroundColor": "#FFFFFF",

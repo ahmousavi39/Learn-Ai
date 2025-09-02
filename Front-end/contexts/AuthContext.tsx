@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import authService, { AuthUser } from '../services/authService';
-import AnonymousAccountService, { LocalUserData } from '../services/anonymousAccountService';
+import AnonymousAccountService, { LocalUserData } from '../services/anonymousAccountService_simple';
 import { APP_CONFIG } from '../config/appConfig';
 
 interface AuthContextType {
