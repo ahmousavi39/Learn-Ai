@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Platform, Dimensions } from 'react-native';
+import { Platform, Dimensions, Alert } from 'react-native';
 import Constants from 'expo-constants';
 import * as Application from 'expo-application';
 import { APP_CONFIG } from '../config/appConfig';
@@ -29,33 +29,30 @@ class AnonymousAccountService {
    */
   private async generateUniqueDeviceHash(): Promise<string> {
     try {
-      this.debugger.log('📱 Generating unique device hash using device APIs...');
+      Alert.alert('DEBUG', 'Step 8: generateUniqueDeviceHash starting');
+      console.log('📱 Generating unique device hash using device APIs...');
       
       let uniqueDeviceId = '';
       
       if (Platform.OS === 'android') {
+        Alert.alert('DEBUG', 'Step 8a: About to call getAndroidId()');
         // For Android, use Android ID (unique per device per app installation)
         uniqueDeviceId = await Application.getAndroidId() || '';
-        this.debugger.log('🤖 Android ID retrieved: ' + (uniqueDeviceId ? 'Yes' : 'No'));
+        Alert.alert('DEBUG', 'Step 8a: getAndroidId() completed');
+        console.log('🤖 Android ID retrieved:', uniqueDeviceId ? 'Yes' : 'No');
       } else if (Platform.OS === 'ios') {
+        Alert.alert('DEBUG', 'Step 8b: About to call getIosIdForVendorAsync() - CRITICAL FREEZE POINT');
         // For iOS, use Identifier for Vendor (unique per device per vendor)
-        try {
-          // Add timeout to prevent hanging in production
-          const timeoutPromise = new Promise<string>((_, reject) => 
-            setTimeout(() => reject(new Error('iOS ID fetch timeout')), 5000)
-          );
-          
-          const idPromise = Application.getIosIdForVendorAsync();
-          uniqueDeviceId = await Promise.race([idPromise, timeoutPromise]) || '';
-          this.debugger.log('🍎 iOS Vendor ID retrieved: ' + (uniqueDeviceId ? 'Yes' : 'No'));
-        } catch (error) {
-          this.debugger.log('⚠️ iOS Vendor ID fetch failed or timed out: ' + error);
-          uniqueDeviceId = '';
-        }
+        uniqueDeviceId = await Application.getIosIdForVendorAsync() || '';
+        Alert.alert('DEBUG', 'Step 8b: getIosIdForVendorAsync() completed successfully!');
+        console.log('🍎 iOS Vendor ID retrieved:', uniqueDeviceId ? 'Yes' : 'No');
       }
+      
+      Alert.alert('DEBUG', 'Step 8c: Platform-specific ID retrieval completed');
       
       // Fallback to Installation ID if platform-specific ID not available
       if (!uniqueDeviceId) {
+        Alert.alert('DEBUG', 'Step 8d: Using installation ID fallback');
         uniqueDeviceId = Constants.installationId || Constants.sessionId || '';
         console.log('🔄 Using installation ID as fallback:', uniqueDeviceId ? 'Yes' : 'No');
       }
@@ -63,6 +60,7 @@ class AnonymousAccountService {
       // If still no ID, check for stored fallback
       if (!uniqueDeviceId) {
         console.log('⚠️ No device API ID available, checking stored fallback...');
+        Alert.alert('DEBUG', 'Step 8e: Using stored fallback');
         uniqueDeviceId = await this.getOrCreateStoredFallback();
       }
       
@@ -118,91 +116,58 @@ class AnonymousAccountService {
    * Main startup flow implementation
    */
   async initializeDevice(): Promise<LocalUserData> {
-    this.debugger.log('Device initialization started');
     try {
-      this.debugger.log('🚀 Starting device initialization...');
+      Alert.alert('DEBUG', 'Step 7: initializeDevice() starting');
+      console.log('🚀 Starting device initialization...');
 
-      // Add overall timeout to prevent app hanging
-      const initializeDeviceInternal = async (): Promise<LocalUserData> => {
-        this.debugger.log('Starting internal initialization');
-        
-        // Step 1: Check if hash is stored locally
-        this.debugger.log('Checking for stored device hash');
-        let deviceHash = await this.getStoredDeviceHash();
-        
-        if (!deviceHash) {
-          this.debugger.log('🆕 No stored device hash found, generating new one...');
-          this.debugger.log('Generating new device hash');
-          deviceHash = await this.generateUniqueDeviceHash();
-          this.debugger.log('Device hash generated', { length: deviceHash.length });
-        } else {
-          this.debugger.log('✅ Found stored device hash: ' + deviceHash.substring(0, 20) + '...');
-          this.debugger.log('Found stored device hash');
-        }
+      // Step 1: Check if hash is stored locally
+      Alert.alert('DEBUG', 'Step 7a: Checking stored device hash');
+      let deviceHash = await this.getStoredDeviceHash();
+      Alert.alert('DEBUG', 'Step 7a: getStoredDeviceHash completed');
+      
+      if (!deviceHash) {
+        console.log('🆕 No stored device hash found, generating new one...');
+        Alert.alert('DEBUG', 'Step 7b: About to generate unique device hash - THIS MAY FREEZE');
+        deviceHash = await this.generateUniqueDeviceHash();
+        Alert.alert('DEBUG', 'Step 7b: generateUniqueDeviceHash completed successfully!');
+      } else {
+        console.log('✅ Found stored device hash:', deviceHash.substring(0, 20) + '...');
+      }
 
-        // Step 2: Post hash to backend
-        this.debugger.log('📤 Posting device hash to backend...');
-        this.debugger.log('Posting to backend', { url: this.BACKEND_URL });
-        const backendResponse = await this.postHashToBackend(deviceHash);
-        this.debugger.log('Backend response received', backendResponse);
+      // Step 2: Post hash to backend
+      console.log('📤 Posting device hash to backend...');
+      Alert.alert('DEBUG', 'Step 7c: About to post to backend');
+      const backendResponse = await this.postHashToBackend(deviceHash);
+      Alert.alert('DEBUG', 'Step 7c: Backend request completed');
 
-        // Step 3: Store hash locally
-        this.debugger.log('💾 Storing device hash locally...');
-        this.debugger.log('Storing hash locally');
-        await this.storeDeviceHash(deviceHash);
+      // Step 3: Store hash locally
+      console.log('💾 Storing device hash locally...');
+      Alert.alert('DEBUG', 'Step 7d: About to store device hash');
+      await this.storeDeviceHash(deviceHash);
+      Alert.alert('DEBUG', 'Step 7d: Device hash stored successfully');
 
-        // Step 4: Create local user data with course count from backend
-        const userData: LocalUserData = {
-          deviceHash: deviceHash,
-          courseCount: backendResponse.courseCount,
-          userType: backendResponse.userType,
-          isNew: backendResponse.isNew,
-          createdAt: backendResponse.createdAt
-        };
-
-        this.debugger.log('User data created', userData);
-        return userData;
+      // Step 4: Create local user data with course count from backend
+      const userData: LocalUserData = {
+        deviceHash: deviceHash,
+        courseCount: backendResponse.courseCount,
+        userType: backendResponse.userType,
+        isNew: backendResponse.isNew,
+        createdAt: backendResponse.createdAt
       };
-
-      // Create timeout promise
-      this.debugger.log('Setting up timeout promise');
-      const timeoutPromise = new Promise<LocalUserData>((_, reject) => 
-        setTimeout(() => {
-          this.debugger.log('Device initialization timeout reached');
-          reject(new Error('Device initialization timeout'));
-        }, 15000)
-      );
-
-      // Race between initialization and timeout
-      this.debugger.log('Starting initialization race');
-      const result = await Promise.race([initializeDeviceInternal(), timeoutPromise]);
 
       // Step 5: Store complete user data locally
-      this.debugger.log('💾 Storing user data locally...');
-      await this.storeUserData(result);
+      console.log('💾 Storing user data locally...');
+      await this.storeUserData(userData);
 
-      this.debugger.log('🎯 Device initialization complete!');
-      this.debugger.log('📊 Course count: ' + result.courseCount);
-      this.debugger.log('👤 User type: ' + result.userType);
-      this.debugger.log('🆕 Is new user: ' + result.isNew);
+      console.log('🎯 Device initialization complete!');
+      console.log('📊 Course count:', userData.courseCount);
+      console.log('👤 User type:', userData.userType);
+      console.log('🆕 Is new user:', userData.isNew);
 
-      return result;
+      return userData;
     } catch (error) {
-      this.debugger.log('❌ Error in device initialization: ' + error);
-      this.debugger.log('Device initialization error', { error: error.toString() });
-      
-      // Return fallback data instead of crashing the app
-      const fallbackData: LocalUserData = {
-        deviceHash: `fallback_${Date.now()}`,
-        courseCount: 3,
-        userType: 'anonymous',
-        isNew: true,
-        createdAt: new Date().toISOString()
-      };
-      
-      this.debugger.log('Using fallback data', fallbackData);
-      await this.storeUserData(fallbackData);
-      return fallbackData;
+      console.error('❌ Error in device initialization:', error);
+      throw error;
     }
   }
 
@@ -211,12 +176,7 @@ class AnonymousAccountService {
    */
   private async postHashToBackend(deviceHash: string): Promise<any> {
     try {
-      // Create request with timeout
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Backend request timeout')), 10000)
-      );
-
-      const fetchPromise = fetch(`${this.BACKEND_URL}/api/auth/initialize-device`, {
+      const response = await fetch(`${this.BACKEND_URL}/api/auth/initialize-device`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -225,8 +185,6 @@ class AnonymousAccountService {
           deviceHash: deviceHash
         })
       });
-
-      const response = await Promise.race([fetchPromise, timeoutPromise]) as Response;
 
       if (!response.ok) {
         throw new Error(`Backend request failed: ${response.status} ${response.statusText}`);
@@ -237,13 +195,7 @@ class AnonymousAccountService {
       return result;
     } catch (error) {
       console.error('❌ Error posting to backend:', error);
-      // Return fallback data instead of crashing
-      return {
-        courseCount: 3,
-        userType: 'anonymous',
-        isNew: true,
-        createdAt: new Date().toISOString()
-      };
+      throw error;
     }
   }
 

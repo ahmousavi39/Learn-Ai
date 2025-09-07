@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, ActivityIndicator, StyleSheet, Alert } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import LoginScreen from './login';
 import CourseGenerationLimit from './courseGenerationLimit';
@@ -9,6 +9,7 @@ interface AuthGuardProps {
 }
 
 const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
+  Alert.alert('DEBUG', 'Step 10: AuthGuard component rendered');
   const { user, loading, canGenerateCourse } = useAuth();
 
   console.log('🛡️ DEBUG AuthGuard state:', {
@@ -18,6 +19,7 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
   });
 
   if (loading) {
+    Alert.alert('DEBUG', 'Step 10a: Showing loading screen - waiting for auth');
     console.log('🛡️ DEBUG: Showing loading screen');
     return (
       <View style={styles.loadingContainer}>
@@ -28,6 +30,7 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
 
   // Allow access for both authenticated and anonymous users
   if (user) {
+    Alert.alert('DEBUG', 'Step 10b: User exists, showing main app - SUCCESS!');
     console.log('🛡️ DEBUG: User exists, showing main app');
     return <>{children}</>;
   }

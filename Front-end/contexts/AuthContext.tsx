@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { Alert } from 'react-native';
 import authService, { AuthUser } from '../services/authService';
-import AnonymousAccountService, { LocalUserData } from '../services/anonymousAccountService_simple';
+import AnonymousAccountService, { LocalUserData } from '../services/anonymousAccountService';
 import { APP_CONFIG } from '../config/appConfig';
 
 interface AuthContextType {
@@ -22,6 +23,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  Alert.alert('DEBUG', 'Step 5a: AuthProvider component created');
   const [user, setUser] = useState<AuthUser | null>(null);
   const [localUserData, setLocalUserData] = useState<LocalUserData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -32,15 +34,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     resetDate?: string;
   } | null>(null);
 
+  Alert.alert('DEBUG', 'Step 5b: About to create AnonymousAccountService instance');
   const anonymousService = AnonymousAccountService.getInstance();
+  Alert.alert('DEBUG', 'Step 5c: AnonymousAccountService instance created');
 
   const checkAuthState = async () => {
     try {
+      Alert.alert('DEBUG', 'Step 6: checkAuthState() starting');
       setLoading(true);
       console.log('🔍 Starting device initialization...');
 
       // Initialize device hash approach
+      Alert.alert('DEBUG', 'Step 6a: About to call initializeDevice()');
       const userData = await anonymousService.initializeDevice();
+      Alert.alert('DEBUG', 'Step 6b: initializeDevice() completed successfully');
       setLocalUserData(userData);
 
       // Create AuthUser object for compatibility
@@ -126,6 +133,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
+    Alert.alert('DEBUG', 'Step 5: AuthProvider useEffect triggered - about to call checkAuthState');
     checkAuthState();
   }, []);
 
